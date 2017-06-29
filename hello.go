@@ -1,12 +1,10 @@
 package annotator
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-
-	"github.com/golang/protobuf/proto"
-	pb "github.com/m-lab/annotation-service/proto"
 )
 
 const appkey = "Temp Key"
@@ -15,6 +13,8 @@ func init() {
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/search_location", search_location)
 }
+
+type LocationRequest struct{}
 
 func search_location(w http.ResponseWriter, r *http.Request) {
 	if r.ContentLength == 0 {
@@ -30,17 +30,15 @@ func search_location(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	location_request := &pb.LocationRequest{}
-	err = proto.Unmarshal(body_buffer, location_request)
+	var location_request interface{}
+	err = json.Unmarshal(body_buffer, &location_request)
 
 	if err != nil {
 		fmt.Fprint(w, "CANNOT PARSE REQUEST")
 		return
 	}
-
-	fmt.Fprint(w, location_request.IP_Addr)
-
-	fmt.Fprint(w, "\n\nWe're at the end now...\n")
+	loc_map := location_request.(map[string]interface{})
+	fmt.Fprint(w, loc_map["IP_Addr"])
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
