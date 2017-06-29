@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 )
 
 const appkey = "Temp Key"
@@ -12,9 +13,23 @@ const appkey = "Temp Key"
 func init() {
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/search_location", search_location)
+	http.HandleFunc("/annotate", annotate)
 }
 
-type LocationRequest struct{}
+func lookupAndRespond(w http.ResponseWriter, ip string, time_milli int64) {
+	fmt.Fprintf(w, "I got ip %s and time since epoch %d.", ip, time_milli)
+}
+
+func annotate(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	ip := query.Get("ip_addr")
+	time_milli, err := strconv.ParseInt(query.Get("since_epoch"), 10, 64)
+	if err != nil {
+		fmt.Fprintf(w, "INVALID TIME since_epoch, %s, %s, %s!!!", err, ip, query.Get("since_epoch"))
+		return
+	}
+	lookupAndRespond(w, ip, time_milli)
+}
 
 func search_location(w http.ResponseWriter, r *http.Request) {
 	if r.ContentLength == 0 {
@@ -37,7 +52,7 @@ func search_location(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "CANNOT PARSE REQUEST")
 		return
 	}
-	loc_map := location_request.(map[string]interface{})
+	loc_map := location_request.(map[string]interface{}) // Patch generic interface to a map of JSON key/value pairs
 	fmt.Fprint(w, loc_map["IP_Addr"])
 }
 
