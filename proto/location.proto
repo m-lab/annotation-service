@@ -1,0 +1,27 @@
+
+
+syntax = "proto3";
+package annotator;
+
+message Location {
+  int32 area_code = 1;
+  string city = 2;
+  string continent_code = 3;
+  string country_code = 4;
+  string country_code3 = 5;
+  string country_name = 6;
+  double latitude = 7;
+  double longitude = 8;
+  int32 metro_code = 9;
+  string postal_code = 10;
+  string region = 11;
+}
+
+message LocationRequest {
+  string IP_Addr = 1;
+  int64  timestamp = 2;
+}
+
+message LocationResponse{
+  Location Found_Location = 1;
+}
