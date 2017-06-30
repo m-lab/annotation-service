@@ -5,12 +5,16 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strconv"
 )
 
 const appkey = "Temp Key"
 
+var match_ip *regexp.Regexp
+
 func init() {
+	match_ip, _ = regexp.Compile(`^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|(\d|[a-fA-F]){1,4}:(\d|[a-fA-F]){1,4}:(\d|[a-fA-F]){1,4}:(\d|[a-fA-F]){1,4}:(\d|[a-fA-F]){1,4}:(\d|[a-fA-F]){1,4}:(\d|[a-fA-F]){1,4}:(\d|[a-fA-F]){1,4})$`)
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/search_location", search_location)
 	http.HandleFunc("/annotate", annotate)
@@ -25,7 +29,11 @@ func annotate(w http.ResponseWriter, r *http.Request) {
 	ip := query.Get("ip_addr")
 	time_milli, err := strconv.ParseInt(query.Get("since_epoch"), 10, 64)
 	if err != nil {
-		fmt.Fprintf(w, "INVALID TIME since_epoch, %s, %s, %s!!!", err, ip, query.Get("since_epoch"))
+		fmt.Fprint(w, "INVALID TIME!")
+		return
+	}
+	if !match_ip.MatchString(ip) {
+		fmt.Fprint(w, "NOT A RECOGNIZED IP FORMAT!")
 		return
 	}
 	lookupAndRespond(w, ip, time_milli)
