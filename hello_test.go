@@ -1,6 +1,7 @@
 package annotator
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
@@ -48,7 +49,11 @@ func Test_annotate(t *testing.T) {
 	}
 	for _, test := range tests {
 		w := httptest.NewRecorder()
-		r := httptest.NewRequest("GET", "/annotate?ip_addr="+url.QueryEscape(test.ip)+"&since_epoch="+url.QueryEscape(test.time), nil)
+		//This only works after GO 1.7
+		//r := httptest.NewRequest("GET", "/annotate?ip_addr="+url.QueryEscape(test.ip)+"&since_epoch="+url.QueryEscape(test.time), nil)
+		//This works for GO 1.6
+		r := &http.Request{}
+		r.URL, _ = url.Parse("/annotate?ip_addr=" + url.QueryEscape(test.ip) + "&since_epoch=" + url.QueryEscape(test.time))
 		annotate(w, r)
 		body := w.Body.String()
 		if test.usestr && string(body) != test.res {
