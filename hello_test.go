@@ -1,7 +1,6 @@
 package annotator
 
 import (
-	"io/ioutil"
 	"net/http/httptest"
 	"net/url"
 	"testing"
@@ -21,7 +20,7 @@ func Test_lookupAndRespond(t *testing.T) {
 	for _, test := range tests {
 		w := httptest.NewRecorder()
 		lookupAndRespond(w, test.ip, test.time)
-		body, _ := ioutil.ReadAll(w.Result().Body)
+		body := w.Body.String()
 		if string(body) != test.res {
 			t.Errorf("Got \"%s\", wanted \"%s\"!", body, test.res)
 		}
@@ -51,14 +50,14 @@ func Test_annotate(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("GET", "/annotate?ip_addr="+url.QueryEscape(test.ip)+"&since_epoch="+url.QueryEscape(test.time), nil)
 		annotate(w, r)
-		body, _ := ioutil.ReadAll(w.Result().Body)
+		body := w.Body.String()
 		if test.usestr && string(body) != test.res {
 			t.Errorf("Got \"%s\", expected \"%s\".", body, test.res)
 		}
 		if !test.usestr {
 			tw := httptest.NewRecorder()
 			lookupAndRespond(tw, test.ip, test.time_num)
-			tbody, _ := ioutil.ReadAll(tw.Result().Body)
+			tbody := tw.Body.String()
 			if string(body) != string(tbody) {
 				t.Errorf("Got \"%s\", expected \"%s\".", body, tbody)
 			}
