@@ -36,7 +36,7 @@ func setupPrometheus() {
 }
 
 func init() {
-	match_ip, _ = regexp.Compile(`^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|(\d|[a-fA-F]){1,4}:(\d|[a-fA-F]){1,4}:(\d|[a-fA-F]){1,4}:(\d|[a-fA-F]){1,4}:(\d|[a-fA-F]){1,4}:(\d|[a-fA-F]){1,4}:(\d|[a-fA-F]){1,4}:(\d|[a-fA-F]){1,4})$`)
+	match_ip, _ = regexp.Compile(`^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|(\d|[a-fA-F]){0,4}:(\d|[a-fA-F]){0,4}:(\d|[a-fA-F]){0,4}:(\d|[a-fA-F]){0,4}:(\d|[a-fA-F]){0,4}:(\d|[a-fA-F]){0,4}:(\d|[a-fA-F]){0,4}:(\d|[a-fA-F]){0,4})$`)
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/search_location", search_location)
 	http.HandleFunc("/annotate", annotate)
