@@ -54,7 +54,23 @@ func Test_annotate(t *testing.T) {
 		//This works for GO 1.6
 		r := &http.Request{}
 		r.URL, _ = url.Parse("/annotate?ip_addr=" + url.QueryEscape(test.ip) + "&since_epoch=" + url.QueryEscape(test.time))
+
+		i, d := false, false
+		metrics_activeRequests = gaugeMock{&i, &d}
+		obc := 0
+		metrics_requestTimes = summaryMock{&obc}
+
 		annotate(w, r)
+
+		metGauge, _ := metrics_activeRequests.(gaugeMock)
+		metSum, _ := metrics_requestTimes.(summaryMock)
+		if !(*metGauge.i && *metGauge.d) {
+			t.Errorf("DIDN'T DO GAUGE METRICS CORRECTLY %t & %t!", *metGauge.i, *metGauge.d)
+		}
+		if *metSum.observeCount == 0 {
+			t.Error("NEVER CALLED OBSERVE!!")
+		}
+
 		body := w.Body.String()
 		if test.usestr && string(body) != test.res {
 			t.Errorf("Got \"%s\", expected \"%s\".", body, test.res)
