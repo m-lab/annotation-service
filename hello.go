@@ -7,17 +7,40 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const appkey = "Temp Key"
 
 var match_ip *regexp.Regexp
 
+//These vars are the prometheus metrics
+var (
+	metrics_activeRequests = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "annotator_Running_Annotation_Requests_Count",
+		Help: "The current number of unfulfilled annotation service requests.",
+	})
+	metrics_requestTimes = prometheus.NewSummary(prometheus.SummaryOpts{
+		Name: "annotator_Request_Response_Time_Summary",
+		Help: "The response time of each request, in nanoseconds.",
+	})
+)
+
+func setupPrometheus() {
+	http.Handle("/metrics", promhttp.Handler())
+	prometheus.MustRegister(metrics_activeRequests)
+	prometheus.MustRegister(metrics_requestTimes)
+}
+
 func init() {
 	match_ip, _ = regexp.Compile(`^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|(\d|[a-fA-F]){1,4}:(\d|[a-fA-F]){1,4}:(\d|[a-fA-F]){1,4}:(\d|[a-fA-F]){1,4}:(\d|[a-fA-F]){1,4}:(\d|[a-fA-F]){1,4}:(\d|[a-fA-F]){1,4}:(\d|[a-fA-F]){1,4})$`)
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/search_location", search_location)
 	http.HandleFunc("/annotate", annotate)
+	setupPrometheus()
 }
 
 func lookupAndRespond(w http.ResponseWriter, ip string, time_milli int64) {
@@ -25,6 +48,10 @@ func lookupAndRespond(w http.ResponseWriter, ip string, time_milli int64) {
 }
 
 func annotate(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	metrics_activeRequests.Inc()
+	defer metrics_activeRequests.Dec()
+	defer metrics_requestTimes.Observe(float64(time.Since(start).Nanoseconds()))
 	query := r.URL.Query()
 	ip := query.Get("ip_addr")
 	time_milli, err := strconv.ParseInt(query.Get("since_epoch"), 10, 64)
