@@ -29,7 +29,7 @@ func annotate(w http.ResponseWriter, r *http.Request) {
 	metrics_activeRequests.Inc()
 	defer metrics_activeRequests.Dec()
 
-	thread.Sleep(3)
+	time.Sleep(3)
 
 	query := r.URL.Query()
 
