@@ -24,7 +24,9 @@ func lookupAndRespond(w http.ResponseWriter, ip string, time_milli int64) {
 func annotate(w http.ResponseWriter, r *http.Request) {
 	// Setup timers and counters for prometheus metrics.
 	timerStart := time.Now()
-	defer metrics_requestTimes.Observe(float64(time.Since(timerStart).Nanoseconds()))
+	defer func(tStart time.Time) {
+		metrics_requestTimes.Observe(float64(time.Since(tStart).Nanoseconds()))
+	}(timerStart)
 
 	metrics_activeRequests.Inc()
 	defer metrics_activeRequests.Dec()
