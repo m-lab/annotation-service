@@ -3,13 +3,13 @@ package annotator
 import (
 	"bufio"
 	"encoding/csv"
-	"errors"
+//	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
+//	"strings"
 )
 
 const appkey = "Temp Key"
@@ -42,11 +42,11 @@ func search(ipLookUp string, w http.ResponseWriter) Node {
 	list := createList(w)
 	return searchList(list, ipLookUp)
 }
-func newSource(client *http.Client, uri string) {
+/*func newSource(client *http.Client, uri string) {
 	if !strings.HasPrefix(uri, "gs://") {
 		return nil, errors.New("invalid file path: " + uri)
 	}
-}
+}*/
 func createList(w http.ResponseWriter) []Node {
 	list := []Node{}
 
