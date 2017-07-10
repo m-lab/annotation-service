@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type Node struct {
@@ -27,7 +28,22 @@ func lookupAndRespond(w http.ResponseWriter, ip string, time_milli int64) {
 
 func search(ipLookUp string, w http.ResponseWriter) Node {
 	list := createList(w)
-	return searchList(list, ipLookUp)
+	ipDecimal := ip2Dec(ipLookUp) 
+	return searchList(list, ipDecimal)
+}
+
+func ip2Dec(ipLookUp string) int {
+	n := strings.Split(ipLookUp, ".")
+	m := []int{}
+
+	for _, i := range n{
+		j,err := strconv.Atoi(i) 
+		if err != nil{
+			panic(err) 
+		}
+		m  = append(m,j) 
+	}
+	return (m[0] <<24) + (m[1] << 16) + (m[2] << 8) + m[3] 
 }
 
 
@@ -80,16 +96,13 @@ func createList(w http.ResponseWriter) []Node {
 
 	return list
 }
-func searchList(list []Node, ipLookUp string) Node {
+func searchList(list []Node, userIp int) (n Node) {
 
-	userIp, err := strconv.Atoi(ipLookUp)
-	if err != nil {
-		panic(err)
-	}
 	for value := range list {
 		if userIp >= list[value].lowRangeNum && userIp <= list[value].highRangeNum {
 			return list[value]
 		}
 	}
-	panic(err)
+
+	return n
 }
