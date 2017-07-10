@@ -17,10 +17,6 @@ func init() {
 	setupPrometheus()
 }
 
-func lookupAndRespond(w http.ResponseWriter, ip string, time_milli int64) {
-	fmt.Fprintf(w, "I got ip %s and time since epoch %d.", ip, time_milli)
-}
-
 func annotate(w http.ResponseWriter, r *http.Request) {
 	// Setup timers and counters for prometheus metrics.
 	timerStart := time.Now()
