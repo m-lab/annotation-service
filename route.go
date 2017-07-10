@@ -31,8 +31,6 @@ func annotate(w http.ResponseWriter, r *http.Request) {
 	metrics_activeRequests.Inc()
 	defer metrics_activeRequests.Dec()
 
-	time.Sleep(3)
-
 	query := r.URL.Query()
 
 	time_milli, err := strconv.ParseInt(query.Get("since_epoch"), 10, 64)
