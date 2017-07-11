@@ -7,28 +7,6 @@ import (
 	"testing"
 )
 
-func Test_lookupAndRespond(t *testing.T) {
-	tests := []struct {
-		ip   string
-		time int64
-		res  string
-	}{
-		{"192.156.789.234", 625600, "I got ip 192.156.789.234 and time since epoch 625600."},
-		{"192.156.789.234", -625600, "I got ip 192.156.789.234 and time since epoch -625600."},
-		{"192.156.789.234", 0, "I got ip 192.156.789.234 and time since epoch 0."},
-		{"", 0, "I got ip  and time since epoch 0."},
-	}
-	for _, test := range tests {
-		w := httptest.NewRecorder()
-		lookupAndRespond(w, test.ip, test.time)
-		body := w.Body.String()
-		if string(body) != test.res {
-			t.Errorf("Got \"%s\", wanted \"%s\"!", body, test.res)
-		}
-	}
-
-}
-
 func Test_annotate(t *testing.T) {
 	tests := []struct {
 		ip       string
