@@ -9,49 +9,80 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"errors"
 )
 
+
+// Node defines the range of IP addresses per country
 type Node struct {
+	// Low range binary 
 	lowRangeBin  string
+	// High range binary
 	highRangeBin string
+	// Low range dec
 	lowRangeNum  int
+	// High range dec
 	highRangeNum int
+	// Country abreviation
 	countryAbrv  string
+	// Country name 
 	countryName  string
 }
 
+// searches for country codes with search func, and replies to http responder
 func lookupAndRespond(w http.ResponseWriter, ip string, time_milli int64) {
-	n := search(ip, w)
-	fmt.Fprintf(w,
-		"time: %d \n[\n  {\"ip\": \"%s\", \"type\": \"STRING\"},\n  {\"country\": \"%s\", \"type\": \"STRING\"},\n  {\"countryAbrv\": \"%s\", \"type\": \"STRING\"},\n]", time_milli, ip, n.countryName, n.countryAbrv)
+	n,err := search(ip)
+	if err != nil {
+		fmt.Fprintf(w,"ERROR, IP ADDRESS NOT FOUND\n")
+	}else{
+	fmt.Fprintf(w, "time: %d \n[\n  {\"ip\": \"%s\", \"type\": \"STRING\"},\n  {\"country\": \"%s\", \"type\": \"STRING\"},\n  {\"countryAbrv\": \"%s\", \"type\": \"STRING\"},\n]", time_milli, ip, n.countryName, n.countryAbrv)
+	}
 }
 
-func search(ipLookUp string, w http.ResponseWriter) Node {
-	list := createList(w)
-	ipDecimal := ip2Dec(ipLookUp) 
-	return searchList(list, ipDecimal)
+
+// creates a list with given Geo IP Country csv file. 
+// converts parameter (given in bnary IP address) to a decimal 
+func search(ipLookUp string) (*Node, error) {
+	list,err := createList()
+	if err != nil {
+		return nil,err
+	}
+	ipDecimal,err := bin2Dec(ipLookUp)
+	if err != nil {
+		return nil,err
+	}
+	n,err := searchList(list, ipDecimal)
+	if err != nil {
+		return nil,err
+	}
+	return n,nil
 }
 
-func ip2Dec(ipLookUp string) int {
+//converts binary IP address to decimal form. used for search  
+func bin2Dec(ipLookUp string) (int,error) {
 	n := strings.Split(ipLookUp, ".")
 	m := []int{}
 
 	for _, i := range n{
+
+		//error handling is done in the caller 
 		j,err := strconv.Atoi(i) 
 		if err != nil{
-			panic(err) 
+			return 0,err
 		}
+
 		m  = append(m,j) 
 	}
-	return (m[0] <<24) + (m[1] << 16) + (m[2] << 8) + m[3] 
+	return (m[0] <<24) + (m[1] << 16) + (m[2] << 8) + m[3] , nil 
 }
 
-
-func createList(w http.ResponseWriter) []Node {
+//reads in CSV file into an array to be searched through 
+func createList() ([]Node,error) {
+	
 	list := []Node{}
-
+ 
 	if _, err := os.Stat("GeoIPCountryWhois.csv"); os.IsNotExist(err) {
-		fmt.Fprintf(w, "data file not found\n")
+		return nil,err
 	}
 
 	f, _ := os.Open("GeoIPCountryWhois.csv")
@@ -93,16 +124,16 @@ func createList(w http.ResponseWriter) []Node {
 		}
 
 	}
-
-	return list
+	return list,nil
 }
-func searchList(list []Node, userIp int) (n Node) {
 
+// searches through array containing CSV file contents 
+func searchList(list []Node, userIp int)  ( *Node, error) {
 	for value := range list {
 		if userIp >= list[value].lowRangeNum && userIp <= list[value].highRangeNum {
-			return list[value]
+			return &list[value],nil
 		}
 	}
-
-	return n
+	return nil, errors.New("not found\n")
 }
+
