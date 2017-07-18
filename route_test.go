@@ -53,14 +53,6 @@ func Test_annotate(t *testing.T) {
 		if test.usestr && string(body) != test.res {
 			t.Errorf("Got \"%s\", expected \"%s\".", body, test.res)
 		}
-		if !test.usestr {
-			tw := httptest.NewRecorder()
-			lookupAndRespond(tw, test.ip, test.time_num)
-			tbody := tw.Body.String()
-			if string(body) != string(tbody) {
-				t.Errorf("Got \"%s\", expected \"%s\".", body, tbody)
-			}
-		}
 	}
 
 }
