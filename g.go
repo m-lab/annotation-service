@@ -6,6 +6,8 @@ import (
 	"log"
 	"cloud.google.com/go/storage"
 	"google.golang.org/appengine"
+	"io" 
+	//"os"
 )
 
 func lookupAndRespond(r *http.Request, w http.ResponseWriter, ip string, time_milli int64) {
@@ -24,17 +26,18 @@ func createList(r *http.Request, w http.ResponseWriter) {
 		log.Fatal(err) 
 	}
 
-	if client != nil{
-		fmt.Fprintf(w, "GOOD\n") 
-	}
-
-
-	bkt := client.Bucket("gs://m-lab-sandbox") 
+	bkt := client.Bucket("m-lab-sandbox") 
 	
-	obj := bkt.Object("/annotator-data/GeoIPCountryWhois.csv") 
-	r,err := obj.NewReader(ctx) 
+	obj := bkt.Object("annotator-data/testMe.csv") 
+	reader ,err := obj.NewReader(ctx) 
 	if err != nil{
 		fmt.Fprintf(w, "badd\n") 
+		log.Fatal(err) 
 	}
-	defer r.Close()  
+
+	if _, err := io.Copy(w, reader); err != nil {
+		log.Fatal(err) 
+	} 
+
+	defer reader.Close()  
 }
