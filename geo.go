@@ -4,15 +4,13 @@ import (
 	"cloud.google.com/go/storage"
 	"encoding/csv"
 	"errors"
-	"fmt"
-//	"google.golang.org/appengine"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"golang.org/x/net/context"
-	//storage_v1 "google.golang.org/api/storage/v1"
+	"fmt"
 )
 
 // Node defines the range of IP addresses per country
@@ -32,8 +30,8 @@ type Node struct {
 }
 
 // searches for country codes with search func, and replies to http responder
-func lookupAndRespond(r *http.Request, w http.ResponseWriter, ip string, time_milli int64) {
-	n, err := search(w, r, ip)
+func lookupAndRespond(bucket string, bucketObj string,r *http.Request, w http.ResponseWriter, ip string, time_milli int64) {
+	n, err := search(bucket, bucketObj, w, r, ip)
 	if err != nil {
 		fmt.Fprintf(w, "ERROR, IP ADDRESS NOT FOUND\n")
 	} else {
@@ -43,8 +41,8 @@ func lookupAndRespond(r *http.Request, w http.ResponseWriter, ip string, time_mi
 
 // creates a list with given Geo IP Country csv file.
 // converts parameter (given in bnary IP address) to a decimal
-func search(w http.ResponseWriter, r *http.Request, ipLookUp string) (*Node, error) {
-	list, err := createList(w, r)
+func search(bucket string, bucketObj string, w http.ResponseWriter, r *http.Request, ipLookUp string) (*Node, error) {
+	list, err := createList(bucket, bucketObj, w, r)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +76,7 @@ func bin2Dec(ipLookUp string) (int, error) {
 }
 
 //reads in CSV file into an array to be searched through
-func createList(write http.ResponseWriter, request *http.Request) ([]Node, error) {
+func createList(bucket string, bucketObj string, write http.ResponseWriter, request *http.Request) ([]Node, error) {
 
 	list := []Node{}
 
@@ -91,19 +89,15 @@ func createList(write http.ResponseWriter, request *http.Request) ([]Node, error
 	if err != nil {
 		log.Fatal(err)
 	}
+// make parameter / 
+	bkt := client.Bucket(bucket)
 
-	bkt := client.Bucket("test-annotator-sandbox")
-
-	obj := bkt.Object("annotator-data/GeoIPCountryWhois.csv")
+	obj := bkt.Object(bucketObj)
 	reader, err := obj.NewReader(ctx)
 
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	/*if _, err := io.Copy(write, reader); err != nil {
-		log.Fatal(err)
-	} */
 
 	r := csv.NewReader(reader)
 	r.TrimLeadingSpace = true
@@ -117,28 +111,28 @@ func createList(write http.ResponseWriter, request *http.Request) ([]Node, error
 		var newNode Node
 
 		for value := range record {
-			//GO enum version of this?
-			if value == 0 {
-				newNode.lowRangeBin = record[value]
-			} else if value == 1 {
-				newNode.highRangeBin = record[value]
-			} else if value == 2 {
-				temp, err := strconv.Atoi(record[value])
-				if err != nil {
-					break
-				}
-				newNode.lowRangeNum = temp
-			} else if value == 3 {
-				temp, err := strconv.Atoi(record[value])
-				if err != nil {
-					break
-				}
-				newNode.highRangeNum = temp
-			} else if value == 4 {
-				newNode.countryAbrv = record[value]
-			} else if value == 5 {
-				newNode.countryName = record[value]
-				list = append(list, newNode)
+			switch value{
+				case 0: 
+					newNode.lowRangeBin = record[value]
+				case 1: 
+					newNode.highRangeBin = record[value]
+				case 2: 
+					temp, err := strconv.Atoi(record[value])
+					if err != nil {
+						break
+					}
+					newNode.lowRangeNum = temp
+				case 3: 
+	                                temp, err := strconv.Atoi(record[value])
+	                                if err != nil {
+	                                   break
+					}  
+					newNode.highRangeNum = temp
+				case 4:
+					newNode.countryAbrv = record[value]
+				case 5: 
+					newNode.countryName = record[value]
+					list = append(list, newNode)
 			}
 		}
 

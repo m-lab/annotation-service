@@ -41,7 +41,7 @@ func annotate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lookupAndRespond(r, w, ip, time_milli)
+	lookupAndRespond("test-annotator-sandbox","annotator-data/GeoIPCountryWhois.csv",r, w, ip, time_milli)
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
