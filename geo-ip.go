@@ -4,13 +4,13 @@ import (
 	"cloud.google.com/go/storage"
 	"encoding/csv"
 	"errors"
+	"fmt"
+	"golang.org/x/net/context"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
-	"golang.org/x/net/context"
-	"fmt"
 )
 
 // Node defines the range of IP addresses per country
@@ -30,8 +30,8 @@ type Node struct {
 }
 
 // searches for country codes with search func, and replies to http responder
-func lookupAndRespond(bucket string, bucketObj string,r *http.Request, w http.ResponseWriter, ip string, time_milli int64) {
-	n, err := search(bucket, bucketObj, w, r, ip)
+func lookupAndRespond(bucket string, bucketObj string, r *http.Request, w http.ResponseWriter, ip string, time_milli int64) {
+	n, err := search(bucket, bucketObj, r, ip)
 	if err != nil {
 		fmt.Fprintf(w, "ERROR, IP ADDRESS NOT FOUND\n")
 	} else {
@@ -41,8 +41,8 @@ func lookupAndRespond(bucket string, bucketObj string,r *http.Request, w http.Re
 
 // creates a list with given Geo IP Country csv file.
 // converts parameter (given in bnary IP address) to a decimal
-func search(bucket string, bucketObj string, w http.ResponseWriter, r *http.Request, ipLookUp string) (*Node, error) {
-	list, err := createList(bucket, bucketObj, w, r)
+func search(bucket string, bucketObj string, r *http.Request, ipLookUp string) (*Node, error) {
+	list, err := createList(bucket, bucketObj, r)
 	if err != nil {
 		return nil, err
 	}
@@ -76,20 +76,19 @@ func bin2Dec(ipLookUp string) (int, error) {
 }
 
 //reads in CSV file into an array to be searched through
-func createList(bucket string, bucketObj string, write http.ResponseWriter, request *http.Request) ([]Node, error) {
+func createList(bucket string, bucketObj string, request *http.Request) ([]Node, error) {
 
 	list := []Node{}
 
 	//ctx := appengine.NewContext(request)
 	//client, err := storage.NewClient(ctx)
-	ctx := context.Background() 
+	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
-
 
 	if err != nil {
 		log.Fatal(err)
 	}
-// make parameter / 
+
 	bkt := client.Bucket(bucket)
 
 	obj := bkt.Object(bucketObj)
@@ -102,6 +101,7 @@ func createList(bucket string, bucketObj string, write http.ResponseWriter, requ
 	r := csv.NewReader(reader)
 	r.TrimLeadingSpace = true
 
+	//TODO: use scanner instead of forloop
 	for {
 		record, err := r.Read()
 		if err == io.EOF {
@@ -110,29 +110,29 @@ func createList(bucket string, bucketObj string, write http.ResponseWriter, requ
 
 		var newNode Node
 
-		for value := range record {
-			switch value{
-				case 0: 
-					newNode.lowRangeBin = record[value]
-				case 1: 
-					newNode.highRangeBin = record[value]
-				case 2: 
-					temp, err := strconv.Atoi(record[value])
-					if err != nil {
-						break
-					}
-					newNode.lowRangeNum = temp
-				case 3: 
-	                                temp, err := strconv.Atoi(record[value])
-	                                if err != nil {
-	                                   break
-					}  
-					newNode.highRangeNum = temp
-				case 4:
-					newNode.countryAbrv = record[value]
-				case 5: 
-					newNode.countryName = record[value]
-					list = append(list, newNode)
+		for i := range record {
+			switch i {
+			case 0:
+				newNode.lowRangeBin = record[0]
+			case 1:
+				newNode.highRangeBin = record[1]
+			case 2:
+				temp, err := strconv.Atoi(record[2])
+				if err != nil {
+					break
+				}
+				newNode.lowRangeNum = temp
+			case 3:
+				temp, err := strconv.Atoi(record[3])
+				if err != nil {
+					break
+				}
+				newNode.highRangeNum = temp
+			case 4:
+				newNode.countryAbrv = record[4]
+			case 5:
+				newNode.countryName = record[5]
+				list = append(list, newNode)
 			}
 		}
 
@@ -142,9 +142,9 @@ func createList(bucket string, bucketObj string, write http.ResponseWriter, requ
 
 // searches through array containing CSV file contents
 func searchList(list []Node, userIp int) (*Node, error) {
-	for value := range list {
-		if userIp >= list[value].lowRangeNum && userIp <= list[value].highRangeNum {
-			return &list[value], nil
+	for i := range list {
+		if userIp >= list[i].lowRangeNum && userIp <= list[i].highRangeNum {
+			return &list[i], nil
 		}
 	}
 	return nil, errors.New("not found\n")
