@@ -1,15 +1,17 @@
 package annotator
 
 import (
-	"bufio"
+	//"os"
 	"encoding/csv"
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"errors"
+	"log"
+	"cloud.google.com/go/storage"
+	"google.golang.org/appengine"
 )
 
 
@@ -30,8 +32,8 @@ type Node struct {
 }
 
 // searches for country codes with search func, and replies to http responder
-func lookupAndRespond(w http.ResponseWriter, ip string, time_milli int64) {
-	n,err := search(ip)
+func lookupAndRespond(r *http.Request, w http.ResponseWriter, ip string, time_milli int64) {
+	n,err := search(w,r,ip)
 	if err != nil {
 		fmt.Fprintf(w,"ERROR, IP ADDRESS NOT FOUND\n")
 	}else{
@@ -39,11 +41,10 @@ func lookupAndRespond(w http.ResponseWriter, ip string, time_milli int64) {
 	}
 }
 
-
 // creates a list with given Geo IP Country csv file. 
 // converts parameter (given in bnary IP address) to a decimal 
-func search(ipLookUp string) (*Node, error) {
-	list,err := createList()
+func search( w http.ResponseWriter,r *http.Request, ipLookUp string) (*Node, error) {
+	list,err := createList(w,r)
 	if err != nil {
 		return nil,err
 	}
@@ -75,20 +76,34 @@ func bin2Dec(ipLookUp string) (int,error) {
 	}
 	return (m[0] <<24) + (m[1] << 16) + (m[2] << 8) + m[3] , nil 
 }
-
 //reads in CSV file into an array to be searched through 
-func createList() ([]Node,error) {
+func createList( write  http.ResponseWriter, request *http.Request) ([]Node,error) {
 	
 	list := []Node{}
- 
-	if _, err := os.Stat("GeoIPCountryWhois.csv"); os.IsNotExist(err) {
-		return nil,err
+
+	ctx :=  appengine.NewContext(request)
+	client, err := storage.NewClient(ctx)
+	
+	if err != nil{
+		log.Fatal(err) 
 	}
 
-	f, _ := os.Open("GeoIPCountryWhois.csv")
+	bkt := client.Bucket("m-lab-sandbox") 
+	
+	obj := bkt.Object("annotator-data/testMe.csv") 
+	reader ,err := obj.NewReader(ctx) 
+	
+	if err != nil{
+		log.Fatal(err) 
+	}
 
-	r := csv.NewReader(bufio.NewReader(f))
+	/*if _, err := io.Copy(write, reader); err != nil {
+		log.Fatal(err) 
+	} */ 
+
+	r := csv.NewReader(reader) 
 	r.TrimLeadingSpace = true
+	
 	for {
 		record, err := r.Read()
 		if err == io.EOF {
@@ -96,7 +111,7 @@ func createList() ([]Node,error) {
 		}
 
 		var newNode Node
-
+ 
 		for value := range record {
 			//GO enum version of this?
 			if value == 0 {
