@@ -1,8 +1,8 @@
 language: go
 
-script: 
+script:
+- go test -v ~/go/src/github.com/m-lab/annotation-service
 - $TRAVIS_BUILD_DIR/travis/install_gcloud.sh
-- go test -v github.com/annotator-service
 
 go:
   - 1.6
