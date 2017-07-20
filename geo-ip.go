@@ -2,10 +2,11 @@ package annotator
 
 import (
 	"cloud.google.com/go/storage"
+	//"google.golang.org/appengine"
+	"golang.org/x/net/context"
 	"encoding/csv"
 	"errors"
 	"fmt"
-	"golang.org/x/net/context"
 	"io"
 	"log"
 	"net/http"
@@ -30,8 +31,9 @@ type Node struct {
 }
 
 // searches for country codes with search func, and replies to http responder
-func lookupAndRespond(bucket string, bucketObj string, r *http.Request, w http.ResponseWriter, ip string, time_milli int64) {
-	n, err := search(bucket, bucketObj, r, ip)
+func lookupAndRespond(sr *storage.Reader, w http.ResponseWriter, ip string, time_milli int64) {
+	
+	n, err := search(sr,ip)
 	if err != nil {
 		fmt.Fprintf(w, "ERROR, IP ADDRESS NOT FOUND\n")
 	} else {
@@ -41,8 +43,8 @@ func lookupAndRespond(bucket string, bucketObj string, r *http.Request, w http.R
 
 // creates a list with given Geo IP Country csv file.
 // converts parameter (given in bnary IP address) to a decimal
-func search(bucket string, bucketObj string, r *http.Request, ipLookUp string) (*Node, error) {
-	list, err := createList(bucket, bucketObj, r)
+func search(sr *storage.Reader, ipLookUp string) (*Node, error) {
+	list, err := createList(sr)
 	if err != nil {
 		return nil, err
 	}
@@ -75,15 +77,13 @@ func bin2Dec(ipLookUp string) (int, error) {
 	return (m[0] << 24) + (m[1] << 16) + (m[2] << 8) + m[3], nil
 }
 
-//reads in CSV file into an array to be searched through
-func createList(bucket string, bucketObj string, request *http.Request) ([]Node, error) {
+//creates generic reader
+func createReader(bucket string, bucketObj string, ctx context.Context) (*storage.Reader, error) {
 
-	list := []Node{}
-
-	//ctx := appengine.NewContext(request)
-	//client, err := storage.NewClient(ctx)
-	ctx := context.Background()
-	client, err := storage.NewClient(ctx)
+	//ctx := context.Background()
+	//ctx := appengine.NewContext(r) 
+	
+	client,err := storage.NewClient(ctx)
 
 	if err != nil {
 		log.Fatal(err)
@@ -97,6 +97,13 @@ func createList(bucket string, bucketObj string, request *http.Request) ([]Node,
 	if err != nil {
 		log.Fatal(err)
 	}
+	return reader, nil
+
+}
+
+// request isnt needed - only reader is needed for parameter
+func createList(reader io.Reader) ([]Node, error) {
+	list := []Node{}
 
 	r := csv.NewReader(reader)
 	r.TrimLeadingSpace = true
@@ -109,32 +116,27 @@ func createList(bucket string, bucketObj string, request *http.Request) ([]Node,
 		}
 
 		var newNode Node
+		// only statements needed - x forloop x switch
+		newNode.lowRangeBin = record[0]
 
-		for i := range record {
-			switch i {
-			case 0:
-				newNode.lowRangeBin = record[0]
-			case 1:
-				newNode.highRangeBin = record[1]
-			case 2:
-				temp, err := strconv.Atoi(record[2])
-				if err != nil {
-					break
-				}
-				newNode.lowRangeNum = temp
-			case 3:
-				temp, err := strconv.Atoi(record[3])
-				if err != nil {
-					break
-				}
-				newNode.highRangeNum = temp
-			case 4:
-				newNode.countryAbrv = record[4]
-			case 5:
-				newNode.countryName = record[5]
-				list = append(list, newNode)
-			}
+		newNode.highRangeBin = record[1]
+		temp, err := strconv.Atoi(record[2])
+		if err != nil {
+			break
 		}
+		newNode.lowRangeNum = temp
+
+		temp2, err := strconv.Atoi(record[3])
+		if err != nil {
+			break
+		}
+
+		newNode.highRangeNum = temp2
+
+		newNode.countryAbrv = record[4]
+
+		newNode.countryName = record[5]
+		list = append(list, newNode)
 
 	}
 	return list, nil

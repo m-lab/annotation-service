@@ -3,27 +3,31 @@ package annotator
 import (
 	"net/http"
 	"net/http/httptest"
+
+
+	"google.golang.org/appengine/aetest"
+
 	"net/url"
 	"testing"
 )
 
-func Test_annotate(t *testing.T) {
+//test request syntax validation 
+func Test_validate(t *testing.T) {
 	tests := []struct {
 		ip       string
 		time     string
 		res      string
-		usestr   bool
 		time_num int64
 	}{
-		{"192.156.789.234", "625600", "", false, 625600},
-		{"2620:0:1003:1008:dc7a:13d4:dfb3:d622", "625600", "", false, 625600},
-		{"2620:0:1003:1008:DC7A:13D4:DFB3:D622", "625600", "", false, 625600},
-		{"2620:0:1003:1008:dC7A:13d4:dfb3:d622", "625600", "", false, 625600},
-		{"199.666.666.6666", "0", "NOT A RECOGNIZED IP FORMAT!", true, 0},
-		{"199.666.666.66f", "0", "NOT A RECOGNIZED IP FORMAT!", true, 0},
-		{"199.666.666.666", "f", "INVALID TIME!", true, 0},
-		{"199.666.666.6666", "", "INVALID TIME!", true, 0},
-		{"199.666.666.6666", "46d", "INVALID TIME!", true, 0},
+		{"1.10.128.0", "625600", "", 625600},
+		{"2620:0:1003:1008:dc7a:13d4:dfb3:d622", "625600", "", 625600},
+		{"2620:0:1003:1008:DC7A:13D4:DFB3:D622", "625600", "", 625600},
+		{"2620:0:1003:1008:dC7A:13d4:dfb3:d622", "625600", "", 625600},
+		{"199.666.666.6666", "0", "NOT A RECOGNIZED IP FORMAT!", 0},
+		{"199.666.666.66f", "0", "NOT A RECOGNIZED IP FORMAT!", 0},
+		{"199.666.666.666", "f", "INVALID TIME!", 0},
+		{"199.666.666.6666", "", "INVALID TIME!", 0},
+		{"199.666.666.6666", "46d", "INVALID TIME!", 0},
 	}
 	for _, test := range tests {
 		w := httptest.NewRecorder()
@@ -38,7 +42,7 @@ func Test_annotate(t *testing.T) {
 		obc := 0
 		metrics_requestTimes = summaryMock{&obc}
 
-		annotate(w, r)
+		validate(w, r)
 
 		metGauge, _ := metrics_activeRequests.(gaugeMock)
 		metSum, _ := metrics_requestTimes.(summaryMock)
@@ -50,9 +54,50 @@ func Test_annotate(t *testing.T) {
 		}
 
 		body := w.Body.String()
-		if test.usestr && string(body) != test.res {
+		if string(body) != test.res {
 			t.Errorf("Got \"%s\", expected \"%s\".", body, test.res)
 		}
 	}
 
 }
+
+// mimics createClient by creating a testing context. Also tests lookupAndRespond
+func Test_createClient(t *testing.T) {
+	tests := []struct {
+		ip       string
+		time     string
+		res      string
+		time_num int64
+	}{
+		{"1.4.128.0", "625600", "time: 625600 \n[\n  {\"ip\": \"1.4.128.0\", \"type\": \"STRING\"},\n  {\"country\": \"Thailand\", \"type\": \"STRING\"},\n  {\"countryAbrv\": \"TH\", \"type\": \"STRING\"},\n]",  625600},
+		{"1.32.128.1", "625600", "time: 625600 \n[\n  {\"ip\": \"1.32.128.1\", \"type\": \"STRING\"},\n  {\"country\": \"Singapore\", \"type\": \"STRING\"},\n  {\"countryAbrv\": \"SG\", \"type\": \"STRING\"},\n]",  625600},
+		{"MEMEMEME", "625600", "ERROR, IP ADDRESS NOT FOUND\n",  625600},
+
+	}
+	for _, test := range tests {
+		w := httptest.NewRecorder()
+		//This only works after GO 1.7
+		//r := httptest.NewRequest("GET", "/annotate?ip_addr="+url.QueryEscape(test.ip)+"&since_epoch="+url.QueryEscape(test.time), nil)
+		//This works for GO 1.6
+		
+		r := &http.Request{}
+		r.URL, _ = url.Parse("/annotate?ip_addr=" + url.QueryEscape(test.ip) + "&since_epoch=" + url.QueryEscape(test.time))
+
+		ctx, done, err := aetest.NewContext()
+		if err != nil{
+			t.Fatal(err) 
+		}
+		defer done() 
+
+		storageReader,err := createReader("test-annotator-sandbox", "annotator-data/GeoIPCountryWhois.csv",ctx)
+		lookupAndRespond(storageReader,w,test.ip,test.time_num) 
+
+
+		body := w.Body.String()
+                
+		if string(body) != test.res {
+			t.Errorf("\nGot\n%s\"\n\nexpected\n\n\"%s\".", body, test.res)
+                }
+	}
+}
+
