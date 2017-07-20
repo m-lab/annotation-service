@@ -1,8 +1,8 @@
 language: go
 
 script:
-- go test -v ./...
 - $TRAVIS_BUILD_DIR/travis/install_gcloud.sh
+- source "${HOME}/google-cloud-sdk/path.bash.inc" && go test -v ./...
 
 go:
   - 1.6
