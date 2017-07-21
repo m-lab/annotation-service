@@ -2,7 +2,9 @@ language: go
 sudo: required
 script:
 - $TRAVIS_BUILD_DIR/travis/install_gcloud.sh
-- source "${HOME}/google-cloud-sdk/path.bash.inc" && go test -v ./...
+  # //- source "${HOME}/google-cloud-sdk/path.bash.inc" && go test -v ./...
+- export APPENGINE_DEV_APPSERVER="${HOME}/google-cloud-sdk/dev_appserver.py"
+- go test -v ./...
 
 go:
   - 1.6
