@@ -1,7 +1,6 @@
 language: go
 sudo: required
-deploy: 
-- script: $TRAVIS_BUILD_DIR/annotator.sh
+deploy: $TRAVIS_BUILD_DIR/annotator.sh
 go:
   - 1.6
   - 1.8
