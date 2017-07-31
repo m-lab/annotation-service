@@ -2,7 +2,6 @@ package annotator
 
 import (
 	"cloud.google.com/go/storage"
-	//"google.golang.org/appengine"
 	"golang.org/x/net/context"
 	"encoding/csv"
 	"errors"
@@ -31,13 +30,13 @@ type Node struct {
 }
 
 // searches for country codes with search func, and replies to http responder
-func lookupAndRespond(sr *storage.Reader, w http.ResponseWriter, ip string, time_milli int64) {
+func lookupAndRespond(sr *storage.Reader, w http.ResponseWriter, ip string) {
 	
 	n, err := search(sr,ip)
 	if err != nil {
 		fmt.Fprintf(w, "ERROR, IP ADDRESS NOT FOUND\n")
 	} else {
-		fmt.Fprintf(w, "time: %d \n[\n  {\"ip\": \"%s\", \"type\": \"STRING\"},\n  {\"country\": \"%s\", \"type\": \"STRING\"},\n  {\"countryAbrv\": \"%s\", \"type\": \"STRING\"},\n]", time_milli, ip, n.countryName, n.countryAbrv)
+		fmt.Fprintf(w, "[\n  {\"ip\": \"%s\", \"type\": \"STRING\"},\n  {\"country\": \"%s\", \"type\": \"STRING\"},\n  {\"countryAbrv\": \"%s\", \"type\": \"STRING\"},\n]", ip, n.countryName, n.countryAbrv)
 	}
 }
 
@@ -80,9 +79,6 @@ func bin2Dec(ipLookUp string) (int, error) {
 //creates generic reader
 func createReader(bucket string, bucketObj string, ctx context.Context) (*storage.Reader, error) {
 
-	//ctx := context.Background()
-	//ctx := appengine.NewContext(r) 
-	
 	client,err := storage.NewClient(ctx)
 
 	if err != nil {
@@ -108,7 +104,6 @@ func createList(reader io.Reader) ([]Node, error) {
 	r := csv.NewReader(reader)
 	r.TrimLeadingSpace = true
 
-	//TODO: use scanner instead of forloop
 	for {
 		record, err := r.Read()
 		if err == io.EOF {
@@ -116,7 +111,7 @@ func createList(reader io.Reader) ([]Node, error) {
 		}
 
 		var newNode Node
-		// only statements needed - x forloop x switch
+		//TODO: scanner instead of individual arguments 
 		newNode.lowRangeBin = record[0]
 
 		newNode.highRangeBin = record[1]
@@ -136,6 +131,7 @@ func createList(reader io.Reader) ([]Node, error) {
 		newNode.countryAbrv = record[4]
 
 		newNode.countryName = record[5]
+
 		list = append(list, newNode)
 
 	}

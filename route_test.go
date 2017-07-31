@@ -3,15 +3,12 @@ package annotator
 import (
 	"net/http"
 	"net/http/httptest"
-
-
 	"google.golang.org/appengine/aetest"
-
 	"net/url"
 	"testing"
 )
 
-//test request syntax validation 
+//test request syntax validation
 func Test_validate(t *testing.T) {
 	tests := []struct {
 		ip       string
@@ -31,9 +28,7 @@ func Test_validate(t *testing.T) {
 	}
 	for _, test := range tests {
 		w := httptest.NewRecorder()
-		//This only works after GO 1.7
-		//r := httptest.NewRequest("GET", "/annotate?ip_addr="+url.QueryEscape(test.ip)+"&since_epoch="+url.QueryEscape(test.time), nil)
-		//This works for GO 1.6
+		
 		r := &http.Request{}
 		r.URL, _ = url.Parse("/annotate?ip_addr=" + url.QueryEscape(test.ip) + "&since_epoch=" + url.QueryEscape(test.time))
 
@@ -69,35 +64,33 @@ func Test_createClient(t *testing.T) {
 		res      string
 		time_num int64
 	}{
-		{"1.4.128.0", "625600", "time: 625600 \n[\n  {\"ip\": \"1.4.128.0\", \"type\": \"STRING\"},\n  {\"country\": \"Thailand\", \"type\": \"STRING\"},\n  {\"countryAbrv\": \"TH\", \"type\": \"STRING\"},\n]",  625600},
-		{"1.32.128.1", "625600", "time: 625600 \n[\n  {\"ip\": \"1.32.128.1\", \"type\": \"STRING\"},\n  {\"country\": \"Singapore\", \"type\": \"STRING\"},\n  {\"countryAbrv\": \"SG\", \"type\": \"STRING\"},\n]",  625600},
-		{"MEMEMEME", "625600", "ERROR, IP ADDRESS NOT FOUND\n",  625600},
-
+		{"1.4.128.0", "625600", "[\n  {\"ip\": \"1.4.128.0\", \"type\": \"STRING\"},\n  {\"country\": \"Thailand\", \"type\": \"STRING\"},\n  {\"countryAbrv\": \"TH\", \"type\": \"STRING\"},\n]", 625600},
+		{"1.32.128.1", "625600", "[\n  {\"ip\": \"1.32.128.1\", \"type\": \"STRING\"},\n  {\"country\": \"Singapore\", \"type\": \"STRING\"},\n  {\"countryAbrv\": \"SG\", \"type\": \"STRING\"},\n]", 625600},
+		{"MEMEMEME", "625600", "ERROR, IP ADDRESS NOT FOUND\n", 625600},
 	}
 	for _, test := range tests {
 		w := httptest.NewRecorder()
-		//This only works after GO 1.7
-		//r := httptest.NewRequest("GET", "/annotate?ip_addr="+url.QueryEscape(test.ip)+"&since_epoch="+url.QueryEscape(test.time), nil)
-		//This works for GO 1.6
-		
+
 		r := &http.Request{}
 		r.URL, _ = url.Parse("/annotate?ip_addr=" + url.QueryEscape(test.ip) + "&since_epoch=" + url.QueryEscape(test.time))
 
 		ctx, done, err := aetest.NewContext()
-		if err != nil{
-			t.Fatal(err) 
+		if err != nil {
+			t.Fatal(err)
 		}
-		defer done() 
+		defer done()
+		
+		if err != nil {
+			t.Error("validate failed") 
+		}
 
-		storageReader,err := createReader("test-annotator-sandbox", "annotator-data/GeoIPCountryWhois.csv",ctx)
-		lookupAndRespond(storageReader,w,test.ip,test.time_num) 
-
+		storageReader, err := createReader("test-annotator-sandbox", "annotator-data/GeoIPCountryWhois.csv", ctx)
+		lookupAndRespond(storageReader, w, test.ip)
 
 		body := w.Body.String()
-                
+
 		if string(body) != test.res {
 			t.Errorf("\nGot\n%s\"\n\nexpected\n\n\"%s\".", body, test.res)
-                }
+		}
 	}
 }
-
