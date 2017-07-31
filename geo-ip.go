@@ -2,10 +2,10 @@ package annotator
 
 import (
 	"cloud.google.com/go/storage"
-	"golang.org/x/net/context"
 	"encoding/csv"
 	"errors"
 	"fmt"
+	"golang.org/x/net/context"
 	"io"
 	"log"
 	"net/http"
@@ -31,8 +31,8 @@ type Node struct {
 
 // searches for country codes with search func, and replies to http responder
 func lookupAndRespond(sr *storage.Reader, w http.ResponseWriter, ip string) {
-	
-	n, err := search(sr,ip)
+
+	n, err := search(sr, ip)
 	if err != nil {
 		fmt.Fprintf(w, "ERROR, IP ADDRESS NOT FOUND\n")
 	} else {
@@ -79,7 +79,7 @@ func bin2Dec(ipLookUp string) (int, error) {
 //creates generic reader
 func createReader(bucket string, bucketObj string, ctx context.Context) (*storage.Reader, error) {
 
-	client,err := storage.NewClient(ctx)
+	client, err := storage.NewClient(ctx)
 
 	if err != nil {
 		log.Fatal(err)
@@ -111,7 +111,7 @@ func createList(reader io.Reader) ([]Node, error) {
 		}
 
 		var newNode Node
-		//TODO: scanner instead of individual arguments 
+		//TODO: scanner instead of individual arguments
 		newNode.lowRangeBin = record[0]
 
 		newNode.highRangeBin = record[1]

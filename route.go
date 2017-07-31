@@ -1,14 +1,14 @@
 package annotator
 
 import (
-	"time"
 	"errors"
 	"fmt"
+	"google.golang.org/appengine"
 	"net"
 	"net/http"
 	"regexp"
 	"strconv"
-	"google.golang.org/appengine"
+	"time"
 )
 
 var ipRegexp *regexp.Regexp
@@ -44,17 +44,15 @@ func validate(w http.ResponseWriter, r *http.Request) (s string, num time.Time, 
 		fmt.Fprint(w, "INVALID TIME!")
 		return s, num, errors.New("Invalid Time!")
 	}
-	
-
 
 	ip := query.Get("ip_addr")
 
 	if net.ParseIP(ip) == nil {
-		fmt.Fprint(w,"NOT A RECOGNIZED IP FORMAT!") 
-		return s,num,errors.New("Strings dont match.") 
+		fmt.Fprint(w, "NOT A RECOGNIZED IP FORMAT!")
+		return s, num, errors.New("Strings dont match.")
 	}
 
-	return ip, time.Unix(time_milli,0), nil
+	return ip, time.Unix(time_milli, 0), nil
 }
 
 // creates client to be passed to lookupAndRespond()

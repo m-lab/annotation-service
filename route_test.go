@@ -1,9 +1,9 @@
 package annotator
 
 import (
+	"google.golang.org/appengine/aetest"
 	"net/http"
 	"net/http/httptest"
-	"google.golang.org/appengine/aetest"
 	"net/url"
 	"testing"
 )
@@ -28,7 +28,7 @@ func Test_validate(t *testing.T) {
 	}
 	for _, test := range tests {
 		w := httptest.NewRecorder()
-		
+
 		r := &http.Request{}
 		r.URL, _ = url.Parse("/annotate?ip_addr=" + url.QueryEscape(test.ip) + "&since_epoch=" + url.QueryEscape(test.time))
 
@@ -79,9 +79,9 @@ func Test_createClient(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer done()
-		
+
 		if err != nil {
-			t.Error("validate failed") 
+			t.Error("validate failed")
 		}
 
 		storageReader, err := createReader("test-annotator-sandbox", "annotator-data/GeoIPCountryWhois.csv", ctx)
