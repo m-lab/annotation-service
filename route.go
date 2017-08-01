@@ -3,29 +3,49 @@ package annotator
 import (
 	"errors"
 	"fmt"
-	"google.golang.org/appengine"
 	"net"
 	"net/http"
 	"regexp"
 	"strconv"
 	"time"
+
+	"google.golang.org/appengine"
 )
 
-var ipRegexp *regexp.Regexp
+var geoData []Node
 
 func init() {
 	//TODO: if moved to flex, put handlers in main()
+
+	setupPrometheus()
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/annotate", annotate)
-	setupPrometheus()
+	InitializeTable(client *Client) 
 }
+
+/*func InitalizeTable(client){
+
+	ctx := appengine.NewContext(r)
+
+	storageReader, err := createReader("test-annotator-sandbox", "annotator-data/GeoIPCountryWhois.csv", ctx)
+	if err != nil {
+		fmt.Fprint(w, "BAD STORAGE READER\n")
+		return
+	}
+	
+	list, err := createList(storageReader)
+	geoData,err := createList 
+	os.exit
+}*/
 
 func annotate(w http.ResponseWriter, r *http.Request) {
 	ip, time_milli, err := validate(w, r)
 	if err != nil {
 		return
 	}
-	createClient(w, r, ip, time_milli)
+
+	//handle errors here also pass JSON out 
+	lookupAndRespond(list, w, ip)
 }
 
 // validates request syntax
@@ -53,20 +73,6 @@ func validate(w http.ResponseWriter, r *http.Request) (s string, num time.Time, 
 	}
 
 	return ip, time.Unix(time_milli, 0), nil
-}
-
-// creates client to be passed to lookupAndRespond()
-// TODO: use time stamp to determine which file to open.
-func createClient(w http.ResponseWriter, r *http.Request, ip string, time time.Time) {
-
-	ctx := appengine.NewContext(r)
-
-	storageReader, err := createReader("test-annotator-sandbox", "annotator-data/GeoIPCountryWhois.csv", ctx)
-	if err != nil {
-		fmt.Fprint(w, "BAD STORAGE READER\n")
-		return
-	}
-	lookupAndRespond(storageReader, w, ip)
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {

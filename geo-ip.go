@@ -30,9 +30,9 @@ type Node struct {
 }
 
 // searches for country codes with search func, and replies to http responder
-func lookupAndRespond(sr *storage.Reader, w http.ResponseWriter, ip string) {
+func lookupAndRespond(list []Node, w http.ResponseWriter, ip string) {
 
-	n, err := search(sr, ip)
+	n, err := search(list, ip)
 	if err != nil {
 		fmt.Fprintf(w, "ERROR, IP ADDRESS NOT FOUND\n")
 	} else {
@@ -42,8 +42,7 @@ func lookupAndRespond(sr *storage.Reader, w http.ResponseWriter, ip string) {
 
 // creates a list with given Geo IP Country csv file.
 // converts parameter (given in bnary IP address) to a decimal
-func search(sr *storage.Reader, ipLookUp string) (*Node, error) {
-	list, err := createList(sr)
+func search(list []Node, ipLookUp string) (*Node, error) {
 	if err != nil {
 		return nil, err
 	}
