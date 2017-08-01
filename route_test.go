@@ -1,7 +1,6 @@
 package annotator
 
 import (
-	"google.golang.org/appengine/aetest"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -56,8 +55,7 @@ func TestValidate(t *testing.T) {
 
 }
 
-// mimics createClient by creating a testing context. Also tests lookupAndRespond
-func TestCreateClient(t *testing.T) {
+func TestAnnotation(t *testing.T) {
 	tests := []struct {
 		ip       string
 		time     string
@@ -66,32 +64,20 @@ func TestCreateClient(t *testing.T) {
 	}{
 		{"1.4.128.0", "625600", "[\n  {\"ip\": \"1.4.128.0\", \"type\": \"STRING\"},\n  {\"country\": \"Thailand\", \"type\": \"STRING\"},\n  {\"countryAbrv\": \"TH\", \"type\": \"STRING\"},\n]", 625600},
 		{"1.32.128.1", "625600", "[\n  {\"ip\": \"1.32.128.1\", \"type\": \"STRING\"},\n  {\"country\": \"Singapore\", \"type\": \"STRING\"},\n  {\"countryAbrv\": \"SG\", \"type\": \"STRING\"},\n]", 625600},
-		{"MEMEMEME", "625600", "ERROR, IP ADDRESS NOT FOUND\n", 625600},
+		{"MEMEMEME", "625600", "NOT A RECOGNIZED IP FORMAT!", 625600},
 	}
 	for _, test := range tests {
 		w := httptest.NewRecorder()
 
 		r := &http.Request{}
 		r.URL, _ = url.Parse("/annotate?ip_addr=" + url.QueryEscape(test.ip) + "&since_epoch=" + url.QueryEscape(test.time))
-
-		_, done, err := aetest.NewContext()
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer done()
-
-		if err != nil {
-			t.Error("validate failed")
-		}
-
-		//InitializeTable(ctx)
-
+		
 		annotate(w,r) 
 
 		body := w.Body.String()
 
 		if string(body) != test.res {
-			t.Errorf("\nGot\n%s\"\n\nexpected\n\n\"%s\".", body, test.res)
+			t.Errorf("\nGot\n__%s__\nexpected\n__%s__\n", body, test.res)
 		}
 	}
 }
