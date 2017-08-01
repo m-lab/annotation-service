@@ -1,16 +1,9 @@
 package annotator
 
 import (
-	"cloud.google.com/go/storage"
 	"encoding/csv"
-	"errors"
-	"fmt"
-	"golang.org/x/net/context"
 	"io"
-	"log"
-	"net/http"
 	"strconv"
-	"strings"
 )
 
 // Node defines the range of IP addresses per country
@@ -29,7 +22,7 @@ type Node struct {
 	countryName string
 }
 
-// searches for country codes with search func, and replies to http responder
+/*// searches for country codes with search func, and replies to http responder
 func lookupAndRespond(list []Node, w http.ResponseWriter, ip string) {
 
 	n, err := search(list, ip)
@@ -92,7 +85,7 @@ func createReader(bucket string, bucketObj string, ctx context.Context) (*storag
 	return reader, nil
 
 }
-
+*/
 // request isnt needed - only reader is needed for parameter
 func createList(reader io.Reader) ([]Node, error) {
 	list := []Node{}
@@ -111,18 +104,18 @@ func createList(reader io.Reader) ([]Node, error) {
 		newNode.lowRangeBin = record[0]
 
 		newNode.highRangeBin = record[1]
-		temp, err := strconv.Atoi(record[2])
+		binaryString, err := strconv.Atoi(record[2])
 		if err != nil {
 			break
 		}
-		newNode.lowRangeNum = temp
+		newNode.lowRangeNum = binaryString
 
-		temp2, err := strconv.Atoi(record[3])
+		binaryString2, err := strconv.Atoi(record[3])
 		if err != nil {
 			break
 		}
 
-		newNode.highRangeNum = temp2
+		newNode.highRangeNum = binaryString2
 
 		newNode.countryAbrv = record[4]
 
@@ -133,7 +126,7 @@ func createList(reader io.Reader) ([]Node, error) {
 	}
 	return list, nil
 }
-
+/*
 // searches through array containing CSV file contents
 func searchList(list []Node, userIp int) (*Node, error) {
 	for i := range list {
@@ -142,4 +135,4 @@ func searchList(list []Node, userIp int) (*Node, error) {
 		}
 	}
 	return nil, errors.New("not found\n")
-}
+}*/
