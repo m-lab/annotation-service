@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-//tests created list
+//tests correct parsing of createList
 func TestCreateList(t *testing.T) {
 	r, _ := os.Open("testdata/sample.csv")
 
