@@ -1,4 +1,4 @@
-package annotator
+package loader
 
 //Reads in CSV file and creates a node list
 
@@ -11,21 +11,23 @@ import (
 // Node defines the range of IP addresses per country
 type Node struct {
 	// Low range binary
-	lowRangeBin string
+	LowRangeBin string
 	// High range binary
-	highRangeBin string
+	HighRangeBin string
 	// Low range dec
-	lowRangeNum int
+	LowRangeNum int
 	// High range dec
-	highRangeNum int
+	HighRangeNum int
 	// Country abreviation
-	countryAbrv string
+	CountryAbrv string
 	// Country name
-	countryName string
+	CountryName string
 }
-
+func NewNode(lrb,hrb string, lrn,hrn int, ctryA,ctryN string) Node{
+	return Node{lrb,hrb,lrn,hrn,ctryA,ctryN}	
+}
 //Reads file from given reader and creates a node list
-func createList(reader io.Reader) ([]Node, error) {
+func CreateList(reader io.Reader) ([]Node, error) {
 	list := []Node{}
 	r := csv.NewReader(reader)
 	r.TrimLeadingSpace = true
@@ -36,20 +38,20 @@ func createList(reader io.Reader) ([]Node, error) {
 		}
 		var newNode Node
 		//TODO: scanner instead of individual arguments
-		newNode.lowRangeBin = record[0]
-		newNode.highRangeBin = record[1]
+		newNode.LowRangeBin = record[0]
+		newNode.HighRangeBin = record[1]
 		binaryString, err := strconv.Atoi(record[2])
 		if err != nil {
 			break
 		}
-		newNode.lowRangeNum = binaryString
+		newNode.LowRangeNum = binaryString
 		binaryString2, err := strconv.Atoi(record[3])
 		if err != nil {
 			break
 		}
-		newNode.highRangeNum = binaryString2
-		newNode.countryAbrv = record[4]
-		newNode.countryName = record[5]
+		newNode.HighRangeNum = binaryString2
+		newNode.CountryAbrv = record[4]
+		newNode.CountryName = record[5]
 		list = append(list, newNode)
 
 	}
