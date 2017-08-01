@@ -9,7 +9,7 @@ import (
 )
 
 //test request syntax validation
-func Test_validate(t *testing.T) {
+func TestValidate(t *testing.T) {
 	tests := []struct {
 		ip       string
 		time     string
@@ -57,7 +57,7 @@ func Test_validate(t *testing.T) {
 }
 
 // mimics createClient by creating a testing context. Also tests lookupAndRespond
-func Test_createClient(t *testing.T) {
+func TestCreateClient(t *testing.T) {
 	tests := []struct {
 		ip       string
 		time     string

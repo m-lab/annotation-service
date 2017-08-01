@@ -7,7 +7,7 @@ import (
 )
 
 //tests created list
-func Test_createList(t *testing.T) {
+func TestCreateList(t *testing.T) {
 	r, _ := os.Open("testdata/sample.csv")
 
 	list, _ := createList(r)
