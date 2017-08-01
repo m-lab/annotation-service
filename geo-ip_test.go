@@ -9,9 +9,7 @@ import (
 //tests correct parsing of createList
 func TestCreateList(t *testing.T) {
 	r, _ := os.Open("testdata/sample.csv")
-
 	list, _ := createList(r)
-
 	var listComp = []Node{
 		Node{
 			lowRangeBin:  "1.0.1.0",
@@ -46,7 +44,6 @@ func TestCreateList(t *testing.T) {
 			countryName:  "Japan",
 		},
 	}
-
 	if !reflect.DeepEqual(list, listComp) {
 		t.Errorf("lists are not equal.\n")
 	}
