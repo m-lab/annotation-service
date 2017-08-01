@@ -71,8 +71,8 @@ func TestAnnotation(t *testing.T) {
 
 		r := &http.Request{}
 		r.URL, _ = url.Parse("/annotate?ip_addr=" + url.QueryEscape(test.ip) + "&since_epoch=" + url.QueryEscape(test.time))
-		
-		annotate(w,r) 
+
+		annotate(w, r)
 
 		body := w.Body.String()
 
