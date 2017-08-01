@@ -74,7 +74,7 @@ func TestCreateClient(t *testing.T) {
 		r := &http.Request{}
 		r.URL, _ = url.Parse("/annotate?ip_addr=" + url.QueryEscape(test.ip) + "&since_epoch=" + url.QueryEscape(test.time))
 
-		ctx, done, err := aetest.NewContext()
+		_, done, err := aetest.NewContext()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -84,8 +84,9 @@ func TestCreateClient(t *testing.T) {
 			t.Error("validate failed")
 		}
 
-		storageReader, err := createReader("test-annotator-sandbox", "annotator-data/GeoIPCountryWhois.csv", ctx)
-		lookupAndRespond(storageReader, w, test.ip)
+		//InitializeTable(ctx)
+
+		annotate(w,r) 
 
 		body := w.Body.String()
 

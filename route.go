@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"regexp"
 	"strconv"
 	"time"
-
-	"google.golang.org/appengine"
+	"os"
+	
+	"golang.org/x/net/context" 
+//	"google.golang.org/appengine"
 )
 
 var geoData []Node
@@ -20,32 +21,33 @@ func init() {
 	setupPrometheus()
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/annotate", annotate)
-	InitializeTable(client *Client) 
+	InitializeTable() 
 }
 
-/*func InitalizeTable(client){
+func InitializeTable(){
 
-	ctx := appengine.NewContext(r)
+	ctx := context.Background()
 
 	storageReader, err := createReader("test-annotator-sandbox", "annotator-data/GeoIPCountryWhois.csv", ctx)
 	if err != nil {
-		fmt.Fprint(w, "BAD STORAGE READER\n")
 		return
 	}
 	
-	list, err := createList(storageReader)
-	geoData,err := createList 
-	os.exit
-}*/
+	geoData, err = createList(storageReader)
+	if err != nil{
+		os.Exit(1) 	
+	}
+}
 
 func annotate(w http.ResponseWriter, r *http.Request) {
-	ip, time_milli, err := validate(w, r)
+	ip, _, err := validate(w, r)
 	if err != nil {
-		return
+		fmt.Fprint(w, "bad validation") 
+		os.Exit(1) 
 	}
 
 	//handle errors here also pass JSON out 
-	lookupAndRespond(list, w, ip)
+	lookupAndRespond(geoData, w, ip)
 }
 
 // validates request syntax
@@ -63,7 +65,7 @@ func validate(w http.ResponseWriter, r *http.Request) (s string, num time.Time, 
 	if err != nil {
 		fmt.Fprint(w, "INVALID TIME!")
 		return s, num, errors.New("Invalid Time!")
-	}
+	}	
 
 	ip := query.Get("ip_addr")
 

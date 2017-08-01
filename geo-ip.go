@@ -43,9 +43,6 @@ func lookupAndRespond(list []Node, w http.ResponseWriter, ip string) {
 // creates a list with given Geo IP Country csv file.
 // converts parameter (given in bnary IP address) to a decimal
 func search(list []Node, ipLookUp string) (*Node, error) {
-	if err != nil {
-		return nil, err
-	}
 	ipDecimal, err := bin2Dec(ipLookUp)
 	if err != nil {
 		return nil, err
