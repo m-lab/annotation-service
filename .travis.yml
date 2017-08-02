@@ -1,7 +1,8 @@
 language: go
 sudo: required
 before_install:
-- go get $TRAVIS_BUILD_DIR/...
+- go get golang.org/x/net/context
+- go get cloud.google.com/go/storage
 - $TRAVIS_BUILD_DIR/annotator.sh
 go:
 - 1.6
