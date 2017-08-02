@@ -10,6 +10,7 @@ import (
 
 var geoData []parser.Node
 
+//Creates list of IP address Nodes 
 func InitializeTable(ctx context.Context, GCSFolder,GCSFile string) *[]parser.Node{
 
 	if ctx == nil {
@@ -27,6 +28,7 @@ func InitializeTable(ctx context.Context, GCSFolder,GCSFile string) *[]parser.No
 	}
 	return &geoData
 }
+
 //creates generic reader
 func createReader(bucket string, bucketObj string, ctx context.Context) (*storage.Reader, error) {
 
