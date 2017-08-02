@@ -1,10 +1,10 @@
 package downloader
 
 import (
-	"golang.org/x/net/context"
-	"cloud.google.com/go/storage"
 	"log"
 
+	"golang.org/x/net/context"
+	"cloud.google.com/go/storage"
 	"github.com/m-lab/annotation-service/parser"
 )
 
