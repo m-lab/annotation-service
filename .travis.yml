@@ -1,7 +1,8 @@
 language: go
 sudo: required
-before_install:
+script:
 - export GOOGLE_APPLICATION_CREDENTIALS="${HOME}/gcloud-service-key.json" && export APPENGINE_DEV_APPSERVER="${HOME}/google-cloud-sdk/bin/dev_appserver.py" && source "${HOME}/google-cloud-sdk/path.bash.inc" && go test -v $TRAVIS_BUILD_DIR/... 
+before_install:
 - $TRAVIS_BUILD_DIR/annotator.sh
 go:
 - 1.6
