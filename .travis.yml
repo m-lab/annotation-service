@@ -1,6 +1,6 @@
 language: go
 sudo: required
-script: 
+before_install: 
 - $TRAVIS_BUILD_DIR/annotator.sh
 go:
 - 1.6
