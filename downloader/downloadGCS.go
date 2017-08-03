@@ -1,24 +1,24 @@
 package downloader
 
 import (
+	"cloud.google.com/go/storage"
+	"golang.org/x/net/context"
 	"log"
 
-	"golang.org/x/net/context"
-	"cloud.google.com/go/storage"
 	"github.com/m-lab/annotation-service/parser"
 )
 
 var geoData []parser.Node
 
-//Creates list of IP address Nodes 
-func InitializeTable(ctx context.Context, GCSFolder,GCSFile string) *[]parser.Node{
+//Creates list of IP address Nodes
+func InitializeTable(ctx context.Context, GCSFolder, GCSFile string) *[]parser.Node {
 
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	storageReader, err := createReader(GCSFolder,GCSFile,ctx) 
+	storageReader, err := createReader(GCSFolder, GCSFile, ctx)
 	if err != nil {
-		log.Println("storage reader failed")	
+		log.Println("storage reader failed")
 		return nil
 	}
 	geoData, err = parser.CreateList(storageReader)
