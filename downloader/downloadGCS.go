@@ -2,6 +2,7 @@ package downloader
 
 import (
 	"cloud.google.com/go/storage"
+	"errors"
 	"golang.org/x/net/context"
 	"log"
 
@@ -11,41 +12,38 @@ import (
 var geoData []parser.Node
 
 //Creates list of IP address Nodes
-func InitializeTable(ctx context.Context, GCSFolder, GCSFile string) *[]parser.Node {
-
+func InitializeTable(ctx context.Context, GCSFolder, GCSFile string, IPVersion int) ([]parser.Node, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	storageReader, err := createReader(GCSFolder, GCSFile, ctx)
 	if err != nil {
 		log.Println("storage reader failed")
-		return nil
+		return geoData, errors.New("Storage Reader Failed")
 	}
-	geoData, err = parser.CreateList(storageReader)
+	if IPVersion == 4 {
+		geoData, err = parser.CreateListIPv4(storageReader)
+	}
+	if IPVersion == 6 {
+		geoData, err = parser.CreateListIPv6(storageReader)
+	}
 	if err != nil {
 		log.Println("geoData createList failed")
-		return nil
+		return geoData, errors.New("geoData createList Failed")
 	}
-	return &geoData
+	return geoData, nil
 }
 
 //creates generic reader
 func createReader(bucket string, bucketObj string, ctx context.Context) (*storage.Reader, error) {
-
 	client, err := storage.NewClient(ctx)
-
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	bkt := client.Bucket(bucket)
-
-	obj := bkt.Object(bucketObj)
+	obj := client.Bucket(bucket).Object(bucketObj)
 	reader, err := obj.NewReader(ctx)
-
 	if err != nil {
 		log.Fatal(err)
 	}
 	return reader, nil
-
 }

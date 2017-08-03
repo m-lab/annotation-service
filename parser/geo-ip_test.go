@@ -1,88 +1,103 @@
 package parser_test
 
 import (
-	"os"
-	"reflect"
-	"testing"
-	"net"
-
 	"github.com/m-lab/annotation-service/parser"
+	"net"
+	"os"
+	"testing"
 )
-
 
 //tests correct parsing of createList
 func TestCreateListIPv4(t *testing.T) {
 	r, _ := os.Open("testdata/sample.csv")
-	list, _ := parser.CreateList(r)
+	list, _ := parser.CreateListIPv4(r)
 	var listComp = []parser.Node{
 		parser.Node{
-			net.IP{1,0,1,0},
-			net.ParseIP("1.0.3.255"),
+			net.IP{1, 0, 1, 0},
+			net.IP{1, 0, 3, 255},
 			"CN",
 			"China",
 		},
 		parser.Node{
-			net.ParseIP("1.0.4.0"),
-			net.ParseIP("1.0.7.255"),
+			net.IP{1, 0, 4, 0},
+			net.IP{1, 0, 7, 255},
 			"AU",
 			"Australia",
 		},
 		parser.Node{
-			net.ParseIP("1.0.8.0"),
-			net.ParseIP("1.0.15.255"),
+			net.IP{1, 0, 8, 0},
+			net.IP{1, 0, 15, 255},
 			"CN",
 			"China",
 		},
 		parser.Node{
-			net.ParseIP("1.0.16.0"),
-			net.ParseIP("1.0.31.255"),
-			16781312,
-			16785407,
+			net.IP{1, 0, 16, 0},
+			net.IP{1, 0, 31, 255},
 			"JP",
 			"Japan",
 		},
 	}
-	if !reflect.DeepEqual(list, listComp) {
-		t.Errorf("lists are not equal.\n")
+	for index, element := range list {
+		if !element.LowRangeBin.Equal(listComp[index].LowRangeBin) {
+			t.Errorf("LowRangeBin inconsistent\ngot:%v \nwanted:%v", element.LowRangeBin, listComp[index].LowRangeBin)
+		}
+		if !element.HighRangeBin.Equal(listComp[index].HighRangeBin) {
+			t.Errorf("HighRangeBin inconsistent\nngot:%v \nwanted:%v", element.HighRangeBin, listComp[index].HighRangeBin)
+
+		}
+		if element.CountryAbrv != listComp[index].CountryAbrv {
+			t.Errorf("CountryAbrv inconsistent\ngot:%v \nwanted:%v", element.CountryAbrv, listComp[index].CountryAbrv)
+
+		}
+		if element.CountryName != listComp[index].CountryName {
+			t.Errorf("CountryName inconsistent\ngot:%v \nwanted:%v", element.CountryName, listComp[index].CountryName)
+		}
 	}
 }
-/*func TestCreateListIPv6(t *testing.T) {
-	r, _ := os.Open("testdata/IPv6SAAMPLE.csv")
-	list, _ := parser.CreateList(r)
+func TestCreateListIPv6(t *testing.T) {
+	r, _ := os.Open("testdata/IPv6SAMPLE.csv")
+	list, _ := parser.CreateListIPv6(r)
 	var listComp = []parser.Node{
 		parser.Node{
-			"2001:5::",
-			"2001:5:ffff:ffff:ffff:ffff:ffff:ffff",
-			0,
-			0,
-			//42540488558116655331872044393019998208,
-			//42540488637344817846136381986563948543,
+			net.ParseIP("2001:5::"),
+			net.ParseIP("2001:5:ffff:ffff:ffff:ffff:ffff:ffff"),
 			"EU",
+			"N/A",
 		},
 		parser.Node{
-			"2001:200::",
-			"2001:200:ffff:ffff:ffff:ffff:ffff:ffff",
-			42540528726795050063891204319802818560,
-			42540528806023212578155541913346768895,
+			net.ParseIP("2001:200::"),
+			net.ParseIP("2001:200:ffff:ffff:ffff:ffff:ffff:ffff"),
 			"JP",
+			"N/A",
 		},
 		parser.Node{
-			"2001:208::",
-			"2001:208:ffff:ffff:ffff:ffff:ffff:ffff",
-			42540529360620350178005905068154421248,
-			42540529439848512692270242661698371583,
+			net.ParseIP("2001:208::"),
+			net.ParseIP("2001:208:ffff:ffff:ffff:ffff:ffff:ffff"),
 			"SG",
+			"N/A",
 		},
 		parser.Node{
-			"2001:218::",
-			"2001:218:ffff:ffff:ffff:ffff:ffff:ffff",
-			42540530628270950406235306564857626624,
-			42540530707499112920499644158401576959,
+			net.ParseIP("2001:218::"),
+			net.ParseIP("2001:218:ffff:ffff:ffff:ffff:ffff:ffff"),
 			"JP",
+			"N/A",
 		},
 	}
-	if !reflect.DeepEqual(list, listComp) {
-		t.Errorf("lists are not equal.\n")
-	}
-}*/
+	for index, element := range list {
+		if !element.LowRangeBin.Equal(listComp[index].LowRangeBin) {
+			t.Errorf("LowRangeBin inconsistent\ngot:%v \nwanted:%v", element.LowRangeBin, listComp[index].LowRangeBin)
+		}
+		if !element.HighRangeBin.Equal(listComp[index].HighRangeBin) {
+			t.Errorf("HighRangeBin inconsistent\nngot:%v \nwanted:%v", element.HighRangeBin, listComp[index].HighRangeBin)
 
+		}
+		if element.CountryAbrv != listComp[index].CountryAbrv {
+			t.Errorf("CountryAbrv inconsistent\ngot:%v \nwanted:%v", element.CountryAbrv, listComp[index].CountryAbrv)
+
+		}
+		if element.CountryName != listComp[index].CountryName {
+			t.Errorf("CountryName inconsistent\ngot:%v \nwanted:%v", element.CountryName, listComp[index].CountryName)
+		}
+	}
+
+}
