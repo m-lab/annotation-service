@@ -1,10 +1,11 @@
 package parser_test
 
 import (
-	"github.com/m-lab/annotation-service/parser"
 	"net"
 	"os"
 	"testing"
+
+	"github.com/m-lab/annotation-service/parser"
 )
 
 //tests correct parsing of createList

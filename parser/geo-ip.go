@@ -3,9 +3,9 @@ package parser
 //Reads in CSV file and creates a node list
 
 import (
-	"encoding/csv"
 	"io"
-	"net"
+	"net"	
+	"encoding/csv"
 )
 
 // Node defines the range of IP addresses per country
