@@ -11,7 +11,10 @@ import (
 //tests correct parsing of createList
 func TestCreateListIPv4(t *testing.T) {
 	r, _ := os.Open("testdata/IPv4SAMPLE.csv")
-	list, _ := parser.CreateList(r,4)
+	list, err := parser.CreateList(r,4)
+	if err != nil {
+		t.Errorf("Error in creating list") 
+	}
 	var listComp = []parser.Node{
 		parser.Node{
 			net.IP{1, 0, 1, 0},
@@ -57,7 +60,10 @@ func TestCreateListIPv4(t *testing.T) {
 }
 func TestCreateListIPv6(t *testing.T) {
 	r, _ := os.Open("testdata/IPv6SAMPLE.csv")
-	list, _ := parser.CreateList(r,6)
+	list, err := parser.CreateList(r,6)
+	if err != nil {
+		t.Errorf("Error in creating list") 
+	}
 	var listComp = []parser.Node{
 		parser.Node{
 			net.ParseIP("2001:5::"),
@@ -101,4 +107,12 @@ func TestCreateListIPv6(t *testing.T) {
 		}
 	}
 
+}
+
+func TestCorruptedCode(t *testing.T){
+	r, _ := os.Open("testdata/IPv4CORRUPT.csv") 
+	_, err := parser.CreateList(r,4)
+	if err == nil {
+		t.Errorf("did not catch corrupted data") 
+	}
 }
