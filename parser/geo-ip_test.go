@@ -10,8 +10,8 @@ import (
 
 //tests correct parsing of createList
 func TestCreateListIPv4(t *testing.T) {
-	r, _ := os.Open("testdata/sample.csv")
-	list, _ := parser.CreateListIPv4(r)
+	r, _ := os.Open("testdata/IPv4SAMPLE.csv")
+	list, _ := parser.CreateList(r,4)
 	var listComp = []parser.Node{
 		parser.Node{
 			net.IP{1, 0, 1, 0},
@@ -43,7 +43,7 @@ func TestCreateListIPv4(t *testing.T) {
 			t.Errorf("LowRangeBin inconsistent\ngot:%v \nwanted:%v", element.LowRangeBin, listComp[index].LowRangeBin)
 		}
 		if !element.HighRangeBin.Equal(listComp[index].HighRangeBin) {
-			t.Errorf("HighRangeBin inconsistent\nngot:%v \nwanted:%v", element.HighRangeBin, listComp[index].HighRangeBin)
+			t.Errorf("HighRangeBin inconsistent\ngot:%v \nwanted:%v", element.HighRangeBin, listComp[index].HighRangeBin)
 
 		}
 		if element.CountryAbrv != listComp[index].CountryAbrv {
@@ -57,7 +57,7 @@ func TestCreateListIPv4(t *testing.T) {
 }
 func TestCreateListIPv6(t *testing.T) {
 	r, _ := os.Open("testdata/IPv6SAMPLE.csv")
-	list, _ := parser.CreateListIPv6(r)
+	list, _ := parser.CreateList(r,6)
 	var listComp = []parser.Node{
 		parser.Node{
 			net.ParseIP("2001:5::"),

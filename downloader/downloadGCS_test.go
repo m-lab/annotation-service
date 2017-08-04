@@ -20,7 +20,7 @@ func TestInitilizationTableIPv4(t *testing.T) {
 		t.Errorf("InitializeTable failed.")
 	}
 	r, _ := os.Open("testdata/GeoIPCountryWhoisSAMPLE.csv")
-	LocalGeoData, _ := parser.CreateListIPv4(r)
+	LocalGeoData, _ := parser.CreateList(r,4)
 	for index, element := range geoData {
 		if !element.LowRangeBin.Equal(LocalGeoData[index].LowRangeBin) {
 			t.Errorf("LowRangeBin inconsistent\ngot:%v \nwanted:%v", element.LowRangeBin, LocalGeoData[index].LowRangeBin)
@@ -50,7 +50,7 @@ func TestInitilizationTableIPv6(t *testing.T) {
 		t.Errorf("Failed initializing table")
 	}
 	r, _ := os.Open("testdata/GeoLiteCityv6SAMPLE.csv")
-	LocalGeoData, _ := parser.CreateListIPv6(r)
+	LocalGeoData, _ := parser.CreateList(r,6)
 	for index, element := range geoData {
 		if !element.LowRangeBin.Equal(LocalGeoData[index].LowRangeBin) {
 			t.Errorf("LowRangeBin inconsistent\ngot:%v \nwanted:%v", element.LowRangeBin, LocalGeoData[index].LowRangeBin)
