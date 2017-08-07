@@ -1,8 +1,7 @@
-package parser
-
 //Depending on whether user input was an IPv4 or IPv6 IPaddress,
 //respective database file will be read in and a list of Nodes will be created
 //Each node contains a geo-location and its range of IP addresses
+package parser
 
 import (
 	"errors"
