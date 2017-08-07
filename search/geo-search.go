@@ -9,7 +9,6 @@ import (
 	"github.com/m-lab/annotation-service/parser"
 )
 
-// searches through array containing CSV file contents
 func searchList(list []parser.Node, ipLookUp string) (*parser.Node, error) {
 	userIP := net.ParseIP(ipLookUp)
 	for i := range list {
