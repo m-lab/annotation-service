@@ -21,7 +21,7 @@ func InitializeTable(ctx context.Context, GCSFolder, GCSFile string, IPVersion i
 		log.Println("storage reader failed")
 		return geoData, errors.New("Storage Reader Failed")
 	}
-	geoData, err = parser.CreateList(storageReader,IPVersion)
+	geoData, err = parser.CreateList(storageReader, IPVersion)
 	if err != nil {
 		log.Println("geoData createList failed")
 		return geoData, errors.New("geoData createList Failed")
