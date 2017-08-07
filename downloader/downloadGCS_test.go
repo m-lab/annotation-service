@@ -11,12 +11,14 @@ import (
 	"github.com/m-lab/annotation-service/parser"
 )
 
-func TestInitilizationTable(t *testing.T) {
-	testFiles("annotator-data/GeoIPCountryWhoisSAMPLE.csv", 4, "testdata/GeoIPCountryWhoisSAMPLE.csv")
+func TestInitilizationTableIPv4(t *testing.T) {
+	if testFiles("annotator-data/GeoIPCountryWhoisSAMPLE.csv", 4, "testdata/GeoIPCountryWhoisSAMPLE.csv") != nil {
+		t.Fatal("Failed initializing IPv4 table")
+	}
 }
 func TestInitilizationTableIPv6(t *testing.T) {
 	if testFiles("annotator-data/GeoLiteCityv6SAMPLE.csv", 6, "testdata/GeoLiteCityv6SAMPLE.csv") != nil {
-		t.Fatal("Failed initilaizing file")
+		t.Fatal("Failed initilaizing IPv4 table")
 	}
 }
 
