@@ -7,12 +7,13 @@ import (
 	"log"
 
 	"github.com/m-lab/annotation-service/parser"
+
 )
 
-var geoData []parser.Node
 
 //Creates list of IP address Nodes
 func InitializeTable(ctx context.Context, GCSFolder, GCSFile string, IPVersion int) ([]parser.Node, error) {
+	var geoData []parser.Node
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -42,3 +43,5 @@ func createReader(bucket string, bucketObj string, ctx context.Context) (*storag
 	}
 	return reader, nil
 }
+
+

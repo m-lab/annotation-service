@@ -4,12 +4,16 @@ import (
 	"errors"
 	"google.golang.org/appengine/aetest"
 	"os"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
 	"github.com/m-lab/annotation-service/downloader"
 	"github.com/m-lab/annotation-service/parser"
 )
+
 
 func TestInitilizationTableIPv4(t *testing.T) {
 	if testFiles("annotator-data/GeoIPCountryWhoisSAMPLE.csv", 4, "testdata/GeoIPCountryWhoisSAMPLE.csv") != nil {
