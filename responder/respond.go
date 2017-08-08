@@ -13,7 +13,7 @@ import (
 	"github.com/m-lab/annotation-service/search"
 )
 
-var geoDataIPv4 []parser.Node
+var geoData []parser.Node
 //var geoDataIPv6 []parser.Node
 var err error 
 
@@ -21,14 +21,14 @@ func init() {
 	http.HandleFunc("/annotate", Annotate)
 	
 	//TODO: make this work for time stamps. 
-	geoDataIPv4, err = downloader.InitializeTable(nil,"test-annotator-sandbox","annotator-data/GeoIPCountryWhois.csv",4)
+	geoData, err = downloader.InitializeTable(nil,"test-annotator-sandbox","annotator-data/GeoIPCountryWhois.csv",4)
 	if err != nil{
 		errors.New("failure creating list") 
 	}
-	geoDataIPv6, err = downloader.InitializeTable(nil,"test-annotator-sandbox","annotator-data/GeoLiteCityv6.csv",6)
+	/*geoDataIPv6, err = downloader.InitializeTable(nil,"test-annotator-sandbox","annotator-data/GeoLiteCityv6.csv",6)
 	if err != nil{
 		errors.New("failure creating list") 
-	}
+	}*/
 
 }
 func Annotate(w http.ResponseWriter, r *http.Request){

@@ -4,9 +4,6 @@ import (
 	"errors"
 	"google.golang.org/appengine/aetest"
 	"os"
-	"net/http"
-	"net/http/httptest"
-	"net/url"
 	"strings"
 	"testing"
 
