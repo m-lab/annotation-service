@@ -9,7 +9,7 @@ import (
 	"github.com/m-lab/annotation-service/parser"
 )
 
-func searchList(list []parser.Node, ipLookUp string) (*parser.Node, error) {
+func SearchList(list []parser.Node, ipLookUp string) (*parser.Node, error) {
 	userIP := net.ParseIP(ipLookUp)
 	for i := range list {
 		if bytes.Compare(userIP, list[i].LowRangeBin) >= 0 && bytes.Compare(userIP, list[i].HighRangeBin) <= 0 {

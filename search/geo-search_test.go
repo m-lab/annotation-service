@@ -1,4 +1,4 @@
-package search
+package search_test
 
 import (
 	"errors"
@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/m-lab/annotation-service/parser"
+	"github.com/m-lab/annotation-service/search"
 )
 
 var listComp = []parser.Node{
@@ -52,7 +53,7 @@ func TestSearchList(t *testing.T) {
 
 }
 func checkSearch(IPLookUp string, ans parser.Node) error {
-	n, err := searchList(listComp, IPLookUp)
+	n, err := search.SearchList(listComp, IPLookUp)
 	if err != nil {
 		output := strings.Join([]string{"expecting", ans.CountryName, "got: Node not found"}, "")
 		return errors.New(output)
