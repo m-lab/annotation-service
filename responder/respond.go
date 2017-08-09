@@ -9,6 +9,7 @@ import (
 	"time"
 	
 	"github.com/m-lab/annotation-service/parser"
+	"github.com/m-lab/annotation-service/metrics"
 	"github.com/m-lab/annotation-service/downloader"
 	"github.com/m-lab/annotation-service/search"
 )
@@ -20,6 +21,7 @@ var err error
 
 func init() {
 	http.HandleFunc("/annotate", Annotate)
+	metrics.SetupPrometheus() 
 	geoDataIPv4, err = downloader.InitializeTable(nil,"test-annotator-sandbox","annotator-data/MaxMind/GeoIPCountryWhois.csv",4)
 	if err != nil{
 		errors.New("failure creating list") 
@@ -48,6 +50,15 @@ func Annotate(w http.ResponseWriter, r *http.Request){
 // validates request syntax
 // parses request and returns parameters
 func validate(w http.ResponseWriter, r *http.Request) (IPversion int, s string, num time.Time, err error) {
+	// Setup timers and counters for prometheus metrics.
+	timerStart := time.Now()
+	defer func(tStart time.Time) {
+		metrics.Metrics_requestTimes.Observe(float64(time.Since(tStart).Nanoseconds()))
+	}(timerStart)
+
+	metrics.Metrics_activeRequests.Inc()
+	defer metrics.Metrics_activeRequests.Dec()
+
 	query := r.URL.Query()
 
 	//PRETEND THAT THIS IS YYYYMMDD
