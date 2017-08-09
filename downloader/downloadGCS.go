@@ -7,7 +7,6 @@ import (
 	"log"
 
 	"github.com/m-lab/annotation-service/parser"
-
 )
 
 
