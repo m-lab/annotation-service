@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net"
 	"time"
-//	"strings"
 	
 	"github.com/m-lab/annotation-service/parser"
 	"github.com/m-lab/annotation-service/downloader"
@@ -15,9 +14,7 @@ import (
 )
 
 var geoDataIPv4 []parser.Node
-//var geoDataIPv4B []parser.Node
 var geoDataIPv6 []parser.Node
-//var geoDataIPv6B []parser.Node
 
 var err error 
 
@@ -34,23 +31,6 @@ func init() {
 
 
 }
-func updateTables(){
-	/*year,month,day := time.Date()  
-
-	s := []string{"MaxMind/",strconv.Itoa(year),"/",month.String(),"/",strconv.Itoa(day)}
-	ipv4Path := [] string{"s"}
-	ipv4File := []string{stconv.Itoa(year),month.String(),strconv.Itoa(day),""}
-	//TODO: make this work for time stamps. 
-	geoDataIPv4, err = downloader.InitializeTable(nil,"downloader-mlab-sandbox","annotator-data/GeoIPCountryWhois.csv",4)
-	if err != nil{
-		errors.New("failure creating list") 
-	}*/
-	/*geoDataIPv6, err = downloader.InitializeTable(nil,"test-annotator-sandbox","annotator-data/GeoLiteCityv6.csv",6)
-	if err != nil{
-		errors.New("failure creating list") 
-	}*/
-
-}
 func Annotate(w http.ResponseWriter, r *http.Request){
 	IPversion, ip, _, err := validate(w, r)
 	if err != nil {
@@ -64,6 +44,7 @@ func Annotate(w http.ResponseWriter, r *http.Request){
 		}
 	}
 }
+
 // validates request syntax
 // parses request and returns parameters
 func validate(w http.ResponseWriter, r *http.Request) (IPversion int, s string, num time.Time, err error) {
@@ -86,6 +67,7 @@ func validate(w http.ResponseWriter, r *http.Request) (IPversion int, s string, 
 	}
 	return 6, ip, time.Unix(time_milli, 0), nil
 }
+
 // searches for country codes with search func, and replies to http responder
 func lookupAndRespond(list []parser.Node, w http.ResponseWriter, ip string) {
 	n, err := search.SearchList(list, ip)
