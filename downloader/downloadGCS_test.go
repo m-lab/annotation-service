@@ -13,23 +13,23 @@ import (
 
 
 func TestInitilizationTableIPv4(t *testing.T) {
-	if testFiles("annotator-data/MaxMind/GeoIPCountryWhoisSAMPLE.csv", 4, "testdata/GeoIPCountryWhoisSAMPLE.csv") != nil {
+	if testFiles("test-annotator-sandbox","annotator-data/MaxMind/GeoIPCountryWhoisSAMPLE.csv", 4, "testdata/GeoIPCountryWhoisSAMPLE.csv") != nil {
 		t.Fatal("Failed initializing IPv4 table")
 	}
 }
 func TestInitilizationTableIPv6(t *testing.T) {
-	if testFiles("annotator-data/MaxMind/GeoLiteCityv6SAMPLE.csv", 6, "testdata/GeoLiteCityv6SAMPLE.csv") != nil {
+	if testFiles("test-annotator-sandbox","annotator-data/MaxMind/GeoLiteCityv6SAMPLE.csv", 6, "testdata/GeoLiteCityv6SAMPLE.csv") != nil {
 		t.Fatal("Failed initilaizing IPv4 table")
 	}
 }
 
-func testFiles(fileName string, IPversion int, localFile string) error {
+func testFiles(bucket, fileName string, IPversion int, localFile string) error {
 	ctx, done, err := aetest.NewContext()
 	if err != nil {
 		return errors.New("Failed context")
 	}
 	defer done()
-	geoData, err := downloader.InitializeTable(ctx, "test-annotator-sandbox", fileName, IPversion)
+	geoData, err := downloader.InitializeTable(ctx, bucket, fileName, IPversion)
 	if err != nil {
 		return errors.New("Failed initializing table")
 	}

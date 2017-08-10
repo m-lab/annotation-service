@@ -30,7 +30,12 @@ func NewNode(lrb, hrb net.IP, ctryA, ctryN string) Node {
 //Creates a List of nodes for either IPv4 or IPv6 databases.
 func CreateList(reader io.Reader, IPVersion int) ([]Node, error) {
 	list := []Node{}
-	r := csv.NewReader(reader)
+	unzip, err := gzip.NewReader(reader) 
+	if err != nil {
+		return list, errors.New("unzipping didn't work") 
+	}
+	defer unzip.Close()
+	r := csv.NewReader(unzip)
 	r.TrimLeadingSpace = true
 	for {
 		record, err := r.Read()
