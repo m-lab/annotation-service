@@ -9,10 +9,10 @@ import (
 	"github.com/m-lab/annotation-service/parser"
 )
 
-var geoData []parser.Node
 
 //Creates list of IP address Nodes
 func InitializeTable(ctx context.Context, GCSFolder, GCSFile string, IPVersion int) ([]parser.Node, error) {
+	var geoData []parser.Node
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -42,3 +42,20 @@ func createReader(bucket string, bucketObj string, ctx context.Context) (*storag
 	}
 	return reader, nil
 }
+
+/*list := []Node{}	
+	fmt.Println("GOT THIS FAR THO.")	
+	
+	gr, err := gzip.NewReader(reader) 
+	if err != nil{
+		fmt.Println("GZIP.NEWREADER failed.")
+		log.Fatal(err) 
+	}
+	defer gr.Close()
+	fmt.Println("HOW ABOUT THIS FAR??")
+	
+	r := csv.NewReader(gr)
+	if r == nil{
+		fmt.Println("gzip new reader for csv failed")
+	}*/
+
