@@ -7,7 +7,7 @@ import (
 	"errors"
 	"io"
 	"net"
-
+	"compress/gzip"
 	"encoding/csv"
 )
 
@@ -27,16 +27,27 @@ func NewNode(lrb, hrb net.IP, ctryA, ctryN string) Node {
 	return Node{lrb, hrb, ctryA, ctryN}
 }
 
-//Creates a List of nodes for either IPv4 or IPv6 databases.
-func CreateList(reader io.Reader, IPVersion int) ([]Node, error) {
-	list := []Node{}
-	unzip, err := gzip.NewReader(reader) 
-	if err != nil {
-		return list, errors.New("unzipping didn't work") 
+func Unzip(reader io.Reader) *Reader{
+	newReader, err := gzip.NewReader(reader) 
+	if err != nil{
+		log.Fatal(err) 
 	}
-	defer unzip.Close()
-	r := csv.NewReader(unzip)
+	defer newReader.Close() 
+	return newReader() 
+}
+
+//Creates a List of nodes for either IPv4 or IPv6 databases.
+func CreateList(reader io.Reader, IPVersion int, zipFile bool) ([]Node, error) {
+	list := []Node{}
 	r.TrimLeadingSpace = true
+	
+	//if needs to be unzipped 
+	if zipFile{
+		r := csv.NewReader(reader)
+	}else{
+		r := csv.NewReader(reader)
+	}
+	
 	for {
 		record, err := r.Read()
 		if err == io.EOF {
