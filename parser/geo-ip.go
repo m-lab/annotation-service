@@ -12,19 +12,16 @@ import (
 )
 
 // Node defines the range of IP addresses per country
-type Node struct {
-	// Low range binary
-	LowRangeBin net.IP
-	// High range binary
-	HighRangeBin net.IP
-	// Country abreviation
-	CountryAbrv string
-	// Country name
-	CountryName string
+type BlockNode struct {
+	IPAdress net.IPNet
+	Geoname int
+	PostalCode string
+	Latitude string
+	Longitude string 
 }
 
-func NewNode(lrb, hrb net.IP, ctryA, ctryN string) Node {
-	return Node{lrb, hrb, ctryA, ctryN}
+func NewBlockNode(ipa net.IPNet,gn int, pc,lat,long string) BlockNode {
+	return Node{ipa,gn,pc,lat,long}
 }
 
 func Unzip(reader io.Reader) *Reader{
