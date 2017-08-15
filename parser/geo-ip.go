@@ -1,4 +1,3 @@
-//Parser will read in a zipped GeoLite2 Maxmind file.
 //Only files including IPv4 IPv6 and Location (in english)
 //will be read and parsed into lists.
 package parser
