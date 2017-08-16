@@ -38,15 +38,10 @@ func NewLocNode(gn int, cc, cn string, mc int64, ctn string) LocNode {
 }
 
 //Unzips file and calls functions to create IPv4 IPv6 and LocLists
-func Unzip(src string) ([]BlockNode, []BlockNode, []LocNode, error) {
+func Unzip(r *zip.Reader) ([]BlockNode, []BlockNode, []LocNode, error) {
 	var listIPv4 []BlockNode
 	var listIPv6 []BlockNode
 	var listLoc []LocNode
-	r, err := zip.OpenReader(src)
-	if err != nil {
-		return listIPv4, listIPv6, listLoc, err
-	}
-	defer r.Close()
 
 	for _, f := range r.File {
 		if f.Name == "GeoLite2-Country-Blocks-IPv4.csv" {
@@ -56,6 +51,9 @@ func Unzip(src string) ([]BlockNode, []BlockNode, []LocNode, error) {
 			}
 			defer rc.Close()
 			listIPv4, err = CreateIPList(rc)
+			if err != nil {
+				return listIPv4, listIPv6, listLoc, err
+			}
 			if listIPv4 == nil {
 				fmt.Println("IPv4 is nil")
 			}
@@ -66,6 +64,9 @@ func Unzip(src string) ([]BlockNode, []BlockNode, []LocNode, error) {
 				return listIPv4, listIPv6, listLoc, err
 			}
 			defer rc.Close()
+			if err != nil {
+				return listIPv4, listIPv6, listLoc, err
+			}
 			listIPv6, err = CreateIPList(rc)
 		}
 		if f.Name == "GeoLite2-Country-Locations-en.csv" {
@@ -74,10 +75,10 @@ func Unzip(src string) ([]BlockNode, []BlockNode, []LocNode, error) {
 				return listIPv4, listIPv6, listLoc, err
 			}
 			defer rc.Close()
+			if err != nil {
+				return listIPv4, listIPv6, listLoc, err
+			}
 			listLoc, err = CreateLocList(rc)
-		}
-		if err != nil {
-			return listIPv4, listIPv6, listLoc, err
 		}
 	}
 	return listIPv4, listIPv6, listLoc, nil

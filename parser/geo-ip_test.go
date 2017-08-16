@@ -1,16 +1,23 @@
 package parser_test
 
 import (
+	"archive/zip"
 	"errors"
 	"fmt"
-	"github.com/m-lab/annotation-service/parser"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/m-lab/annotation-service/parser"
 )
 
 func TestCreateListIPv4(t *testing.T) {
-	IPv4Test, IPv6Test, LocListTest, err := parser.Unzip("testdata/GeoLiteZIP.zip")
+	//takes source, returns *ReadCloser
+	reader, err := zip.OpenReader("testdata/GeoLiteZIP.zip")
+	if err != nil {
+		t.Error(err)
+	}
+	IPv4Test, IPv6Test, LocListTest, err := parser.Unzip(&(reader.Reader))
 	if err != nil {
 		t.Errorf("Error unzipping and creating lists")
 	}
