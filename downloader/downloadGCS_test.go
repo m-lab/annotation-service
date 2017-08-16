@@ -14,7 +14,7 @@ import (
 )
 
 func TestInitilizationTable(t *testing.T) {
-	err := testFiles("Maxmind/2017/08/15/20170815T200728Z-GeoLite2-City-CSV.zip", "testdata/GeoIPCountryWhoisSAMPLE.csv")
+	err := testFiles("MaxMind/2017/08/15/GeoLite2-City-CSV_20170801.zip", "testdata/GeoLiteZIP.zip")
 	if err != nil {
 		t.Fatal(err)
 		t.Fatal("Failed initializing IPv4 table")
@@ -22,7 +22,7 @@ func TestInitilizationTable(t *testing.T) {
 }
 
 func TestBadGCSFile(t *testing.T) {
-	err := testFiles("Maxmind/2017/08/15/NONEXISTENT.zip", "testdata/GeoIPCountryWhoisSAMPLE.csv")
+	err := testFiles("MaxMind/2017/08/15/NONEXISTENT.zip", "testdata/GeoLiteZIP.zip")
 	if err == nil {
 		t.Fatal(err)
 		t.Fatal("Failed to recognize nonexistant file")
@@ -35,12 +35,12 @@ func testFiles(fileName string, localFile string) error {
 		return errors.New("Failed context")
 	}
 	defer done()
-	IPv4GCS, IPv6GCS, LocGCS, err := downloader.InitializeTable(ctx, "downloader-mlab-sandbox", fileName)
+	IPv4GCS, IPv6GCS, LocGCS, err := downloader.InitializeTable(ctx, "test-annotator-sandbox", fileName)
 	if err != nil {
 		return errors.New("Failed initializing table")
 	}
 	//test with local files
-	reader, err := zip.OpenReader("testdata/GeoLiteZIP.zip")
+	reader, err := zip.OpenReader(localFile)
 	if err != nil {
 		return errors.New("error unzipping local file")
 	}
