@@ -14,18 +14,10 @@ import (
 )
 
 func TestInitilizationTable(t *testing.T) {
-	err := testFiles("MaxMind/2017/08/15/GeoLite2-City-CSV_20170801.zip", "testdata/GeoLiteZIP.zip")
+	err := testFiles("MaxMind/2017/08/15/GeoLite2City.zip", "testdata/GeoLite2City.zip")
 	if err != nil {
 		t.Fatal(err)
 		t.Fatal("Failed initializing IPv4 table")
-	}
-}
-
-func TestBadGCSFile(t *testing.T) {
-	err := testFiles("MaxMind/2017/08/15/NONEXISTENT.zip", "testdata/GeoLiteZIP.zip")
-	if err == nil {
-		t.Fatal(err)
-		t.Fatal("Failed to recognize nonexistant file")
 	}
 }
 
@@ -80,8 +72,6 @@ func compareIPLists(list, listComp []parser.BlockNode) error {
 		}
 		if element.Latitude != listComp[index].Latitude {
 			output := strings.Join([]string{"Latitude inconsistent\ngot:", strconv.FormatFloat(element.Latitude, 'f', 6, 64), " \nwanted:", strconv.FormatFloat(listComp[index].Latitude, 'f', 6, 64)}, "")
-			fmt.Println(element)
-			fmt.Println(listComp[index])
 			fmt.Println(output)
 			return errors.New(output)
 		}

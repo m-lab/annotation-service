@@ -13,7 +13,7 @@ import (
 
 func TestCreateListIPv4(t *testing.T) {
 	//takes source, returns *ReadCloser
-	reader, err := zip.OpenReader("testdata/GeoLiteZIP.zip")
+	reader, err := zip.OpenReader("testdata/GeoLite2City.zip")
 	if err != nil {
 		t.Error(err)
 	}
@@ -122,8 +122,6 @@ func compareIPLists(list, listComp []parser.BlockNode) error {
 		}
 		if element.Latitude != listComp[index].Latitude {
 			output := strings.Join([]string{"Latitude inconsistent\ngot:", strconv.FormatFloat(element.Latitude, 'f', 6, 64), " \nwanted:", strconv.FormatFloat(listComp[index].Latitude, 'f', 6, 64)}, "")
-			fmt.Println(element)
-			fmt.Println(listComp[index])
 			fmt.Println(output)
 			return errors.New(output)
 		}
