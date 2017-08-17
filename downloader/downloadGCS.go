@@ -17,13 +17,13 @@ func InitializeTable(ctx context.Context, GCSFolder, GCSFile string) ([]parser.B
 	var IPv4List []parser.BlockNode
 	// IPv6 database
 	var IPv6List []parser.BlockNode
-	// Location database 
+	// Location database
 	var LocationList []parser.LocationNode
 
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	zipReader,err := createReader(GCSFolder, GCSFile, ctx)
+	zipReader, err := createReader(GCSFolder, GCSFile, ctx)
 	if err != nil {
 		return IPv4List, IPv6List, LocationList, errors.New("Failed creating zipReader")
 	}
@@ -35,21 +35,21 @@ func InitializeTable(ctx context.Context, GCSFolder, GCSFile string) ([]parser.B
 }
 
 // Creates generic reader
-func createReader(bucket string, bucketObj string, ctx context.Context) (*zip.Reader,error) {
+func createReader(bucket string, bucketObj string, ctx context.Context) (*zip.Reader, error) {
 	client, err := storage.NewClient(ctx)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	obj := client.Bucket(bucket).Object(bucketObj)
 
 	// Takes context returns *Reader
 	reader, err := obj.NewReader(ctx)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	bytesSlice, err := ioutil.ReadAll(reader)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	// Takes byte slice returns Reader
@@ -58,5 +58,5 @@ func createReader(bucket string, bucketObj string, ctx context.Context) (*zip.Re
 	// Takes r io.ReaderAt(implements Reader) and size of bytes. returns *Reader
 	zipReader, err := zip.NewReader(r, int64(len(bytesSlice)))
 
-	return zipReader,nil
+	return zipReader, nil
 }

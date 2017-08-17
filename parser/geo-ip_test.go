@@ -3,7 +3,6 @@ package parser_test
 import (
 	"archive/zip"
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -15,11 +14,11 @@ func TestUnzip(t *testing.T) {
 	// Takes source, returns *ReadCloser
 	reader, err := zip.OpenReader("testdata/GeoLite2City.zip")
 	if err != nil {
-		t.Error(err)
+		t.Errorf("Error opening zip file")
 	}
 	IPv4Test, IPv6Test, LocListTest, err := parser.Unzip(&(reader.Reader))
 	if err != nil {
-		t.Errorf("Error unzipping and creating lists")
+		t.Errorf("Error creating lists")
 	}
 	var IPv6List = []parser.BlockNode{
 		parser.BlockNode{
@@ -103,6 +102,7 @@ func TestUnzip(t *testing.T) {
 		t.Errorf("Location lists are not equal")
 	}
 }
+
 func TestCorruptedData(t *testing.T) {
 	reader, err := zip.OpenReader("testdata/GeoLite2CityCORRUPT.zip")
 	if err != nil {
@@ -113,62 +113,54 @@ func TestCorruptedData(t *testing.T) {
 		t.Errorf("failed to recognize corrupted data")
 	}
 }
+
 func compareIPLists(list, listComp []parser.BlockNode) error {
 	for index, element := range list {
 		if element.IPAddress != listComp[index].IPAddress {
 			output := strings.Join([]string{"IPAddress inconsistent\ngot:", element.IPAddress, " \nwanted:", listComp[index].IPAddress}, "")
-			fmt.Println(output)
 			return errors.New(output)
 		}
 		if element.Geoname != listComp[index].Geoname {
 			output := strings.Join([]string{"Geoname inconsistent\ngot:", strconv.Itoa(element.Geoname), " \nwanted:", strconv.Itoa(listComp[index].Geoname)}, "")
-			fmt.Println(output)
 			return errors.New(output)
 		}
 		if element.PostalCode != listComp[index].PostalCode {
 			output := strings.Join([]string{"PostalCode inconsistent\ngot:", element.PostalCode, " \nwanted:", listComp[index].PostalCode}, "")
-			fmt.Println(output)
 			return errors.New(output)
 		}
 		if element.Latitude != listComp[index].Latitude {
 			output := strings.Join([]string{"Latitude inconsistent\ngot:", strconv.FormatFloat(element.Latitude, 'f', 6, 64), " \nwanted:", strconv.FormatFloat(listComp[index].Latitude, 'f', 6, 64)}, "")
-			fmt.Println(output)
 			return errors.New(output)
 		}
 		if element.Longitude != listComp[index].Longitude {
 			output := strings.Join([]string{"Longitude inconsistent\ngot:", strconv.FormatFloat(element.Longitude, 'f', 6, 64), " \nwanted:", strconv.FormatFloat(listComp[index].Longitude, 'f', 6, 64)}, "")
-			fmt.Println(output)
 			return errors.New(output)
 		}
 
 	}
 	return nil
 }
+
 func compareLocLists(list, listComp []parser.LocationNode) error {
 	for index, element := range list {
 		if element.Geoname != listComp[index].Geoname {
 			output := strings.Join([]string{"Geoname inconsistent\ngot:", strconv.Itoa(element.Geoname), " \nwanted:", strconv.Itoa(listComp[index].Geoname)}, "")
-			fmt.Println(output)
 			return errors.New(output)
 		}
 		if element.ContinentCode != listComp[index].ContinentCode {
 			output := strings.Join([]string{"Longitude inconsistent\ngot:", element.ContinentCode, " \nwanted:", listComp[index].ContinentCode}, "")
-			fmt.Println(output)
 			return errors.New(output)
 		}
 		if element.CountryName != listComp[index].CountryName {
 			output := strings.Join([]string{"Longitude inconsistent\ngot:", element.CountryName, " \nwanted:", listComp[index].CountryName}, "")
-			fmt.Println(output)
 			return errors.New(output)
 		}
 		if element.MetroCode != listComp[index].MetroCode {
 			output := strings.Join([]string{"Longitude inconsistent\ngot:", strconv.FormatInt(element.MetroCode, 16), " \nwanted:", strconv.FormatInt(listComp[index].MetroCode, 16)}, "")
-			fmt.Println(output)
 			return errors.New(output)
 		}
 		if element.CityName != listComp[index].CityName {
 			output := strings.Join([]string{"Longitude inconsistent\ngot:", element.CityName, " \nwanted:", listComp[index].CityName}, "")
-			fmt.Println(output)
 			return errors.New(output)
 		}
 	}

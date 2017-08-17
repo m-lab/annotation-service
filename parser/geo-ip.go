@@ -41,50 +41,50 @@ func NewLocNode(gn int, cc, cn string, mc int64, ctn string) LocationNode {
 
 // Unzips file and calls functions to create IPv4 IPv6 and LocLists
 func Unzip(r *zip.Reader) ([]BlockNode, []BlockNode, []LocationNode, error) {
-	var listIPv4 []BlockNode
-	var listIPv6 []BlockNode
-	var listLoc []LocationNode
-	// Add metrics
+	var IPv4List []BlockNode
+	var IPv6List []BlockNode
+	var LocationList []LocationNode
+	// Add metricsIPv4List, IPv6List, LocationList
 	for _, f := range r.File {
 		if len(f.Name) >= len("GeoLite2-City-Blocks-IPv4.csv") && f.Name[len(f.Name)-len("GeoLite2-City-Blocks-IPv4.csv"):] == "GeoLite2-City-Blocks-IPv4.csv" {
 			rc, err := f.Open()
 			if err != nil {
-				return listIPv4, listIPv6, listLoc, err
+				return IPv4List, IPv6List, LocationList, err
 			}
 			defer rc.Close()
-			listIPv4, err = CreateIPList(rc)
+			IPv4List, err = CreateIPList(rc)
 			if err != nil {
-				return listIPv4, listIPv6, listLoc, err
+				return IPv4List, IPv6List, LocationList, err
 			}
 		}
 		if len(f.Name) >= len("GeoLite2-City-Blocks-IPv6.csv") && f.Name[len(f.Name)-len("GeoLite2-City-Blocks-IPv6.csv"):] == "GeoLite2-City-Blocks-IPv6.csv" {
 			rc, err := f.Open()
 			if err != nil {
-				return listIPv4, listIPv6, listLoc, err
+				return IPv4List, IPv6List, LocationList, err
 			}
 			defer rc.Close()
-			listIPv6, err = CreateIPList(rc)
+			IPv6List, err = CreateIPList(rc)
 			if err != nil {
-				return listIPv4, listIPv6, listLoc, err
+				return IPv4List, IPv6List, LocationList, err
 			}
 		}
 		if len(f.Name) >= len("GeoLite2-City-Locations-en.csv") && f.Name[len(f.Name)-len("GeoLite2-City-Locations-en.csv"):] == "GeoLite2-City-Locations-en.csv" {
 			rc, err := f.Open()
 			if err != nil {
-				return listIPv4, listIPv6, listLoc, err
+				return IPv4List, IPv6List, LocationList, err
 			}
 			defer rc.Close()
-			listLoc, err = CreateLocLis	"log"t(rc)
+			LocationList, err = CreateLocationList(rc)
 			if err != nil {
-				return listIPv4, listIPv6, listLoc, err
+				return IPv4List, IPv6List, LocationList, err
 			}
 		}
 	}
-	// TODO: Add metrics for error cases 
-	if listIPv4 == nil || listIPv6 == nil || listLoc == nil {
-		return listIPv4, listIPv6, listLoc, errors.New("Corrupted Data")
+	// TODO: Add metrics for error cases
+	if IPv4List == nil || IPv6List == nil || LocationList == nil {
+		return IPv4List, IPv6List, LocationList, errors.New("Corrupted Data")
 	}
-	return listIPv4, listIPv6, listLoc, nil
+	return IPv4List, IPv6List, LocationList, nil
 }
 
 // Creates a List of nodes for either IPv4 or IPv6 databases.
@@ -109,20 +109,20 @@ func CreateIPList(reader io.Reader) ([]BlockNode, error) {
 		newNode.IPAddress = record[0]
 		newNode.Geoname, err = strconv.Atoi(record[1])
 		if err != nil {
-			if len(record[0]) > 0{
+			if len(record[0]) > 0 {
 				return list, errors.New("Corrupted Data")
-			}	
+			}
 		}
 		newNode.PostalCode = record[6]
 		newNode.Latitude, err = strconv.ParseFloat(record[7], 64)
 		if err != nil {
-			if len(record[7]) > 0{
+			if len(record[7]) > 0 {
 				return list, errors.New("Corrupted Data")
 			}
 		}
 		newNode.Longitude, err = strconv.ParseFloat(record[8], 64)
 		if err != nil {
-			if len(record[8]) > 0{
+			if len(record[8]) > 0 {
 				return list, errors.New("Corrupted Data")
 			}
 		}
@@ -132,7 +132,7 @@ func CreateIPList(reader io.Reader) ([]BlockNode, error) {
 }
 
 // Creates list for location databases
-func CreateLocList(reader io.Reader) ([]LocationNode, error) {
+func CreateLocationList(reader io.Reader) ([]LocationNode, error) {
 	list := []LocationNode{}
 	r := csv.NewReader(reader)
 	r.TrimLeadingSpace = true
@@ -152,9 +152,9 @@ func CreateLocList(reader io.Reader) ([]LocationNode, error) {
 		var newNode LocationNode
 		newNode.Geoname, err = strconv.Atoi(record[0])
 		if err != nil {
-			if len(record[0]) > 0{
+			if len(record[0]) > 0 {
 				return list, errors.New("Corrupted Data")
-			}	
+			}
 		}
 		newNode.ContinentCode = record[2]
 		newNode.CountryName = record[5]
