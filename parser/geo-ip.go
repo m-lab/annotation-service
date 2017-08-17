@@ -42,7 +42,7 @@ func Unzip(r *zip.Reader) ([]BlockNode, []BlockNode, []LocNode, error) {
 	var listIPv4 []BlockNode
 	var listIPv6 []BlockNode
 	var listLoc []LocNode
-
+	// Add metrics
 	for _, f := range r.File {
 		if len(f.Name) >= len("GeoLite2-City-Blocks-IPv4.csv") && f.Name[len(f.Name)-len("GeoLite2-City-Blocks-IPv4.csv"):] == "GeoLite2-City-Blocks-IPv4.csv" {
 			rc, err := f.Open()
@@ -99,7 +99,7 @@ func Unzip(r *zip.Reader) ([]BlockNode, []BlockNode, []LocNode, error) {
 	}
 
 	if listIPv4 == nil || listIPv6 == nil || listLoc == nil {
-		return listIPv4, listIPv6, listLoc, errors.New("Incomplete Data")
+		return listIPv4, listIPv6, listLoc, errors.New("Corrupted Datac")
 	}
 	return listIPv4, listIPv6, listLoc, nil
 }
@@ -122,7 +122,7 @@ func CreateIPList(reader io.Reader) ([]BlockNode, error) {
 			break
 		}
 		if len(record) != 10 {
-			fmt.Println(record)
+			return list, errors.New("Corrupted Data") 
 		}
 		var newNode BlockNode
 		newNode.IPAddress = record[0]
@@ -133,24 +133,11 @@ func CreateIPList(reader io.Reader) ([]BlockNode, error) {
 		newNode.PostalCode = record[6]
 		newNode.Latitude, err = strconv.ParseFloat(record[7], 64)
 		if err != nil {
-			fmt.Println("no latitude")
-			fmt.Println("--------------------")
-			fmt.Println(record)
-			fmt.Println("--------------------")
-			fmt.Println(len(record))
-			fmt.Println("--------------------")
-			return list, err
+			newNode.Latitude = 0
 		}
 		newNode.Longitude, err = strconv.ParseFloat(record[8], 64)
 		if err != nil {
-			fmt.Println("no longitude")
-			fmt.Println("--------------------")
-			fmt.Println(record)
-			fmt.Println("--------------------")
-			fmt.Println(len(record))
-			fmt.Println("--------------------")
-			return list, err
-
+			newNode.Longitude = 0
 		}
 		list = append(list, newNode)
 	}
@@ -173,6 +160,9 @@ func CreateLocList(reader io.Reader) ([]LocNode, error) {
 		record, err := r.Read()
 		if err == io.EOF {
 			break
+		}
+		if len(record) != 13 {
+			return list, errors.New("Corrupted Data") 
 		}
 		var newNode LocNode
 		newNode.Geoname, err = strconv.Atoi(record[0])
