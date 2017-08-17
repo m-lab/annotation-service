@@ -38,18 +38,18 @@ func InitializeTable(ctx context.Context, GCSFolder, GCSFile string) ([]parser.B
 func createReader(bucket string, bucketObj string, ctx context.Context) (*zip.Reader, error) {
 	client, err := storage.NewClient(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("Failed to create client in createReader")
 	}
 	obj := client.Bucket(bucket).Object(bucketObj)
 
 	// Takes context returns *Reader
 	reader, err := obj.NewReader(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("Failed creating new reader in createReader") 
 	}
 	bytesSlice, err := ioutil.ReadAll(reader)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("Failed to create byte slice in createReader")
 	}
 
 	// Takes byte slice returns Reader
