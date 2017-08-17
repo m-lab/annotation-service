@@ -80,7 +80,6 @@ func Unzip(r *zip.Reader) ([]BlockNode, []BlockNode, []LocationNode, error) {
 			}
 		}
 	}
-	// TODO: Add metrics for error cases
 	if IPv4List == nil || IPv6List == nil || LocationList == nil {
 		return IPv4List, IPv6List, LocationList, errors.New("Corrupted Data")
 	}
