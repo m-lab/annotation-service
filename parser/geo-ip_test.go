@@ -12,7 +12,7 @@ import (
 )
 
 func TestUnzip(t *testing.T) {
-	//takes source, returns *ReadCloser
+	// Takes source, returns *ReadCloser
 	reader, err := zip.OpenReader("testdata/GeoLite2City.zip")
 	if err != nil {
 		t.Error(err)
@@ -67,22 +67,22 @@ func TestUnzip(t *testing.T) {
 			119.3061,
 		},
 	}
-	var LocList = []parser.LocNode{
-		parser.LocNode{
+	var LocList = []parser.LocationNode{
+		parser.LocationNode{
 			32909,
 			"AS",
 			"Iran",
 			0,
 			"Shahre Jadide Andisheh",
 		},
-		parser.LocNode{
+		parser.LocationNode{
 			49518,
 			"AF",
 			"Rwanda",
 			0,
 			"",
 		},
-		parser.LocNode{
+		parser.LocationNode{
 			51537,
 			"AF",
 			"Somalia",
@@ -144,7 +144,7 @@ func compareIPLists(list, listComp []parser.BlockNode) error {
 	}
 	return nil
 }
-func compareLocLists(list, listComp []parser.LocNode) error {
+func compareLocLists(list, listComp []parser.LocationNode) error {
 	for index, element := range list {
 		if element.Geoname != listComp[index].Geoname {
 			output := strings.Join([]string{"Geoname inconsistent\ngot:", strconv.Itoa(element.Geoname), " \nwanted:", strconv.Itoa(listComp[index].Geoname)}, "")
