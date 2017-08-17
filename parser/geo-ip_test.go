@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"log"
 
 	"github.com/m-lab/annotation-service/parser"
 )
@@ -129,22 +130,27 @@ func compareIPLists(list, listComp []parser.BlockNode) error {
 	for index, element := range list {
 		if element.IPAddress != listComp[index].IPAddress {
 			output := strings.Join([]string{"IPAddress inconsistent\ngot:", element.IPAddress, " \nwanted:", listComp[index].IPAddress}, "")
+			log.Println(output)
 			return errors.New(output)
 		}
 		if element.Geoname != listComp[index].Geoname {
 			output := strings.Join([]string{"Geoname inconsistent\ngot:", strconv.Itoa(element.Geoname), " \nwanted:", strconv.Itoa(listComp[index].Geoname)}, "")
+			log.Println(output) 
 			return errors.New(output)
 		}
 		if element.PostalCode != listComp[index].PostalCode {
 			output := strings.Join([]string{"PostalCode inconsistent\ngot:", element.PostalCode, " \nwanted:", listComp[index].PostalCode}, "")
+			log.Println(output)
 			return errors.New(output)
 		}
 		if element.Latitude != listComp[index].Latitude {
 			output := strings.Join([]string{"Latitude inconsistent\ngot:", strconv.FormatFloat(element.Latitude, 'f', 6, 64), " \nwanted:", strconv.FormatFloat(listComp[index].Latitude, 'f', 6, 64)}, "")
+			log.Println(output)
 			return errors.New(output)
 		}
 		if element.Longitude != listComp[index].Longitude {
 			output := strings.Join([]string{"Longitude inconsistent\ngot:", strconv.FormatFloat(element.Longitude, 'f', 6, 64), " \nwanted:", strconv.FormatFloat(listComp[index].Longitude, 'f', 6, 64)}, "")
+			log.Println(output)
 			return errors.New(output)
 		}
 
@@ -156,22 +162,27 @@ func compareLocLists(list, listComp []parser.LocationNode) error {
 	for index, element := range list {
 		if element.Geoname != listComp[index].Geoname {
 			output := strings.Join([]string{"Geoname inconsistent\ngot:", strconv.Itoa(element.Geoname), " \nwanted:", strconv.Itoa(listComp[index].Geoname)}, "")
+			log.Println(output)
 			return errors.New(output)
 		}
 		if element.ContinentCode != listComp[index].ContinentCode {
 			output := strings.Join([]string{"Longitude inconsistent\ngot:", element.ContinentCode, " \nwanted:", listComp[index].ContinentCode}, "")
+			log.Println(output)
 			return errors.New(output)
 		}
 		if element.CountryName != listComp[index].CountryName {
 			output := strings.Join([]string{"Longitude inconsistent\ngot:", element.CountryName, " \nwanted:", listComp[index].CountryName}, "")
+			log.Println(output)
 			return errors.New(output)
 		}
 		if element.MetroCode != listComp[index].MetroCode {
 			output := strings.Join([]string{"Longitude inconsistent\ngot:", strconv.FormatInt(element.MetroCode, 16), " \nwanted:", strconv.FormatInt(listComp[index].MetroCode, 16)}, "")
+			log.Println(output)
 			return errors.New(output)
 		}
 		if element.CityName != listComp[index].CityName {
 			output := strings.Join([]string{"Longitude inconsistent\ngot:", element.CityName, " \nwanted:", listComp[index].CityName}, "")
+			log.Println(output)
 			return errors.New(output)
 		}
 	}

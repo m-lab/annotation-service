@@ -7,6 +7,7 @@ import (
 	"errors"
 	"golang.org/x/net/context"
 	"io/ioutil"
+	"log"
 
 	"github.com/m-lab/annotation-service/parser"
 )
@@ -25,10 +26,12 @@ func InitializeTable(ctx context.Context, GCSFolder, GCSFile string) ([]parser.B
 	}
 	zipReader, err := createReader(GCSFolder, GCSFile, ctx)
 	if err != nil {
+		log.Println("createReader() failed")
 		return IPv4List, IPv6List, LocationList, errors.New("Failed creating zipReader")
 	}
 	IPv4List, IPv6List, LocationList, err = parser.Unzip(zipReader)
 	if err != nil {
+		log.Println("Unzip() failed")
 		return IPv4List, IPv6List, LocationList, errors.New("Failed Unzipping and creating lists")
 	}
 	return IPv4List, IPv6List, LocationList, nil
@@ -38,18 +41,21 @@ func InitializeTable(ctx context.Context, GCSFolder, GCSFile string) ([]parser.B
 func createReader(bucket string, bucketObj string, ctx context.Context) (*zip.Reader, error) {
 	client, err := storage.NewClient(ctx)
 	if err != nil {
-		return nil, errors.New("Failed to create client in createReader")
+		log.Println("Failed creating new client")
+		return nil, errors.New("Failed creating new client")
 	}
 	obj := client.Bucket(bucket).Object(bucketObj)
 
 	// Takes context returns *Reader
 	reader, err := obj.NewReader(ctx)
 	if err != nil {
-		return nil, errors.New("Failed creating new reader in createReader") 
+		log.Println("Failed creating new reader")
+		return nil, errors.New("Failed creating new reader") 
 	}
 	bytesSlice, err := ioutil.ReadAll(reader)
 	if err != nil {
-		return nil, errors.New("Failed to create byte slice in createReader")
+		log.Println("Failed to create byte slice")
+		return nil, errors.New("Failed to create byte slice")
 	}
 
 	// Takes byte slice returns Reader

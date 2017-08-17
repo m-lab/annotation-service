@@ -7,6 +7,7 @@ import (
 	"encoding/csv"
 	"errors"
 	"io"
+	"log"
 	"strconv"
 )
 
@@ -49,38 +50,45 @@ func Unzip(r *zip.Reader) ([]BlockNode, []BlockNode, []LocationNode, error) {
 		if len(f.Name) >= len("GeoLite2-City-Blocks-IPv4.csv") && f.Name[len(f.Name)-len("GeoLite2-City-Blocks-IPv4.csv"):] == "GeoLite2-City-Blocks-IPv4.csv" {
 			rc, err := f.Open()
 			if err != nil {
+				log.Println("Failed to open" + f.Name)
 				return IPv4List, IPv6List, LocationList, err
 			}
 			defer rc.Close()
 			IPv4List, err = CreateIPList(rc)
 			if err != nil {
+				log.Println("Failed to create IPv4List")
 				return IPv4List, IPv6List, LocationList, err
 			}
 		}
 		if len(f.Name) >= len("GeoLite2-City-Blocks-IPv6.csv") && f.Name[len(f.Name)-len("GeoLite2-City-Blocks-IPv6.csv"):] == "GeoLite2-City-Blocks-IPv6.csv" {
 			rc, err := f.Open()
 			if err != nil {
+				log.Println("Failed to open" + f.Name)
 				return IPv4List, IPv6List, LocationList, err
 			}
 			defer rc.Close()
 			IPv6List, err = CreateIPList(rc)
 			if err != nil {
+				log.Println("Failed to create IPv6List") 
 				return IPv4List, IPv6List, LocationList, err
 			}
 		}
 		if len(f.Name) >= len("GeoLite2-City-Locations-en.csv") && f.Name[len(f.Name)-len("GeoLite2-City-Locations-en.csv"):] == "GeoLite2-City-Locations-en.csv" {
 			rc, err := f.Open()
 			if err != nil {
+				log.Println("Failed to open" + f.Name)
 				return IPv4List, IPv6List, LocationList, err
 			}
 			defer rc.Close()
 			LocationList, err = CreateLocationList(rc)
 			if err != nil {
+				log.Println("Failed to create LocationList") 
 				return IPv4List, IPv6List, LocationList, err
 			}
 		}
 	}
 	if IPv4List == nil || IPv6List == nil || LocationList == nil {
+		log.Println("Corrupted data, one or more files missing")
 		return IPv4List, IPv6List, LocationList, errors.New("Corrupted Data")
 	}
 	return IPv4List, IPv6List, LocationList, nil
@@ -94,6 +102,7 @@ func CreateIPList(reader io.Reader) ([]BlockNode, error) {
 	// Skip first line
 	_, err := r.Read()
 	if err == io.EOF {
+		log.Println("Empty file") 
 		return list, errors.New("Corrupted Data")
 	}
 	for {
@@ -102,6 +111,7 @@ func CreateIPList(reader io.Reader) ([]BlockNode, error) {
 			break
 		}
 		if len(record) != IPColumnNum {
+			log.Println("Incorrect number of columns in IP list") 
 			return list, errors.New("Corrupted Data")
 		}
 		var newNode BlockNode
@@ -109,6 +119,7 @@ func CreateIPList(reader io.Reader) ([]BlockNode, error) {
 		newNode.Geoname, err = strconv.Atoi(record[1])
 		if err != nil {
 			if len(record[0]) > 0 {
+				log.Println("Geoname was not a number") 
 				return list, errors.New("Corrupted Data")
 			}
 		}
@@ -116,12 +127,14 @@ func CreateIPList(reader io.Reader) ([]BlockNode, error) {
 		newNode.Latitude, err = strconv.ParseFloat(record[7], 64)
 		if err != nil {
 			if len(record[7]) > 0 {
+				log.Println("Latitude was not a number") 
 				return list, errors.New("Corrupted Data")
 			}
 		}
 		newNode.Longitude, err = strconv.ParseFloat(record[8], 64)
 		if err != nil {
 			if len(record[8]) > 0 {
+				log.Println("Longitude was not a number") 
 				return list, errors.New("Corrupted Data")
 			}
 		}
@@ -138,6 +151,7 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, error) {
 	// Skip the first line
 	_, err := r.Read()
 	if err == io.EOF {
+		log.Println("Empty file") 
 		return list, errors.New("Corrupted Data")
 	}
 	for {
@@ -146,12 +160,14 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, error) {
 			break
 		}
 		if len(record) != LocationColumnNum {
+			log.Println("Incorrect number of columns in Location list") 
 			return list, errors.New("Corrupted Data")
 		}
 		var newNode LocationNode
 		newNode.Geoname, err = strconv.Atoi(record[0])
 		if err != nil {
 			if len(record[0]) > 0 {
+				log.Println("Geoname was a number") 
 				return list, errors.New("Corrupted Data")
 			}
 		}
@@ -160,6 +176,7 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, error) {
 		newNode.MetroCode, err = strconv.ParseInt(record[11], 10, 64)
 		if err != nil {
 			if len(record[11]) > 0 {
+				log.Println("MetroCode is not a number")
 				return list, errors.New("Corrupted Data")
 			}
 		}
