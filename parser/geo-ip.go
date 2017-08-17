@@ -104,13 +104,13 @@ func Unzip(r *zip.Reader) ([]BlockNode, []BlockNode, []LocNode, error) {
 	return listIPv4, listIPv6, listLoc, nil
 }
 
-//Creates a List of nodes for either IPv4 or IPv6 databases.
+// Creates a List of nodes for either IPv4 or IPv6 databases.
 func CreateIPList(reader io.Reader) ([]BlockNode, error) {
 	list := []BlockNode{}
 	r := csv.NewReader(reader)
 	r.TrimLeadingSpace = true
 
-	//skip first line
+	// Skip first line
 	_, err := r.Read()
 	if err == io.EOF {
 		fmt.Println("File is empty")
@@ -122,7 +122,7 @@ func CreateIPList(reader io.Reader) ([]BlockNode, error) {
 			break
 		}
 		if len(record) != 10 {
-			return list, errors.New("Corrupted Data") 
+			return list, errors.New("Corrupted Data")
 		}
 		var newNode BlockNode
 		newNode.IPAddress = record[0]
@@ -144,13 +144,13 @@ func CreateIPList(reader io.Reader) ([]BlockNode, error) {
 	return list, nil
 }
 
-//Creates list for location databases
+// Creates list for location databases
 func CreateLocList(reader io.Reader) ([]LocNode, error) {
 	list := []LocNode{}
 	r := csv.NewReader(reader)
 	r.TrimLeadingSpace = true
 
-	//skip the first line
+	// Skip the first line
 	_, err := r.Read()
 	if err == io.EOF {
 		log.Fatal(err)
@@ -162,7 +162,7 @@ func CreateLocList(reader io.Reader) ([]LocNode, error) {
 			break
 		}
 		if len(record) != 13 {
-			return list, errors.New("Corrupted Data") 
+			return list, errors.New("Corrupted Data")
 		}
 		var newNode LocNode
 		newNode.Geoname, err = strconv.Atoi(record[0])
