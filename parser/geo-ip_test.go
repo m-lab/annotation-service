@@ -110,7 +110,7 @@ func TestCorruptedDataMissingColumns(t *testing.T) {
 	}
 	_, _, _, err = parser.Unzip(&(reader.Reader))
 	if err == nil {
-		t.Errorf("failed to recognize corrupted data")
+		t.Errorf("Failed to recognize corrupted data")
 	}
 }
 
@@ -121,7 +121,7 @@ func TestCorruptDataMissingFiles(t *testing.T){
 	}
 	_, _, _, err = parser.Unzip(&(reader.Reader))
 	if err == nil {
-		t.Errorf("failed to recognize corrupted data")
+		t.Errorf("Failed to recognize corrupted data")
 	}
 
 }
