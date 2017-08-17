@@ -1,12 +1,12 @@
 package downloader
 
 import (
-	"cloud.google.com/go/storage"
-	"errors"
-	"golang.org/x/net/context"
 	"archive/zip"
 	"bytes"
+	"cloud.google.com/go/storage"
+	"errors"
 	"fmt"
+	"golang.org/x/net/context"
 	"io/ioutil"
 
 	"github.com/m-lab/annotation-service/parser"
@@ -23,7 +23,7 @@ func InitializeTable(ctx context.Context, GCSFolder, GCSFile string) ([]parser.B
 	}
 	zipReader := createReader(GCSFolder, GCSFile, ctx)
 	if zipReader == nil {
-		fmt.Println("Failed creating reader") 
+		fmt.Println("Failed creating reader")
 		return listIPv4, listIPv6, listLoc, errors.New("failed creating zipReader")
 	}
 	listIPv4, listIPv6, listLoc, err := parser.Unzip(zipReader)
@@ -41,7 +41,7 @@ func createReader(bucket string, bucketObj string, ctx context.Context) *zip.Rea
 		return nil
 	}
 	obj := client.Bucket(bucket).Object(bucketObj)
-	
+
 	//takes context returns *Reader
 	reader, err := obj.NewReader(ctx)
 	if err != nil {
@@ -51,7 +51,7 @@ func createReader(bucket string, bucketObj string, ctx context.Context) *zip.Rea
 	if err != nil {
 		return nil
 	}
-	
+
 	//takes byte slice returns Reader
 	r := bytes.NewReader(bytesSlice)
 
