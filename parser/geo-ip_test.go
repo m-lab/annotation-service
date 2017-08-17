@@ -103,7 +103,7 @@ func TestUnzip(t *testing.T) {
 	}
 }
 
-func TestCorruptedData(t *testing.T) {
+func TestCorruptedDataMissingColumns(t *testing.T) {
 	reader, err := zip.OpenReader("testdata/GeoLite2CityCORRUPT.zip")
 	if err != nil {
 		t.Error(err)
@@ -114,6 +114,17 @@ func TestCorruptedData(t *testing.T) {
 	}
 }
 
+func TestCorruptDataMissingFiles(t *testing.T){
+	reader, err := zip.OpenReader("testdata/GeoLite2CityMissingFilesCORRUPT.zip")
+	if err != nil {
+		t.Error(err)
+	}
+	_, _, _, err = parser.Unzip(&(reader.Reader))
+	if err == nil {
+		t.Errorf("failed to recognize corrupted data")
+	}
+
+}
 func compareIPLists(list, listComp []parser.BlockNode) error {
 	for index, element := range list {
 		if element.IPAddress != listComp[index].IPAddress {
