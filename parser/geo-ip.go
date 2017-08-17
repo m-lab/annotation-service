@@ -43,7 +43,7 @@ func Unzip(r *zip.Reader) ([]BlockNode, []BlockNode, []LocNode, error) {
 	var listLoc []LocNode
 
 	for _, f := range r.File {
-		if f.Name == "GeoLite2-City-Blocks-IPv4.csv"{
+		if len(f.Name)>=len("GeoLite2-City-Blocks-IPv4.csv") && f.Name[len(f.Name) - len("GeoLite2-City-Blocks-IPv4.csv"):] == "GeoLite2-City-Blocks-IPv4.csv"{
 			rc, err := f.Open()
 			if err != nil {
 				fmt.Println("error opening GeoLite2-Country-Blocks-IPv4.csv")
@@ -60,7 +60,7 @@ func Unzip(r *zip.Reader) ([]BlockNode, []BlockNode, []LocNode, error) {
 				fmt.Println("BAAAAD")
 			}
 		}
-		if f.Name == "GeoLite2-City-Blocks-IPv6.csv"{
+		if  len(f.Name)>=len("GeoLite2-City-Blocks-IPv6.csv") && f.Name[len(f.Name) - len("GeoLite2-City-Blocks-IPv6.csv"):] == "GeoLite2-City-Blocks-IPv6.csv"{
 			rc, err := f.Open()
 			if err != nil {
 				fmt.Println("error opening GeoLite2-Country-Blocks-IPv6.csv")
@@ -73,7 +73,7 @@ func Unzip(r *zip.Reader) ([]BlockNode, []BlockNode, []LocNode, error) {
 				return listIPv4, listIPv6, listLoc, err
 			}
 		}
-		if f.Name == "GeoLite2-City-Locations-en.csv" {
+		if len(f.Name)>=len("GeoLite2-City-Locations-en.csv") && f.Name[len(f.Name) - len("GeoLite2-City-Locations-en.csv"):] == "GeoLite2-City-Locations-en.csv" {
 			rc, err := f.Open()
 			if err != nil {
 				fmt.Println("error opening GeoLite2-Country-Locations-en.csv")
@@ -98,7 +98,6 @@ func Unzip(r *zip.Reader) ([]BlockNode, []BlockNode, []LocNode, error) {
 	}
 
 	if listIPv4 == nil || listIPv6 == nil || listLoc == nil {
-		fmt.Println("Incomplete data")
 		return listIPv4, listIPv6, listLoc, errors.New("Incomplete Data")
 	}
 	return listIPv4, listIPv6, listLoc, nil
@@ -121,6 +120,9 @@ func CreateIPList(reader io.Reader) ([]BlockNode, error) {
 		if err == io.EOF {
 			break
 		}
+		if len(record) != 10 {
+			fmt.Println(record)
+		}
 		var newNode BlockNode
 		newNode.IPAddress = record[0]
 		newNode.Geoname, err = strconv.Atoi(record[1])
@@ -131,13 +133,21 @@ func CreateIPList(reader io.Reader) ([]BlockNode, error) {
 		newNode.Latitude, err = strconv.ParseFloat(record[7], 64)
 		if err != nil{
 			fmt.Println("no latitude")
+			fmt.Println("--------------------")
 			fmt.Println(record)
+			fmt.Println("--------------------")
+			fmt.Println(len(record))
+			fmt.Println("--------------------")
 			return list,err
 		}
 		newNode.Longitude, err = strconv.ParseFloat(record[8], 64)
 		if err != nil{
 			fmt.Println("no longitude")
+			fmt.Println("--------------------")
 			fmt.Println(record)
+			fmt.Println("--------------------")
+			fmt.Println(len(record))
+			fmt.Println("--------------------")
 			return list,err
 
 		}

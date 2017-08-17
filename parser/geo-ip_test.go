@@ -11,7 +11,7 @@ import (
 	"github.com/m-lab/annotation-service/parser"
 )
 
-func TestCreateListIPv4(t *testing.T) {
+func TestUnzip(t *testing.T) {
 	//takes source, returns *ReadCloser
 	reader, err := zip.OpenReader("testdata/GeoLite2City.zip")
 	if err != nil {
@@ -103,6 +103,7 @@ func TestCreateListIPv4(t *testing.T) {
 		t.Errorf("Location lists are not equal")
 	}
 }
+
 func compareIPLists(list, listComp []parser.BlockNode) error {
 	for index, element := range list {
 		if element.IPAddress != listComp[index].IPAddress {
