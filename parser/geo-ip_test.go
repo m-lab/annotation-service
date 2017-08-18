@@ -21,22 +21,22 @@ func TestUnzip(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error creating lists")
 	}
-	var IPv6List = []parser.BlockNode{
-		parser.BlockNode{
+	var IPv6List = []parser.IPNode{
+		parser.IPNode{
 			"600:8801:9400:5a1:948b:ab15:dde3:61a3/128",
 			5363990,
 			"91941",
 			32.7596,
 			-116.994,
 		},
-		parser.BlockNode{
+		parser.IPNode{
 			"2001:5::/32",
 			6255148,
 			"",
 			47,
 			8,
 		},
-		parser.BlockNode{
+		parser.IPNode{
 			"2001:200::/40",
 			1861060,
 			"",
@@ -44,22 +44,22 @@ func TestUnzip(t *testing.T) {
 			138,
 		},
 	}
-	var IPv4List = []parser.BlockNode{
-		parser.BlockNode{
+	var IPv4List = []parser.IPNode{
+		parser.IPNode{
 			"1.0.0.0/24",
 			2151718,
 			"3095",
 			-37.7,
 			145.1833,
 		},
-		parser.BlockNode{
+		parser.IPNode{
 			"1.0.1.0/24",
 			1810821,
 			"",
 			26.0614,
 			119.3061,
 		},
-		parser.BlockNode{
+		parser.IPNode{
 			"1.0.2.0/23",
 			1810821,
 			"",
@@ -126,7 +126,7 @@ func TestCorruptDataMissingFiles(t *testing.T){
 	}
 
 }
-func compareIPLists(list, listComp []parser.BlockNode) error {
+func compareIPLists(list, listComp []parser.IPNode) error {
 	for index, element := range list {
 		if element.IPAddress != listComp[index].IPAddress {
 			output := strings.Join([]string{"IPAddress inconsistent\ngot:", element.IPAddress, " \nwanted:", listComp[index].IPAddress}, "")

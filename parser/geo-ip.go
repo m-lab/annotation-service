@@ -1,4 +1,4 @@
-// Only files including IPv4 IPv6 and Location (in english)
+// Only files including IPv4, IPv6, and Location (in english)
 // will be read and parsed into lists.
 package parser
 
@@ -11,11 +11,11 @@ import (
 	"strconv"
 )
 
-const IPColumnNum = 10
-const LocationColumnNum = 13
+const IPNumColumns = 10
+const LocationNumColumns = 13
 
-// BlockNode defintes Block IPv4 and Block IPv6 databases
-type BlockNode struct {
+// IPNode IPv4 and Block IPv6 databases
+type IPNode struct {
 	IPAddress  string
 	Geoname    int
 	PostalCode string
@@ -32,18 +32,11 @@ type LocationNode struct {
 	CityName      string
 }
 
-func NewBlockNode(ipa string, gn int, pc string, lat, long float64) BlockNode {
-	return BlockNode{ipa, gn, pc, lat, long}
-}
-
-func NewLocNode(gn int, cc, cn string, mc int64, ctn string) LocationNode {
-	return LocationNode{gn, cc, cn, mc, ctn}
-}
 
 // Unzips file and calls functions to create IPv4 IPv6 and LocLists
-func Unzip(r *zip.Reader) ([]BlockNode, []BlockNode, []LocationNode, error) {
-	var IPv4List []BlockNode
-	var IPv6List []BlockNode
+func Unzip(r *zip.Reader) ([]IPNode, []IPNode, []LocationNode, error) {
+	var IPv4List []IPNode
+	var IPv6List []IPNode
 	var LocationList []LocationNode
 	// Add metricsIPv4List, IPv6List, LocationList
 	for _, f := range r.File {
@@ -95,8 +88,8 @@ func Unzip(r *zip.Reader) ([]BlockNode, []BlockNode, []LocationNode, error) {
 }
 
 // Creates a List of nodes for either IPv4 or IPv6 databases.
-func CreateIPList(reader io.Reader) ([]BlockNode, error) {
-	list := []BlockNode{}
+func CreateIPList(reader io.Reader) ([]IPNode, error) {
+	list := []IPNode{}
 	r := csv.NewReader(reader)
 	r.TrimLeadingSpace = true
 	// Skip first line
@@ -110,11 +103,11 @@ func CreateIPList(reader io.Reader) ([]BlockNode, error) {
 		if err == io.EOF {
 			break
 		}
-		if len(record) != IPColumnNum {
+		if len(record) != IPNumColumns {
 			log.Println("Incorrect number of columns in IP list") 
 			return list, errors.New("Corrupted Data")
 		}
-		var newNode BlockNode
+		var newNode IPNode
 		newNode.IPAddress = record[0]
 		newNode.Geoname, err = strconv.Atoi(record[1])
 		if err != nil {
@@ -159,7 +152,7 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, error) {
 		if err == io.EOF {
 			break
 		}
-		if len(record) != LocationColumnNum {
+		if len(record) != LocationNumColumns {
 			log.Println("Incorrect number of columns in Location list") 
 			return list, errors.New("Corrupted Data")
 		}

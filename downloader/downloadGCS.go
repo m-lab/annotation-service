@@ -13,11 +13,11 @@ import (
 )
 
 // Creates list of IP address Nodes
-func InitializeTable(ctx context.Context, GCSFolder, GCSFile string) ([]parser.BlockNode, []parser.BlockNode, []parser.LocationNode, error) {
+func InitializeTable(ctx context.Context, GCSFolder, GCSFile string) ([]parser.IPNode, []parser.IPNode, []parser.LocationNode, error) {
 	// IPv4 database
-	var IPv4List []parser.BlockNode
+	var IPv4List []parser.IPNode
 	// IPv6 database
-	var IPv6List []parser.BlockNode
+	var IPv6List []parser.IPNode
 	// Location database
 	var LocationList []parser.LocationNode
 
@@ -26,23 +26,23 @@ func InitializeTable(ctx context.Context, GCSFolder, GCSFile string) ([]parser.B
 	}
 	zipReader, err := createReader(GCSFolder, GCSFile, ctx)
 	if err != nil {
-		log.Println("createReader() failed")
+		log.Println(err)
 		return IPv4List, IPv6List, LocationList, errors.New("Failed creating zipReader")
 	}
 	IPv4List, IPv6List, LocationList, err = parser.Unzip(zipReader)
 	if err != nil {
-		log.Println("Unzip() failed")
+		log.Println(err)
 		return IPv4List, IPv6List, LocationList, errors.New("Failed Unzipping and creating lists")
 	}
 	return IPv4List, IPv6List, LocationList, nil
 }
 
-// Creates generic reader
+// Creates a zip.Reader 
 func createReader(bucket string, bucketObj string, ctx context.Context) (*zip.Reader, error) {
+	ctx = context.Background()
 	client, err := storage.NewClient(ctx)
 	if err != nil {
 		log.Println(err)
-		log.Println("Failed creating new client")
 		return nil, errors.New("Failed creating new client")
 	}
 	obj := client.Bucket(bucket).Object(bucketObj)
@@ -51,12 +51,11 @@ func createReader(bucket string, bucketObj string, ctx context.Context) (*zip.Re
 	reader, err := obj.NewReader(ctx)
 	if err != nil {
 		log.Println(err)
-		log.Println("Failed creating new reader")
 		return nil, errors.New("Failed creating new reader") 
 	}
 	bytesSlice, err := ioutil.ReadAll(reader)
 	if err != nil {
-		log.Println("Failed to create byte slice")
+		log.Println(err)
 		return nil, errors.New("Failed to create byte slice")
 	}
 
