@@ -16,7 +16,7 @@ const LocationNumColumns = 13
 
 // LocationNode defines Location databases
 type LocationNode struct {
-	Geoname       int
+	GeonameID       int
 	ContinentCode string
 	CountryName   string
 	MetroCode     int64
@@ -45,11 +45,11 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 			return nil, nil, errors.New("Corrupted Data: wrong number of columns")
 		}
 		var newNode LocationNode
-		newNode.Geoname, err = strconv.Atoi(record[0])
+		newNode.GeonameID, err = strconv.Atoi(record[0])
 		if err != nil {
 			if len(record[0]) > 0 {
-				log.Println("Geoname should be a number")
-				return nil, nil, errors.New("Corrupted Data: geoname should be a number")
+				log.Println("GeonameID should be a number")
+				return nil, nil, errors.New("Corrupted Data: GeonameID should be a number")
 			}
 		}
 		match,_ := regexp.MatchString("^[A-Z]*$",record[2])
@@ -75,7 +75,7 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		}
 		newNode.CityName = record[10]
 		list = append(list, newNode)
-		idMap[newNode.Geoname] = len(list) - 1
+		idMap[newNode.GeonameID] = len(list) - 1
 	}
 	return list, idMap, nil
 }

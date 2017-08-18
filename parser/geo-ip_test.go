@@ -103,8 +103,8 @@ func TestCorruptData(t *testing.T) {
 
 func compareLocLists(list, listComp []parser.LocationNode) error {
 	for index, element := range list {
-		if element.Geoname != listComp[index].Geoname {
-			output := strings.Join([]string{"Geoname inconsistent\ngot:", strconv.Itoa(element.Geoname), " \nwanted:", strconv.Itoa(listComp[index].Geoname)}, "")
+		if element.GeonameID != listComp[index].GeonameID {
+			output := strings.Join([]string{"GeonameID inconsistent\ngot:", strconv.Itoa(element.GeonameID), " \nwanted:", strconv.Itoa(listComp[index].GeonameID)}, "")
 			log.Println(output)
 			return errors.New(output)
 		}
