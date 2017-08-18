@@ -1,11 +1,11 @@
 package parser_test
 
 import (
+	"errors"
 	"net"
 	"os"
-	"testing"
-	"errors"
 	"strings"
+	"testing"
 
 	"github.com/m-lab/annotation-service/parser"
 )
@@ -46,14 +46,14 @@ func TestCreateListIPv4(t *testing.T) {
 			"Japan",
 		},
 	}
-	if compareLists(list,listComp) != nil{
+	if compareLists(list, listComp) != nil {
 		t.Errorf("CreateList failed.")
 	}
 
 }
 func TestCreateListIPv6(t *testing.T) {
 	r, err := os.Open("testdata/IPv6SAMPLE.csv")
-	if err != nil{
+	if err != nil {
 		t.Errorf("Error opening IPv6SAMPLE.csv")
 	}
 	list, err := parser.CreateList(r, 6)
@@ -86,7 +86,7 @@ func TestCreateListIPv6(t *testing.T) {
 			"N/A",
 		},
 	}
-	if compareLists(list,listComp) != nil{
+	if compareLists(list, listComp) != nil {
 		t.Errorf("CreateList failed.")
 	}
 
@@ -100,7 +100,7 @@ func TestCorruptedCode(t *testing.T) {
 	}
 }
 
-func compareLists(list,listComp []parser.Node) error {
+func compareLists(list, listComp []parser.Node) error {
 	for index, element := range list {
 		if !element.LowRangeBin.Equal(listComp[index].LowRangeBin) {
 			output := strings.Join([]string{"LowRangeBin inconsistent\ngot:", element.LowRangeBin.String(), " \nwanted:", listComp[index].LowRangeBin.String()}, "")

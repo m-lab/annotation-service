@@ -1,11 +1,11 @@
 package handler
 
 import (
-	"net/http"
 	"errors"
-	"strconv"
 	"fmt"
 	"net"
+	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/m-lab/annotation-service/metrics"
@@ -14,15 +14,15 @@ import (
 func init() {
 	// TODO: load tables here
 	http.HandleFunc("/annotate", Annotate)
-	metrics.SetupPrometheus() 
+	metrics.SetupPrometheus()
 }
 
-// Annotate looks up IP address and returns geodata. 
-func Annotate(w http.ResponseWriter, r *http.Request){
+// Annotate looks up IP address and returns geodata.
+func Annotate(w http.ResponseWriter, r *http.Request) {
 	_, _, _, err := validate(w, r)
 	if err != nil {
-		fmt.Fprintf(w,"Invalid request")
-	}else{
+		fmt.Fprintf(w, "Invalid request")
+	} else {
 		// Fake response
 		fmt.Fprintf(w, "[\n  {\"ip\": \"%s\", \"type\": \"STRING\"},\n  {\"country\": \"%s\", \"type\": \"STRING\"},\n  {\"countryAbrv\": \"%s\", \"type\": \"STRING\"},\n]", "1.4.128.0", "Thailand", "TH")
 		// TODO: Figure out which table to use
@@ -56,7 +56,7 @@ func validate(w http.ResponseWriter, r *http.Request) (IPversion int, s string, 
 	if newIP == nil {
 		return 0, s, num, errors.New("Invalid IP address.")
 	}
-	if newIP.To4() != nil{
+	if newIP.To4() != nil {
 		return 4, ip, time.Unix(time_milli, 0), nil
 	}
 	return 6, ip, time.Unix(time_milli, 0), nil

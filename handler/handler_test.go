@@ -1,17 +1,16 @@
 package handler_test
 
 import (
-	"testing"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	
-	"github.com/m-lab/annotation-service/handler"
+	"testing"
 
+	"github.com/m-lab/annotation-service/handler"
 )
 
-func TestRequest(t *testing.T){
-		tests := []struct {
+func TestRequest(t *testing.T) {
+	tests := []struct {
 		ip       string
 		time     string
 		res      string

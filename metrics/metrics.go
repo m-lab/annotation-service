@@ -1,4 +1,5 @@
-package metrics 
+package metrics
+
 import (
 	"net/http"
 
