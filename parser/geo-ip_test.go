@@ -12,7 +12,7 @@ import (
 	"github.com/m-lab/annotation-service/parser"
 )
 
-func TestUnzip(t *testing.T) {
+func TestLocationList(t *testing.T) {
 	var locationList []parser.LocationNode
 	var idMap map[int]int
 	var LocList = []parser.LocationNode{
@@ -58,7 +58,7 @@ func TestUnzip(t *testing.T) {
 			defer rc.Close()
 			locationList, idMap, err = parser.CreateLocationList(rc)
 			if err != nil {
-				log.Println(err)
+				t.Errorf("Failed to create Location list")
 			}
 			break
 		}
