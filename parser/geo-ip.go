@@ -30,7 +30,7 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 	// Skip the first line
 	_, err := r.Read()
 	if err == io.EOF {
-		log.Println("Empty file") 
+		log.Println("Empty file")
 		return nil, nil, errors.New("Corrupted Data")
 	}
 	for {
@@ -39,14 +39,14 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 			break
 		}
 		if len(record) != LocationNumColumns {
-			log.Println("Incorrect number of columns in Location list") 
+			log.Println("Incorrect number of columns in Location list")
 			return nil, nil, errors.New("Corrupted Data")
 		}
 		var newNode LocationNode
 		newNode.Geoname, err = strconv.Atoi(record[0])
 		if err != nil {
 			if len(record[0]) > 0 {
-				log.Println("Geoname was a number") 
+				log.Println("Geoname was a number")
 				return nil, nil, errors.New("Corrupted Data")
 			}
 		}
@@ -61,7 +61,7 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		}
 		newNode.CityName = record[10]
 		list = append(list, newNode)
-		idMap[newNode.Geoname] = len(list) -1
+		idMap[newNode.Geoname] = len(list) - 1
 	}
 	return list, idMap, nil
 }

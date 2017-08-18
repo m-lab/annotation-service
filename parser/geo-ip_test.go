@@ -3,18 +3,18 @@ package parser_test
 import (
 	"archive/zip"
 	"errors"
+	"log"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
-	"log"
-	"reflect"
 
 	"github.com/m-lab/annotation-service/parser"
 )
 
 func TestUnzip(t *testing.T) {
-	var locationList []parser.LocationNode 
-	var idMap map[int]int 
+	var locationList []parser.LocationNode
+	var idMap map[int]int
 	var LocList = []parser.LocationNode{
 		parser.LocationNode{
 			32909,
@@ -39,18 +39,18 @@ func TestUnzip(t *testing.T) {
 		},
 	}
 	LocIdMap := map[int]int{
-		51537 : 2,
-		49518 : 1,
-		32909 : 0,
-	} 
+		51537: 2,
+		49518: 1,
+		32909: 0,
+	}
 
 	reader, err := zip.OpenReader("testdata/GeoLite2City.zip")
 	if err != nil {
 		t.Errorf("Error opening zip file")
 	}
 	r := &(reader.Reader)
-	for _,f := range r.File {
-		if len(f.Name) >= len("GeoLite2-City-Locations-en.csv") && f.Name[len(f.Name)-len("GeoLite2-City-Locations-en.csv"):] == "GeoLite2-City-Locations-en.csv"{
+	for _, f := range r.File {
+		if len(f.Name) >= len("GeoLite2-City-Locations-en.csv") && f.Name[len(f.Name)-len("GeoLite2-City-Locations-en.csv"):] == "GeoLite2-City-Locations-en.csv" {
 			rc, err := f.Open()
 			if err != nil {
 				t.Errorf("Failed to open GeoLite2-City-Locations-en.csv")
@@ -58,34 +58,34 @@ func TestUnzip(t *testing.T) {
 			defer rc.Close()
 			locationList, idMap, err = parser.CreateLocationList(rc)
 			if err != nil {
-				log.Println(err) 
+				log.Println(err)
 			}
 			break
 		}
 	}
 	if locationList == nil || idMap == nil {
-		t.Errorf("Failed to create LocationList and mapID") 
+		t.Errorf("Failed to create LocationList and mapID")
 	}
 
-	err = compareLocLists(locationList,LocList)
+	err = compareLocLists(locationList, LocList)
 	if err != nil {
 		t.Errorf("Location lists are not equal")
 	}
 
-	eq := reflect.DeepEqual(LocIdMap,idMap)
+	eq := reflect.DeepEqual(LocIdMap, idMap)
 	if !eq {
 		t.Errorf("Location maps are not equal")
 	}
 }
 
-func TestCorruptData(t *testing.T){
+func TestCorruptData(t *testing.T) {
 	reader, err := zip.OpenReader("testdata/GeoLite2CityCORRUPT.zip")
 	if err != nil {
 		t.Errorf("Error opening zip file")
 	}
 	r := &(reader.Reader)
-	for _,f := range r.File {
-		if len(f.Name) >= len("GeoLite2-City-Locations-en.csv") && f.Name[len(f.Name)-len("GeoLite2-City-Locations-en.csv"):] == "GeoLite2-City-Locations-en.csv"{
+	for _, f := range r.File {
+		if len(f.Name) >= len("GeoLite2-City-Locations-en.csv") && f.Name[len(f.Name)-len("GeoLite2-City-Locations-en.csv"):] == "GeoLite2-City-Locations-en.csv" {
 			rc, err := f.Open()
 			if err != nil {
 				t.Errorf("Failed to open GeoLite2-City-Locations-en.csv")
@@ -93,7 +93,7 @@ func TestCorruptData(t *testing.T){
 			defer rc.Close()
 			_, _, err = parser.CreateLocationList(rc)
 			if err == nil {
-				t.Errorf("Failed to recognize missing rows") 
+				t.Errorf("Failed to recognize missing rows")
 			}
 			break
 		}
