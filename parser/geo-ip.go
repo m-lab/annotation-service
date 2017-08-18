@@ -1,76 +1,67 @@
-//Depending on whether user input was an IPv4 or IPv6 IPaddress,
-//respective database file will be read in and a list of Nodes will be created
-//Each node contains a geo-location and its range of IP addresses
+// Only files including IPv4, IPv6, and Location (in english)
+// will be read and parsed into lists.
 package parser
 
 import (
+	"encoding/csv"
 	"errors"
 	"io"
-	"net"
-
-	"encoding/csv"
+	"log"
+	"strconv"
 )
 
-// Node defines the range of IP addresses per country
-type Node struct {
-	// Low range binary
-	LowRangeBin net.IP
-	// High range binary
-	HighRangeBin net.IP
-	// Country abreviation
-	CountryAbrv string
-	// Country name
-	CountryName string
+const LocationNumColumns = 13
+
+// LocationNode defines Location databases
+type LocationNode struct {
+	Geoname       int
+	ContinentCode string
+	CountryName   string
+	MetroCode     int64
+	CityName      string
 }
 
-func NewNode(lrb, hrb net.IP, ctryA, ctryN string) Node {
-	return Node{lrb, hrb, ctryA, ctryN}
-}
-
-//Creates a List of nodes for either IPv4 or IPv6 databases.
-func CreateList(reader io.Reader, IPVersion int) ([]Node, error) {
-	list := []Node{}
+// Creates list for location databases
+func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
+	idMap := make(map[int]int, 200000)
+	list := []LocationNode{}
 	r := csv.NewReader(reader)
 	r.TrimLeadingSpace = true
+	// Skip the first line
+	_, err := r.Read()
+	if err == io.EOF {
+		log.Println("Empty file") 
+		return nil, nil, errors.New("Corrupted Data")
+	}
 	for {
 		record, err := r.Read()
 		if err == io.EOF {
 			break
 		}
-		var newNode Node
-		if IPVersion == 4 {
-			if len(record) != 6 {
-				return list, errors.New("Corrupted file")
-			}
-			newNode.LowRangeBin = net.ParseIP(record[0])
-			newNode.HighRangeBin = net.ParseIP(record[1])
-			newNode.CountryAbrv = record[4]
-			newNode.CountryName = record[5]
-
-			if newNode.LowRangeBin.To4() == nil {
-				return list, errors.New("Low range IP invalid")
-			}
-			if newNode.HighRangeBin.To4() == nil {
-				return list, errors.New("High range IP invalid")
+		if len(record) != LocationNumColumns {
+			log.Println("Incorrect number of columns in Location list") 
+			return nil, nil, errors.New("Corrupted Data")
+		}
+		var newNode LocationNode
+		newNode.Geoname, err = strconv.Atoi(record[0])
+		if err != nil {
+			if len(record[0]) > 0 {
+				log.Println("Geoname was a number") 
+				return nil, nil, errors.New("Corrupted Data")
 			}
 		}
-		if IPVersion == 6 {
-			if len(record) != 12 {
-				return list, errors.New("Corrupted file")
-			}
-			newNode.LowRangeBin = net.ParseIP(record[0])
-			newNode.HighRangeBin = net.ParseIP(record[1])
-			newNode.CountryAbrv = record[4]
-			newNode.CountryName = "N/A"
-
-			if newNode.LowRangeBin.To16() == nil {
-				return list, errors.New("Low range IP invalid")
-			}
-			if newNode.HighRangeBin.To16() == nil {
-				return list, errors.New("High range IP invalid")
+		newNode.ContinentCode = record[2]
+		newNode.CountryName = record[5]
+		newNode.MetroCode, err = strconv.ParseInt(record[11], 10, 64)
+		if err != nil {
+			if len(record[11]) > 0 {
+				log.Println("MetroCode is not a number")
+				return nil, nil, errors.New("Corrupted Data")
 			}
 		}
+		newNode.CityName = record[10]
 		list = append(list, newNode)
+		idMap[newNode.Geoname] = len(list) -1
 	}
-	return list, nil
+	return list, idMap, nil
 }
