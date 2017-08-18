@@ -1,44 +1,69 @@
 package downloader
 
 import (
+	"archive/zip"
+	"bytes"
 	"cloud.google.com/go/storage"
 	"errors"
 	"golang.org/x/net/context"
+	"io/ioutil"
 	"log"
 
 	"github.com/m-lab/annotation-service/parser"
 )
 
-var geoData []parser.Node
+// Creates list of IP address Nodes
+func InitializeTable(ctx context.Context, GCSFolder, GCSFile string) ([]parser.IPNode, []parser.IPNode, []parser.LocationNode, error) {
+	// IPv4 database
+	var IPv4List []parser.IPNode
+	// IPv6 database
+	var IPv6List []parser.IPNode
+	// Location database
+	var LocationList []parser.LocationNode
 
-//Creates list of IP address Nodes
-func InitializeTable(ctx context.Context, GCSFolder, GCSFile string, IPVersion int) ([]parser.Node, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	storageReader, err := createReader(GCSFolder, GCSFile, ctx)
+	zipReader, err := createReader(GCSFolder, GCSFile, ctx)
 	if err != nil {
-		log.Println("storage reader failed")
-		return geoData, errors.New("Storage Reader Failed")
+		log.Println(err)
+		return IPv4List, IPv6List, LocationList, errors.New("Failed creating zipReader")
 	}
-	geoData, err = parser.CreateList(storageReader, IPVersion)
+	IPv4List, IPv6List, LocationList, err = parser.Unzip(zipReader)
 	if err != nil {
-		log.Println("geoData createList failed")
-		return geoData, errors.New("geoData createList Failed")
+		log.Println(err)
+		return IPv4List, IPv6List, LocationList, errors.New("Failed Unzipping and creating lists")
 	}
-	return geoData, nil
+	return IPv4List, IPv6List, LocationList, nil
 }
 
-//creates generic reader
-func createReader(bucket string, bucketObj string, ctx context.Context) (*storage.Reader, error) {
+// Creates a zip.Reader 
+func createReader(bucket string, bucketObj string, ctx context.Context) (*zip.Reader, error) {
+	ctx = context.Background()
 	client, err := storage.NewClient(ctx)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return nil, errors.New("Failed creating new client")
 	}
 	obj := client.Bucket(bucket).Object(bucketObj)
+
+	// Takes context returns *Reader
 	reader, err := obj.NewReader(ctx)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return nil, errors.New("Failed creating new reader") 
 	}
-	return reader, nil
+	bytesSlice, err := ioutil.ReadAll(reader)
+	if err != nil {
+		log.Println(err)
+		return nil, errors.New("Failed to create byte slice")
+	}
+
+	// Takes byte slice returns Reader
+	r := bytes.NewReader(bytesSlice)
+
+	// Takes r io.ReaderAt(implements Reader) and size of bytes. returns *Reader
+	zipReader, err := zip.NewReader(r, int64(len(bytesSlice)))
+
+	return zipReader, nil
 }
