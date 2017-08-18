@@ -63,36 +63,36 @@ func TestLocalSearchList(t *testing.T) {
 }
 
 func TestGCSSearchListIPv4(t *testing.T) {
-	if searchGCS("1.32.0.1", "MY", "annotator-data/GeoIPCountryWhois.csv", 4) != nil {
+	if searchGCS("1.32.0.1", "MY", "annotator-data/MaxMind/GeoIPCountryWhois.csv", 4) != nil {
 		t.Errorf("IPv4 #1 Failed")
 	}
-	if searchGCS("5.11.56.4", "GR", "annotator-data/GeoIPCountryWhois.csv", 4) != nil {
+	if searchGCS("5.11.56.4", "GR", "annotator-data/MaxMind/GeoIPCountryWhois.csv", 4) != nil {
 		t.Errorf("IPv4 #2 Failed")
 	}
-	if searchGCS("5.44.239.254", "GB", "annotator-data/GeoIPCountryWhois.csv", 4) != nil {
+	if searchGCS("5.44.239.254", "GB", "annotator-data/MaxMind/GeoIPCountryWhois.csv", 4) != nil {
 		t.Errorf("IPv4 #3 Failed")
 	}
 
 	//incorrect input
-	if searchGCS("5.54.4.32", "GB", "annotator-data/GeoIPCountryWhois.csv", 4) == nil {
+	if searchGCS("5.54.4.32", "GB", "annotator-data/MaxMind/GeoIPCountryWhois.csv", 4) == nil {
 		t.Errorf("IPv4 #4 Failed")
 	}
 
 }
 
 func TestGCSSearchListIPv6(t *testing.T) {
-	if searchGCS("2001:500:2::", "US", "annotator-data/GeoLiteCityv6.csv", 6) != nil {
+	if searchGCS("2001:500:2::", "US", "annotator-data/MaxMind/GeoLiteCityv6.csv", 6) != nil {
 		t.Errorf("IPv6 #1 Failed")
 	}
-	if searchGCS("2001:678:a:ffff:ffff:ffff:ffff:ffff", "BE", "annotator-data/GeoLiteCityv6.csv", 6) != nil {
+	if searchGCS("2001:678:a:ffff:ffff:ffff:ffff:ffff", "BE", "annotator-data/MaxMind/GeoLiteCityv6.csv", 6) != nil {
 		t.Errorf("IPv6 #2 Failed")
 	}
-	if searchGCS("2001:678:2f4::", "IL", "annotator-data/GeoLiteCityv6.csv", 6) != nil {
+	if searchGCS("2001:678:2f4::", "IL", "annotator-data/MaxMind/GeoLiteCityv6.csv", 6) != nil {
 		t.Errorf("IPv6 #3 Failed")
 	}
 
 	//incorrect input 
-	if searchGCS("2001:678:45c::", "GB", "annotator-data/GeoLiteCityv6.csv", 6) == nil {
+	if searchGCS("2001:678:45c::", "GB", "annotator-data/MaxMind/GeoLiteCityv6.csv", 6) == nil {
 		t.Errorf("IPv6 #4 Failed")
 	}
 }
