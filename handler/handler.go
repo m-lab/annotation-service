@@ -32,6 +32,7 @@ func Annotate(w http.ResponseWriter, r *http.Request){
 
 // validates request syntax
 // parses request and returns parameters
+// 0 for IPversion means that there was an error.
 func validate(w http.ResponseWriter, r *http.Request) (IPversion int, s string, num time.Time, err error) {
 	// Setup timers and counters for prometheus metrics.
 	timerStart := time.Now()
