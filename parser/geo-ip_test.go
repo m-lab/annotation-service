@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 	"log"
+	"reflect"
 
 	"github.com/m-lab/annotation-service/parser"
 )
@@ -37,10 +38,10 @@ func TestUnzip(t *testing.T) {
 			"",
 		},
 	}
-	var LocIdMap := map[int]int{
-		0 : 32909,
-		1 : 49518,
-		2 : 51537,
+	LocIdMap := map[int]int{
+		51537 : 2,
+		49518 : 1,
+		32909 : 0,
 	} 
 
 	reader, err := zip.OpenReader("testdata/GeoLite2City.zip")
@@ -70,6 +71,34 @@ func TestUnzip(t *testing.T) {
 	if err != nil {
 		t.Errorf("Location lists are not equal")
 	}
+
+	eq := reflect.DeepEqual(LocIdMap,idMap)
+	if !eq {
+		t.Errorf("Location maps are not equal")
+	}
+}
+
+func TestCorruptData(t *testing.T){
+	reader, err := zip.OpenReader("testdata/GeoLite2CityCORRUPT.zip")
+	if err != nil {
+		t.Errorf("Error opening zip file")
+	}
+	r := &(reader.Reader)
+	for _,f := range r.File {
+		if len(f.Name) >= len("GeoLite2-City-Locations-en.csv") && f.Name[len(f.Name)-len("GeoLite2-City-Locations-en.csv"):] == "GeoLite2-City-Locations-en.csv"{
+			rc, err := f.Open()
+			if err != nil {
+				t.Errorf("Failed to open GeoLite2-City-Locations-en.csv")
+			}
+			defer rc.Close()
+			_, _, err = parser.CreateLocationList(rc)
+			if err == nil {
+				t.Errorf("Failed to recognize missing rows") 
+			}
+			break
+		}
+	}
+
 }
 
 func compareLocLists(list, listComp []parser.LocationNode) error {

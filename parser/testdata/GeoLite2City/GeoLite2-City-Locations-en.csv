@@ -1,0 +1,4 @@
+geoname_id,locale_code,continent_code,continent_name,country_iso_code,country_name,subdivision_1_iso_code,subdivision_1_name,subdivision_2_iso_code,subdivision_2_name,city_name,metro_code,time_zone
+32909,en,AS,Asia,IR,Iran,07,"Ostan-e Tehran",,,"Shahre Jadide Andisheh",,Asia/Tehran
+49518,en,AF,Africa,RW,Rwanda,,,,,,,Africa/Kigali
+51537,en,AF,Africa,SO,Somalia,,,,,,,Africa/Mogadishu
