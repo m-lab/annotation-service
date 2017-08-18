@@ -41,6 +41,7 @@ func InitializeTable(ctx context.Context, GCSFolder, GCSFile string) ([]parser.B
 func createReader(bucket string, bucketObj string, ctx context.Context) (*zip.Reader, error) {
 	client, err := storage.NewClient(ctx)
 	if err != nil {
+		log.Println(err)
 		log.Println("Failed creating new client")
 		return nil, errors.New("Failed creating new client")
 	}
@@ -49,6 +50,7 @@ func createReader(bucket string, bucketObj string, ctx context.Context) (*zip.Re
 	// Takes context returns *Reader
 	reader, err := obj.NewReader(ctx)
 	if err != nil {
+		log.Println(err)
 		log.Println("Failed creating new reader")
 		return nil, errors.New("Failed creating new reader") 
 	}
