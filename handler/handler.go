@@ -23,6 +23,7 @@ func Annotate(w http.ResponseWriter, r *http.Request){
 	if err != nil {
 		fmt.Fprintf(w,"Invalid request")
 	}else{
+		// Fake response
 		fmt.Fprintf(w, "[\n  {\"ip\": \"%s\", \"type\": \"STRING\"},\n  {\"country\": \"%s\", \"type\": \"STRING\"},\n  {\"countryAbrv\": \"%s\", \"type\": \"STRING\"},\n]", "1.4.128.0", "Thailand", "TH")
 		// Figure out which table to use
 		// Handle request
