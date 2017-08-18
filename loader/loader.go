@@ -1,6 +1,5 @@
 package loader
 
-//TODO:change to loader
 import (
 	"archive/zip"
 	"bytes"

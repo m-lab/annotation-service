@@ -10,7 +10,10 @@ import (
 )
 
 func TestCreateZipReader(t *testing.T) {
-	// TODO: add code to disable in travis
+	if os.Getenv("TRAVIS") == "true"{
+		log.Println("skipping test")
+		return
+	}
 	ctx, done, err := aetest.NewContext()
 	if err != nil {
 		log.Println(err)
