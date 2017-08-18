@@ -25,8 +25,8 @@ func Annotate(w http.ResponseWriter, r *http.Request){
 	}else{
 		// Fake response
 		fmt.Fprintf(w, "[\n  {\"ip\": \"%s\", \"type\": \"STRING\"},\n  {\"country\": \"%s\", \"type\": \"STRING\"},\n  {\"countryAbrv\": \"%s\", \"type\": \"STRING\"},\n]", "1.4.128.0", "Thailand", "TH")
-		// Figure out which table to use
-		// Handle request
+		// TODO: Figure out which table to use
+		// TODO: Handle request
 	}
 }
 
@@ -44,7 +44,6 @@ func validate(w http.ResponseWriter, r *http.Request) (IPversion int, s string, 
 
 	query := r.URL.Query()
 
-	//PRETEND THAT THIS IS YYYYMMDD
 	time_milli, err := strconv.ParseInt(query.Get("since_epoch"), 10, 64)
 	if err != nil {
 		return 0, s, num, errors.New("Invalid time")
