@@ -2,15 +2,16 @@ package loader_test
 
 import (
 	"log"
+	"os"
 	"testing"
 
 	"google.golang.org/appengine/aetest"
-	
+
 	"github.com/m-lab/annotation-service/loader"
 )
 
 func TestCreateZipReader(t *testing.T) {
-	if os.Getenv("TRAVIS") == "true"{
+	if os.Getenv("TRAVIS") == "true" {
 		log.Println("skipping test")
 		return
 	}

@@ -8,7 +8,6 @@ import (
 	"golang.org/x/net/context"
 	"io/ioutil"
 	"log"
-
 )
 
 // CreateZipReader reads a file from GCS and wraps it in a zip.Reader.
@@ -39,7 +38,7 @@ func CreateZipReader(ctx context.Context, bucket string, bucketObj string) (*zip
 	// Takes r io.ReaderAt(implements Reader) and size of bytes. returns *Reader
 	zipReader, err := zip.NewReader(r, int64(len(bytesSlice)))
 	if err != nil {
-		log.Println(err) 
+		log.Println(err)
 		return nil, errors.New("Failed to create zip.Reader")
 	}
 	return zipReader, nil
