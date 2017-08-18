@@ -24,7 +24,7 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Invalid request")
 	} else {
 		// Fake response
-		fmt.Fprintf(w, "[\n  {\"ip\": \"%s\", \"type\": \"STRING\"},\n  {\"country\": \"%s\", \"type\": \"STRING\"},\n  {\"countryAbrv\": \"%s\", \"type\": \"STRING\"},\n]", "1.4.128.0", "Thailand", "TH")
+		fmt.Fprintf(w, `{"Geo":{"city": "%s", "postal_code":"10583"},"ASN":{}}`, "Not A Real City")
 		// TODO: Figure out which table to use
 		// TODO: Handle request
 	}
