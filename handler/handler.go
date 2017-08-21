@@ -6,10 +6,13 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/m-lab/annotation-service/metrics"
 )
+
+var currentDataMutex = &sync.RWMutex{}
 
 func SetupHandlers() {
 	http.HandleFunc("/annotate", Annotate)
@@ -23,6 +26,8 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Invalid request")
 	} else {
 		// Fake response
+		currentDataMutex.RLock()
+		defer currentDataMutex.RUnlock()
 		fmt.Fprintf(w, `{"Geo":{"city": "%s", "postal_code":"10583"},"ASN":{}}`, "Not A Real City")
 		// TODO: Figure out which table to use
 		// TODO: Handle request

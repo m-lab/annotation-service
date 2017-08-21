@@ -29,6 +29,8 @@ func waitForDownloaderMessages() {
 	log.Fatal(sub.Receive(context.Background(), func(ctx context.Context, m *pubsub.Message) {
 		// TODO(JM) Reload the tables here with the same setup
 		// method that will eventually be used in main
+		currentDataMutex.Lock()
+		defer currentDataMutex.Unlock()
 		log.Println(string(m.Data))
 		m.Ack()
 	}))
