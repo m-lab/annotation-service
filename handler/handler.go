@@ -13,6 +13,7 @@ import (
 
 func SetupHandlers() {
 	http.HandleFunc("/annotate", Annotate)
+	go waitForDownloaderMessages()
 }
 
 // Annotate looks up IP address and returns geodata.
