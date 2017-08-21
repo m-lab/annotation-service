@@ -6,9 +6,9 @@ import (
 	"cloud.google.com/go/storage"
 	"errors"
 	"golang.org/x/net/context"
+	"io"
 	"io/ioutil"
 	"log"
-	"io"
 	"strings"
 )
 
@@ -46,16 +46,15 @@ func CreateZipReader(ctx context.Context, bucket string, bucketObj string) (*zip
 	return zipReader, nil
 }
 
-func FindFile(fn string,zrdr *zip.Reader) (io.ReadCloser,error) {
-for _, f := range zrdr.File {
-		if strings.HasSuffix(f.Name,fn){
+func FindFile(fn string, zrdr *zip.Reader) (io.ReadCloser, error) {
+	for _, f := range zrdr.File {
+		if strings.HasSuffix(f.Name, fn) {
 			rc, err := f.Open()
 			if err != nil {
-				return nil,err
+				return nil, err
 			}
-			return rc,nil
+			return rc, nil
 		}
 	}
-	return nil,errors.New("File not found") 
-
+	return nil, errors.New("File not found")
 }

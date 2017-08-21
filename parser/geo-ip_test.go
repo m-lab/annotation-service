@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/m-lab/annotation-service/parser"
 	"github.com/m-lab/annotation-service/loader"
+	"github.com/m-lab/annotation-service/parser"
 )
 
 func TestIPList(t *testing.T) {
@@ -99,12 +99,12 @@ func TestLocationList(t *testing.T) {
 		t.Errorf("Error opening zip file")
 	}
 
-	rc,err := loader.FindFile("GeoLite2-City-Locations-en.csv", &reader.Reader)
-	if err != nil{
+	rc, err := loader.FindFile("GeoLite2-City-Locations-en.csv", &reader.Reader)
+	if err != nil {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
-	defer rc.Close() 
-	locationList,idMap,err = parser.CreateLocationList(rc)
+	defer rc.Close()
+	locationList, idMap, err = parser.CreateLocationList(rc)
 	if err != nil {
 		t.Errorf("Failed to CreateLocationList")
 	}
