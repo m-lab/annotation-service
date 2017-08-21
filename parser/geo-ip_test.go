@@ -104,7 +104,7 @@ func TestLocationList(t *testing.T) {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
 	defer rc.Close() 
-	locationList,idMap,err := CreateLocationList(&reader.Reader)
+	locationList,idMap,err = parser.CreateLocationList(rc)
 	if err != nil {
 		t.Errorf("Failed to CreateLocationList")
 	}
