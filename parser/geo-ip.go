@@ -7,16 +7,16 @@ import (
 	"errors"
 	"io"
 	"log"
-	"strconv"
 	"regexp"
+	"strconv"
 )
 
 const mapMax = 200000
-const LocationNumColumns = 13
+const locationNumColumns = 13
 
 // LocationNode defines Location databases
 type LocationNode struct {
-	GeonameID       int
+	GeonameID     int
 	ContinentCode string
 	CountryName   string
 	MetroCode     int64
@@ -33,14 +33,14 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 	_, err := r.Read()
 	if err == io.EOF {
 		log.Println("Empty input data")
-		return nil, nil, errors.New("Corrupted Data")
+		return nil, nil, errors.New("Empty input data")
 	}
 	for {
 		record, err := r.Read()
 		if err == io.EOF {
 			break
 		}
-		if len(record) != LocationNumColumns {
+		if len(record) != locationNumColumns {
 			log.Println("Incorrect number of columns in Location list")
 			return nil, nil, errors.New("Corrupted Data: wrong number of columns")
 		}
@@ -52,17 +52,17 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 				return nil, nil, errors.New("Corrupted Data: GeonameID should be a number")
 			}
 		}
-		match,_ := regexp.MatchString("^[A-Z]*$",record[2])
-		if match == true{
+		match, _ := regexp.MatchString("^[A-Z]*$", record[2])
+		if match {
 			newNode.ContinentCode = record[2]
-		}else{
-			log.Println("Continent code should be all capitals and no numbers") 
+		} else {
+			log.Println("Continent code should be all capitals and no numbers")
 			return nil, nil, errors.New("Corrupted Data: continent code should be all caps")
 		}
-		match,_ = regexp.MatchString("^[a-zA-Z]*$",record[5])
-		if match == true{
+		match, _ = regexp.MatchString("^[a-zA-Z]*$", record[5])
+		if match {
 			newNode.CountryName = record[5]
-		}else{
+		} else {
 			log.Println("Country name should be letters only")
 			return nil, nil, errors.New("Corrupted Data: country name should be letters")
 		}
