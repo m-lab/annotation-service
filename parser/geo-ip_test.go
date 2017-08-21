@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/m-lab/annotation-service/parser"
+	"github.com/m-lab/annotation-service/loader"
 )
 
 func TestIPList(t *testing.T) {
