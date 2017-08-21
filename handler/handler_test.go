@@ -16,7 +16,7 @@ func TestRequest(t *testing.T) {
 		res      string
 		time_num int64
 	}{
-		{"1.4.128.0", "625600", "[\n  {\"ip\": \"1.4.128.0\", \"type\": \"STRING\"},\n  {\"country\": \"Thailand\", \"type\": \"STRING\"},\n  {\"countryAbrv\": \"TH\", \"type\": \"STRING\"},\n]", 625600},
+		{"1.4.128.0", "625600", `{"Geo":{"city": "Not A Real City", "postal_code":"10583"},"ASN":{}}`, 625600},
 	}
 	for _, test := range tests {
 		w := httptest.NewRecorder()
