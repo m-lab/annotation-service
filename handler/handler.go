@@ -11,10 +11,8 @@ import (
 	"github.com/m-lab/annotation-service/metrics"
 )
 
-func init() {
-	// TODO: load tables here
+func SetupHandlers() {
 	http.HandleFunc("/annotate", Annotate)
-	metrics.SetupPrometheus()
 }
 
 // Annotate looks up IP address and returns geodata.
