@@ -92,10 +92,16 @@ func TestCorruptData(t *testing.T) {
 			}
 			defer rc.Close()
 			_, _, err = parser.CreateLocationList(rc)
-			if err == nil {
-				t.Errorf("Failed to recognize missing rows")
+			if err.Error() != "Corrupted Data: wrong number of columns" {
+				if err == nil {
+					t.Errorf("Error inconsistent:\ngot: nil\nwanted: Corrupted Data: wrong number of columns")
+				}
+				if err != nil {
+					output := strings.Join([]string{"Error inconsistent:\ngot: ", err.Error(), "\nwanted: Corrupted Data: wrong number of columns"}, "")
+					t.Errorf(output)
+				}
+
 			}
-			break
 		}
 	}
 
