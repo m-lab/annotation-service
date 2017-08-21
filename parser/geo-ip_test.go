@@ -98,20 +98,15 @@ func TestLocationList(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error opening zip file")
 	}
-	r := &(reader.Reader)
-	for _, f := range r.File {
-		if len(f.Name) >= len("GeoLite2-City-Locations-en.csv") && f.Name[len(f.Name)-len("GeoLite2-City-Locations-en.csv"):] == "GeoLite2-City-Locations-en.csv" {
-			rc, err := f.Open()
-			if err != nil {
-				t.Errorf("Failed to open GeoLite2-City-Locations-en.csv")
-			}
-			defer rc.Close()
-			locationList, idMap, err = parser.CreateLocationList(rc)
-			if err != nil {
-				t.Errorf("Failed to create Location list")
-			}
-			break
-		}
+
+	rc,err := loader.FindFile("GeoLite2-City-Locations-en.csv", &reader.Reader)
+	if err != nil{
+		t.Errorf("Failed to create io.ReaderCloser")
+	}
+	defer rc.Close() 
+	locationList,idMap,err := CreateLocationList(&reader.Reader)
+	if err != nil {
+		t.Errorf("Failed to CreateLocationList")
 	}
 	if locationList == nil || idMap == nil {
 		t.Errorf("Failed to create LocationList and mapID")
@@ -157,6 +152,10 @@ func TestCorruptData(t *testing.T) {
 
 }
 
+func floatToString(num float64) string {
+	return strconv.FormatFloat(num, 'f', 6, 64)
+}
+
 func compareIPLists(list, listComp []parser.IPNode) error {
 	for index, element := range list {
 		if element.IPAddress != listComp[index].IPAddress {
@@ -175,12 +174,12 @@ func compareIPLists(list, listComp []parser.IPNode) error {
 			return errors.New(output)
 		}
 		if element.Latitude != listComp[index].Latitude {
-			output := strings.Join([]string{"Latitude inconsistent\ngot:", strconv.FormatFloat(element.Latitude, 'f', 6, 64), " \nwanted:", strconv.FormatFloat(listComp[index].Latitude, 'f', 6, 64)}, "")
+			output := strings.Join([]string{"Latitude inconsistent\ngot:", floatToString(element.Latitude), " \nwanted:", floatToString(listComp[index].Latitude)}, "")
 			log.Println(output)
 			return errors.New(output)
 		}
 		if element.Longitude != listComp[index].Longitude {
-			output := strings.Join([]string{"Longitude inconsistent\ngot:", strconv.FormatFloat(element.Longitude, 'f', 6, 64), " \nwanted:", strconv.FormatFloat(listComp[index].Longitude, 'f', 6, 64)}, "")
+			output := strings.Join([]string{"Longitude inconsistent\ngot:", floatToString(element.Longitude), " \nwanted:", floatToString(listComp[index].Longitude)}, "")
 			log.Println(output)
 			return errors.New(output)
 		}
