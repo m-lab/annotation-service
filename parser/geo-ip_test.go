@@ -12,6 +12,55 @@ import (
 	"github.com/m-lab/annotation-service/parser"
 )
 
+func TestIPList(t *testing.T) {
+	var ipv4 []parser.IPNode
+	var ipv4Expected = []parser.IPNode{
+		parser.IPNode{
+			"1.0.0.0/24",
+			0,
+			"3095",
+			-37.7,
+			145.1833,
+		},
+		parser.IPNode{
+			"1.0.1.0/24",
+			4,
+			"",
+			26.0614,
+			119.3061,
+		},
+		parser.IPNode{
+			"1.0.2.0/23",
+			4,
+			"",
+			26.0614,
+			119.3061,
+		},
+	}
+	locationIdMap := map[int]int{
+		2151718: 0,
+		1810821: 4,
+	}
+	reader, err := zip.OpenReader("testdata/GeoLite2City.zip")
+	if err != nil {
+		t.Errorf("Error opening zip file")
+	}
+	rc, err := loader.FindFile("GeoLite2-City-Blocks-IPv4.csv", &reader.Reader)
+	if err != nil {
+		t.Errorf("Failed to create io.ReaderCloser")
+	}
+	defer rc.Close()
+	ipv4, err = parser.CreateIPList(rc, locationIdMap)
+	if err != nil {
+		t.Errorf("Failed to create ipv4")
+	}
+	err = compareIPLists(ipv4Expected, ipv4)
+	if err != nil {
+		t.Errorf("Lists are not equal")
+	}
+
+}
+
 func TestLocationList(t *testing.T) {
 	var locationList []parser.LocationNode
 	var idMap map[int]int
@@ -105,6 +154,38 @@ func TestCorruptData(t *testing.T) {
 		}
 	}
 
+}
+
+func compareIPLists(list, listComp []parser.IPNode) error {
+	for index, element := range list {
+		if element.IPAddress != listComp[index].IPAddress {
+			output := strings.Join([]string{"IPAddress inconsistent\ngot:", element.IPAddress, " \nwanted:", listComp[index].IPAddress}, "")
+			log.Println(output)
+			return errors.New(output)
+		}
+		if element.LocationIndex != listComp[index].LocationIndex {
+			output := strings.Join([]string{"LocationIndex inconsistent\ngot:", strconv.Itoa(element.LocationIndex), " \nwanted:", strconv.Itoa(listComp[index].LocationIndex)}, "")
+			log.Println(output)
+			return errors.New(output)
+		}
+		if element.PostalCode != listComp[index].PostalCode {
+			output := strings.Join([]string{"PostalCode inconsistent\ngot:", element.PostalCode, " \nwanted:", listComp[index].PostalCode}, "")
+			log.Println(output)
+			return errors.New(output)
+		}
+		if element.Latitude != listComp[index].Latitude {
+			output := strings.Join([]string{"Latitude inconsistent\ngot:", strconv.FormatFloat(element.Latitude, 'f', 6, 64), " \nwanted:", strconv.FormatFloat(listComp[index].Latitude, 'f', 6, 64)}, "")
+			log.Println(output)
+			return errors.New(output)
+		}
+		if element.Longitude != listComp[index].Longitude {
+			output := strings.Join([]string{"Longitude inconsistent\ngot:", strconv.FormatFloat(element.Longitude, 'f', 6, 64), " \nwanted:", strconv.FormatFloat(listComp[index].Longitude, 'f', 6, 64)}, "")
+			log.Println(output)
+			return errors.New(output)
+		}
+
+	}
+	return nil
 }
 
 func compareLocLists(list, listComp []parser.LocationNode) error {

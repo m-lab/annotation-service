@@ -11,8 +11,18 @@ import (
 	"strconv"
 )
 
-const mapMax = 200000
+const ipNumColumns = 10
 const locationNumColumns = 13
+const mapMax = 200000
+
+// IPNode IPv4 and Block IPv6 databases
+type IPNode struct {
+	IPAddress     string
+	LocationIndex int // Index to slice of locations
+	PostalCode    string
+	Latitude      float64
+	Longitude     float64
+}
 
 // LocationNode defines Location databases
 type LocationNode struct {
@@ -21,6 +31,59 @@ type LocationNode struct {
 	CountryName   string
 	MetroCode     int64
 	CityName      string
+}
+
+// Creates a List of nodes for either IPv4 or IPv6 databases.
+func CreateIPList(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
+	list := []IPNode{}
+	r := csv.NewReader(reader)
+	r.TrimLeadingSpace = true
+	// Skip first line
+	_, err := r.Read()
+	if err == io.EOF {
+		log.Println("Empty input data")
+		return list, errors.New("Empty input data")
+	}
+	for {
+		record, err := r.Read()
+		if err == io.EOF {
+			break
+		}
+		if len(record) != ipNumColumns {
+			log.Println("Incorrect number of columns in IP list")
+			return nil, errors.New("Corrupted Data: wrong number of columns")
+		}
+		var newNode IPNode
+		newNode.IPAddress = record[0]
+		geonameId, err := strconv.Atoi(record[1])
+		if err != nil {
+			log.Println("geonameID should be a number")
+			return nil, errors.New("Corrupted Data: geonameID should be a number")
+		}
+		loadIndex, ok := idMap[geonameId]
+		if !ok {
+			log.Println("geonameID not found ", geonameId)
+			return nil, errors.New("Corrupted Data: geonameId not found")
+		}
+		newNode.LocationIndex = loadIndex
+		newNode.PostalCode = record[6]
+		newNode.Latitude, err = strconv.ParseFloat(record[7], 64)
+		if err != nil {
+			if len(record[7]) > 0 {
+				log.Println("Latitude was not a number")
+				return nil, errors.New("Corrupted Data: latitude should be an int")
+			}
+		}
+		newNode.Longitude, err = strconv.ParseFloat(record[8], 64)
+		if err != nil {
+			if len(record[8]) > 0 {
+				log.Println("Longitude was not a number")
+				return nil, errors.New("Corrupted Data: longitude should be a int")
+			}
+		}
+		list = append(list, newNode)
+	}
+	return list, nil
 }
 
 // Creates list for location databases
