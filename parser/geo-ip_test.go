@@ -59,7 +59,6 @@ func TestIPList(t *testing.T) {
 	if err != nil {
 		t.Errorf("Lists are not equal")
 	}
-
 }
 
 func TestLocationList(t *testing.T) {
@@ -149,7 +148,6 @@ func TestCorruptData(t *testing.T) {
 			}
 		}
 	}
-
 }
 
 func floatToString(num float64) string {
