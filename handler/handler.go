@@ -28,7 +28,7 @@ func SetupHandlers() {
 
 // Annotate looks up IP address and returns geodata.
 func Annotate(w http.ResponseWriter, r *http.Request) {
-	_, _, _, err := validate(w, r)
+	_, err := ValidateAndParse(r)
 	if err != nil {
 		fmt.Fprintf(w, "Invalid request")
 	} else {
@@ -44,7 +44,7 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 // validates request syntax
 // parses request and returns parameters
 // 0 for IPversion means that there was an error.
-func validate(w http.ResponseWriter, r *http.Request) (IPversion int, s string, num time.Time, err error) {
+func ValidateAndParse(r *http.Request) (*RequestData, error) {
 	// Setup timers and counters for prometheus metrics.
 	timerStart := time.Now()
 	defer func(tStart time.Time) {
@@ -58,19 +58,19 @@ func validate(w http.ResponseWriter, r *http.Request) (IPversion int, s string, 
 
 	time_milli, err := strconv.ParseInt(query.Get("since_epoch"), 10, 64)
 	if err != nil {
-		return 0, s, num, errors.New("Invalid time")
+		return nil, errors.New("Invalid time")
 	}
 
 	ip := query.Get("ip_addr")
 
 	newIP := net.ParseIP(ip)
 	if newIP == nil {
-		return 0, s, num, errors.New("Invalid IP address.")
+		return nil, errors.New("Invalid IP address.")
 	}
 	if newIP.To4() != nil {
-		return 4, ip, time.Unix(time_milli, 0), nil
+		return &RequestData{ip, 4, time.Unix(time_milli, 0)}, nil
 	}
-	return 6, ip, time.Unix(time_milli, 0), nil
+	return &RequestData{ip, 6, time.Unix(time_milli, 0)}, nil
 }
 
 func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
@@ -106,6 +106,6 @@ func BatchValidateAndParse(source io.ReadCloser) ([]RequestData, error) {
 	return validatedData, nil
 }
 
-func GetMetadataForSingleIP(IPVersion int, ip string, timestamp time.Time) *MetaData {
+func GetMetadataForSingleIP(request *RequestData) *MetaData {
 	return nil
 }
