@@ -29,6 +29,7 @@ type IPNode struct {
 type LocationNode struct {
 	GeonameID     int
 	ContinentCode string
+	CountryCode   string
 	CountryName   string
 	MetroCode     int64
 	CityName      string
@@ -51,8 +52,9 @@ func CreateIPList(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 			break
 		}
 		if len(record) != ipNumColumns {
-			log.Println("Incorrect number of columns in IP list")
+			log.Println("Incorrect number of columns in IP list",ipNumColumns," got: ",len(record),record)
 			return nil, errors.New("Corrupted Data: wrong number of columns")
+
 		}
 		var newNode IPNode
 		newNode.IPAddress = record[0]
@@ -94,6 +96,18 @@ func stringToFloat(str, field string) (float64, error) {
 	return flt, nil
 }
 
+func checkAllCaps(str, field string) (string, error) {
+	match, _ := regexp.MatchString("^[A-Z]*$", str)
+	if match {
+		return str, nil
+	} else {
+		log.Println(field, "should be all capitals and no numbers")
+		output := strings.Join([]string{"Corrupted Data: ", field, " should be all caps"}, "")
+		return "", errors.New(output)
+
+	}
+}
+
 // Creates list for location databases
 func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 	idMap := make(map[int]int, mapMax)
@@ -112,7 +126,7 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 			break
 		}
 		if len(record) != locationNumColumns {
-			log.Println("Incorrect number of columns in Location list")
+			log.Println("Incorrect number of columns in Location list\n\twanted: ",locationNumColumns," got: ",len(record),record)
 			return nil, nil, errors.New("Corrupted Data: wrong number of columns")
 		}
 		var newNode LocationNode
@@ -123,14 +137,15 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 				return nil, nil, errors.New("Corrupted Data: GeonameID should be a number")
 			}
 		}
-		match, _ := regexp.MatchString("^[A-Z]*$", record[2])
-		if match {
-			newNode.ContinentCode = record[2]
-		} else {
-			log.Println("Continent code should be all capitals and no numbers")
-			return nil, nil, errors.New("Corrupted Data: continent code should be all caps")
+		newNode.ContinentCode, err = checkAllCaps(record[2], "Continent code")
+		if err != nil {
+			return nil, nil, err
 		}
-		match, _ = regexp.MatchString("^[a-zA-Z]*$", record[5])
+		newNode.CountryCode, err = checkAllCaps(record[4], "Country code")
+		if err != nil {
+			return nil, nil, err
+		}
+		match, _ := regexp.MatchString("^[a-zA-Z]*$", record[5])
 		if match {
 			newNode.CountryName = record[5]
 		} else {

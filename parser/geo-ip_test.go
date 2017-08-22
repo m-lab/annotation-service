@@ -14,7 +14,30 @@ import (
 )
 
 func TestIPList(t *testing.T) {
-	var ipv4 []parser.IPNode
+	var ipv4,ipv6 []parser.IPNode
+	var ipv6Expected = []parser.IPNode{
+		parser.IPNode{
+			"600:8801:9400:5a1:948b:ab15:dde3:61a3/128",
+			4,
+			"91941",
+			32.7596,
+			-116.994,
+		},
+		parser.IPNode{
+			"2001:5::/32",
+			4,
+			"",
+			47,
+			8,
+		},
+		parser.IPNode{
+			"2001:200::/40",
+			4,
+			"",
+			36,
+			138,
+		},
+	}
 	var ipv4Expected = []parser.IPNode{
 		parser.IPNode{
 			"1.0.0.0/24",
@@ -41,21 +64,41 @@ func TestIPList(t *testing.T) {
 	locationIdMap := map[int]int{
 		2151718: 0,
 		1810821: 4,
+		5363990: 4,
+		6255148: 4,
+		1861060: 4,
+
 	}
 	reader, err := zip.OpenReader("testdata/GeoLite2City.zip")
 	if err != nil {
 		t.Errorf("Error opening zip file")
 	}
-	rc, err := loader.FindFile("GeoLite2-City-Blocks-IPv4.csv", &reader.Reader)
+
+	rcIPv4, err := loader.FindFile("GeoLite2-City-Blocks-IPv4.csv", &reader.Reader)
 	if err != nil {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
-	defer rc.Close()
-	ipv4, err = parser.CreateIPList(rc, locationIdMap)
+	defer rcIPv4.Close()
+	ipv4, err = parser.CreateIPList(rcIPv4, locationIdMap)
 	if err != nil {
 		t.Errorf("Failed to create ipv4")
 	}
 	err = compareIPLists(ipv4Expected, ipv4)
+	if err != nil {
+		t.Errorf("Lists are not equal")
+	}
+
+	rcIPv6, err := loader.FindFile("GeoLite2-City-Blocks-IPv6.csv", &reader.Reader)
+	if err != nil {
+		t.Errorf("Failed to create io.ReaderCloser")
+	}
+	defer rcIPv6.Close()
+	ipv6, err = parser.CreateIPList(rcIPv6, locationIdMap)
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Failed to create ipv6")
+	}
+	err = compareIPLists(ipv6Expected, ipv6)
 	if err != nil {
 		t.Errorf("Lists are not equal")
 	}
@@ -68,6 +111,7 @@ func TestLocationList(t *testing.T) {
 		parser.LocationNode{
 			32909,
 			"AS",
+			"IR",
 			"Iran",
 			0,
 			"Shahre Jadide Andisheh",
@@ -75,6 +119,7 @@ func TestLocationList(t *testing.T) {
 		parser.LocationNode{
 			49518,
 			"AF",
+			"RW",
 			"Rwanda",
 			0,
 			"",
@@ -82,6 +127,7 @@ func TestLocationList(t *testing.T) {
 		parser.LocationNode{
 			51537,
 			"AF",
+			"SO",
 			"Somalia",
 			0,
 			"",
@@ -195,6 +241,11 @@ func compareLocLists(list, listComp []parser.LocationNode) error {
 		}
 		if element.ContinentCode != listComp[index].ContinentCode {
 			output := strings.Join([]string{"Continent code inconsistent\ngot:", element.ContinentCode, " \nwanted:", listComp[index].ContinentCode}, "")
+			log.Println(output)
+			return errors.New(output)
+		}
+		if element.CountryCode != listComp[index].CountryCode {
+			output := strings.Join([]string{"Country code inconsistent\ngot:", element.CountryCode, " \nwanted:", listComp[index].CountryCode}, "")
 			log.Println(output)
 			return errors.New(output)
 		}
