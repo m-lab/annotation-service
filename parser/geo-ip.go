@@ -9,6 +9,7 @@ import (
 	"log"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 const ipNumColumns = 10
@@ -67,23 +68,30 @@ func CreateIPList(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 		}
 		newNode.LocationIndex = loadIndex
 		newNode.PostalCode = record[6]
-		newNode.Latitude, err = strconv.ParseFloat(record[7], 64)
+		newNode.Latitude, err = stringToFloat(record[7], "Latitude")
 		if err != nil {
-			if len(record[7]) > 0 {
-				log.Println("Latitude was not a number")
-				return nil, errors.New("Corrupted Data: latitude should be an int")
-			}
+			return nil, err
 		}
-		newNode.Longitude, err = strconv.ParseFloat(record[8], 64)
+		newNode.Longitude, err = stringToFloat(record[8], "Longitude")
 		if err != nil {
-			if len(record[8]) > 0 {
-				log.Println("Longitude was not a number")
-				return nil, errors.New("Corrupted Data: longitude should be a int")
-			}
+			return nil, err
 		}
 		list = append(list, newNode)
 	}
 	return list, nil
+}
+
+func stringToFloat(str, field string) (float64, error) {
+	flt, err := strconv.ParseFloat(str, 64)
+	if err != nil {
+		if len(str) > 0 {
+			log.Println(field, " was not a number")
+			output := strings.Join([]string{"Corrupted Data: ", field, " should be an int"}, "")
+			return 0, errors.New(output)
+
+		}
+	}
+	return flt, nil
 }
 
 // Creates list for location databases

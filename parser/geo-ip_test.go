@@ -194,12 +194,12 @@ func compareLocLists(list, listComp []parser.LocationNode) error {
 			return errors.New(output)
 		}
 		if element.ContinentCode != listComp[index].ContinentCode {
-			output := strings.Join([]string{"Longitude inconsistent\ngot:", element.ContinentCode, " \nwanted:", listComp[index].ContinentCode}, "")
+			output := strings.Join([]string{"Continent code inconsistent\ngot:", element.ContinentCode, " \nwanted:", listComp[index].ContinentCode}, "")
 			log.Println(output)
 			return errors.New(output)
 		}
 		if element.CountryName != listComp[index].CountryName {
-			output := strings.Join([]string{"Longitude inconsistent\ngot:", element.CountryName, " \nwanted:", listComp[index].CountryName}, "")
+			output := strings.Join([]string{"Country name inconsistent\ngot:", element.CountryName, " \nwanted:", listComp[index].CountryName}, "")
 			log.Println(output)
 			return errors.New(output)
 		}

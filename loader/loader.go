@@ -46,6 +46,7 @@ func CreateZipReader(ctx context.Context, bucket string, bucketObj string) (*zip
 	return zipReader, nil
 }
 
+// Field "fn" is the filename being searched for within the zip file
 func FindFile(fn string, zrdr *zip.Reader) (io.ReadCloser, error) {
 	for _, f := range zrdr.File {
 		if strings.HasSuffix(f.Name, fn) {
