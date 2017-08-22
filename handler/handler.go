@@ -12,8 +12,12 @@ import (
 	"github.com/m-lab/annotation-service/metrics"
 )
 
+// A mutex to make sure that we are not reading from the dataset while
+// trying to update it
 var currentDataMutex = &sync.RWMutex{}
 
+// A function to set up any handlers that are needed, including url
+// handlers and pubsub handlers
 func SetupHandlers() {
 	http.HandleFunc("/annotate", Annotate)
 	go waitForDownloaderMessages()
