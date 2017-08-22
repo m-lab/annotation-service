@@ -33,7 +33,7 @@ type MetaData struct {
 	ASN *IPASNData     // Holds the IP/ASN data
 }
 
-type RequestPair struct {
+type RequestData struct {
 	IP        string    // Holds the IP from an incoming request
 	IPFormat  int       // Holds the ip format, 4 or 6
 	Timestamp time.Time // Holds the timestamp from an incoming request

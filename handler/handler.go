@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -76,21 +77,23 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func BatchValidateAndParse(source io.ReaderCloser) ([]RequestPair, error) {
+func BatchValidateAndParse(source io.ReadCloser) ([]RequestData, error) {
 	jsonBuffer, err := ioutil.ReadAll(source)
-	validatedPairs = []RequestPairs{}
+	validatedData := []RequestData{}
 	if err != nil {
 		return nil, err
 	}
-	uncheckedPairs, err := json.Unmarshal(jsonBuffer, []struct {
+	uncheckedData := []struct {
 		ip      string
 		unix_ts int64
-	})
+	}{}
+
+	err = json.Unmarshal(jsonBuffer, &uncheckedData)
 	if err != nil {
 		return nil, err
 	}
-	for _, pair := range uncheckedPairs {
-		newIP := net.ParseIP(pair.ip)
+	for _, data := range uncheckedData {
+		newIP := net.ParseIP(data.ip)
 		if newIP == nil {
 			return nil, errors.New("Invalid IP address.")
 		}
@@ -98,10 +101,11 @@ func BatchValidateAndParse(source io.ReaderCloser) ([]RequestPair, error) {
 		if newIP.To4() != nil {
 			ipType = 4
 		}
-		validatePairs = append(validatedPairs, RequestPair{ip, ipType, time.Unix(pair.unix_ts, 0)})
+		validatedData = append(validatedData, RequestData{data.ip, ipType, time.Unix(data.unix_ts, 0)})
 	}
+	return validatedData, nil
 }
 
-func GetMetadataForSingleIP(IPVersion int, string ip, timestamp time.Time) *MetaData {
+func GetMetadataForSingleIP(IPVersion int, ip string, timestamp time.Time) *MetaData {
 	return nil
 }
