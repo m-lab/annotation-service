@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"strconv"
@@ -68,4 +70,38 @@ func validate(w http.ResponseWriter, r *http.Request) (IPversion int, s string, 
 		return 4, ip, time.Unix(time_milli, 0), nil
 	}
 	return 6, ip, time.Unix(time_milli, 0), nil
+}
+
+func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func BatchValidateAndParse(source io.ReaderCloser) ([]RequestPair, error) {
+	jsonBuffer, err := ioutil.ReadAll(source)
+	validatedPairs = []RequestPairs{}
+	if err != nil {
+		return nil, err
+	}
+	uncheckedPairs, err := json.Unmarshal(jsonBuffer, []struct {
+		ip      string
+		unix_ts int64
+	})
+	if err != nil {
+		return nil, err
+	}
+	for _, pair := range uncheckedPairs {
+		newIP := net.ParseIP(pair.ip)
+		if newIP == nil {
+			return nil, errors.New("Invalid IP address.")
+		}
+		ipType := 6
+		if newIP.To4() != nil {
+			ipType = 4
+		}
+		validatePairs = append(validatedPairs, RequestPair{ip, ipType, time.Unix(pair.unix_ts, 0)})
+	}
+}
+
+func GetMetadataForSingleIP(IPVersion int, string ip, timestamp time.Time) *MetaData {
+	return nil
 }
