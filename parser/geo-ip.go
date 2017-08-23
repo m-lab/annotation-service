@@ -52,7 +52,7 @@ func CreateIPList(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 			break
 		}
 		if len(record) != ipNumColumns {
-			log.Println("Incorrect number of columns in IP list",ipNumColumns," got: ",len(record),record)
+			log.Println("Incorrect number of columns in IP list", ipNumColumns, " got: ", len(record), record)
 			return nil, errors.New("Corrupted Data: wrong number of columns")
 
 		}
@@ -126,7 +126,7 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 			break
 		}
 		if len(record) != locationNumColumns {
-			log.Println("Incorrect number of columns in Location list\n\twanted: ",locationNumColumns," got: ",len(record),record)
+			log.Println("Incorrect number of columns in Location list\n\twanted: ", locationNumColumns, " got: ", len(record), record)
 			return nil, nil, errors.New("Corrupted Data: wrong number of columns")
 		}
 		var newNode LocationNode

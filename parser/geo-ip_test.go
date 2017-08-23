@@ -14,7 +14,7 @@ import (
 )
 
 func TestIPList(t *testing.T) {
-	var ipv4,ipv6 []parser.IPNode
+	var ipv4, ipv6 []parser.IPNode
 	var ipv6Expected = []parser.IPNode{
 		parser.IPNode{
 			"600:8801:9400:5a1:948b:ab15:dde3:61a3/128",
@@ -67,7 +67,6 @@ func TestIPList(t *testing.T) {
 		5363990: 4,
 		6255148: 4,
 		1861060: 4,
-
 	}
 	reader, err := zip.OpenReader("testdata/GeoLite2City.zip")
 	if err != nil {
