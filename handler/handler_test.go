@@ -1,7 +1,9 @@
 package handler_test
 
 import (
+	"bytes"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -71,6 +73,60 @@ func TestValidateAndParse(t *testing.T) {
 			t.Errorf("Expected %+v, got %+v.", test.res, res)
 		}
 		if !reflect.DeepEqual(err, test.err) {
+			t.Errorf("Expected %+v, got %+v.", test.err, err)
+		}
+	}
+
+}
+
+type badReader int
+
+func (badReader) Read(_ []byte) (n int, err error) {
+	return 0, errors.New("Bad Reader")
+}
+
+func TestBatchValidateAndParse(t *testing.T) {
+	tests := []struct {
+		source io.Reader
+		res    []handler.RequestData
+		err    error
+	}{
+		{
+			source: badReader(0),
+			res:    nil,
+			err:    errors.New("Bad Reader"),
+		},
+		{
+			source: bytes.NewBufferString(`{`),
+			res:    nil,
+			err:    errors.New("unexpected end of JSON input"),
+		},
+		{
+			source: bytes.NewBufferString(`[]`),
+			res:    []handler.RequestData{},
+			err:    nil,
+		},
+		{
+			source: bytes.NewBufferString(`[{"ip": "Bad IP", "unix_ts": 100}]`),
+			res:    nil,
+			err:    errors.New("Invalid IP address."),
+		},
+		{
+			source: bytes.NewBufferString(`[{"ip": "127.0.0.1", "unix_ts": 100},` +
+				`{"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "unix_ts":666}]`),
+			res: []handler.RequestData{
+				{"127.0.0.1", 4, time.Unix(100, 0)},
+				{"2620:0:1003:1008:5179:57e3:3c75:1886", 6, time.Unix(666, 0)},
+			},
+			err: nil,
+		},
+	}
+	for _, test := range tests {
+		res, err := handler.BatchValidateAndParse(test.source)
+		if !reflect.DeepEqual(res, test.res) {
+			t.Errorf("Expected %+v, got %+v.", test.res, res)
+		}
+		if err != nil && test.err == nil || err == nil && test.err != nil {
 			t.Errorf("Expected %+v, got %+v.", test.err, err)
 		}
 	}

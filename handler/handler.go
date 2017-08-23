@@ -85,8 +85,8 @@ func BatchValidateAndParse(source io.Reader) ([]RequestData, error) {
 		return nil, err
 	}
 	uncheckedData := []struct {
-		ip      string
-		unix_ts int64
+		IP      string
+		Unix_ts int64
 	}{}
 
 	err = json.Unmarshal(jsonBuffer, &uncheckedData)
@@ -94,7 +94,7 @@ func BatchValidateAndParse(source io.Reader) ([]RequestData, error) {
 		return nil, err
 	}
 	for _, data := range uncheckedData {
-		newIP := net.ParseIP(data.ip)
+		newIP := net.ParseIP(data.IP)
 		if newIP == nil {
 			return nil, errors.New("Invalid IP address.")
 		}
@@ -102,7 +102,7 @@ func BatchValidateAndParse(source io.Reader) ([]RequestData, error) {
 		if newIP.To4() != nil {
 			ipType = 4
 		}
-		validatedData = append(validatedData, RequestData{data.ip, ipType, time.Unix(data.unix_ts, 0)})
+		validatedData = append(validatedData, RequestData{data.IP, ipType, time.Unix(data.Unix_ts, 0)})
 	}
 	return validatedData, nil
 }
