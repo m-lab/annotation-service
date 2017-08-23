@@ -1,11 +1,9 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"strconv"
@@ -26,7 +24,8 @@ func SetupHandlers() {
 	go waitForDownloaderMessages()
 }
 
-// Annotate looks up IP address and returns geodata.
+// Annotate is a URL handler that looks up IP address and puts
+// metadata out to the response encoded in json format.
 func Annotate(w http.ResponseWriter, r *http.Request) {
 	// Setup timers and counters for prometheus metrics.
 	timerStart := time.Now()
@@ -49,9 +48,9 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// validates request syntax
-// parses request and returns parameters
-// 0 for IPversion means that there was an error.
+// ValidateAndParse takes a request and validates the URL parameters,
+// verifying that it has a valid ip address and time. Then, it uses
+// that to construct a RequestData struct and returns the pointer.
 func ValidateAndParse(r *http.Request) (*RequestData, error) {
 	query := r.URL.Query()
 
@@ -77,32 +76,7 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 }
 
 func BatchValidateAndParse(source io.Reader) ([]RequestData, error) {
-	jsonBuffer, err := ioutil.ReadAll(source)
-	validatedData := []RequestData{}
-	if err != nil {
-		return nil, err
-	}
-	uncheckedData := []struct {
-		ip      string
-		unix_ts int64
-	}{}
 
-	err = json.Unmarshal(jsonBuffer, &uncheckedData)
-	if err != nil {
-		return nil, err
-	}
-	for _, data := range uncheckedData {
-		newIP := net.ParseIP(data.ip)
-		if newIP == nil {
-			return nil, errors.New("Invalid IP address.")
-		}
-		ipType := 6
-		if newIP.To4() != nil {
-			ipType = 4
-		}
-		validatedData = append(validatedData, RequestData{data.ip, ipType, time.Unix(data.unix_ts, 0)})
-	}
-	return validatedData, nil
 }
 
 func GetMetadataForSingleIP(request *RequestData) *MetaData {
