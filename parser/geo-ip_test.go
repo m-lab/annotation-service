@@ -273,7 +273,6 @@ func compareIPLists(listComp, list []parser.IPNode) error {
 		if element.LocationIndex != listComp[index].LocationIndex {
 			output := strings.Join([]string{"LocationIndex inconsistent\ngot:", strconv.Itoa(element.LocationIndex), " \nwanted:", strconv.Itoa(listComp[index].LocationIndex)}, "")
 			log.Println(output)
-			log.Println(element)
 			return errors.New(output)
 		}
 		if element.PostalCode != listComp[index].PostalCode {
