@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"errors"
 	"log"
+	"net"
 	"reflect"
 	"strconv"
 	"strings"
@@ -13,28 +14,80 @@ import (
 	"github.com/m-lab/annotation-service/parser"
 )
 
+func TestIPGLite1(t *testing.T) {
+	var ipv4 []parser.IPNode
+	var ipv4Expected = []parser.IPNode{
+		parser.IPNode{
+			net.ParseIP("1.0.0.0"),
+			net.ParseIP("1.0.0.255"),
+			0,
+			"",
+			0,
+			0,
+		},
+		parser.IPNode{
+			net.ParseIP("1.0.1.0"),
+			net.ParseIP("1.0.3.255"),
+			4,
+			"",
+			0,
+			0,
+		},
+		parser.IPNode{
+			net.ParseIP("1.0.4.0"),
+			net.ParseIP("1.0.7.255"),
+			4,
+			"",
+			0,
+			0,
+		},
+	}
+	locationIdMap := map[int]int{
+		609013: 0,
+		104084: 4,
+		17:     4,
+	}
+	reader, err := zip.OpenReader("testdata/GeoLiteLatest.zip")
+	if err != nil {
+		t.Errorf("Error opening zip file")
+	}
+
+	rcIPv4, err := loader.FindFile("GeoLiteCity-Blocks.csv", &reader.Reader)
+	if err != nil {
+		t.Errorf("Failed to create io.ReaderCloser")
+	}
+	defer rcIPv4.Close()
+	ipv4, err = parser.CreateIPList(rcIPv4, locationIdMap, "geolatest")
+	if err != nil {
+		t.Errorf("Failed to create ipv4")
+	}
+	err = compareIPLists(ipv4Expected, ipv4)
+	if err != nil {
+		t.Errorf("Lists are not equal")
+	}
+}
 func TestIPLisGLite2(t *testing.T) {
 	var ipv4, ipv6 []parser.IPNode
 	var ipv6Expected = []parser.IPNode{
 		parser.IPNode{
-			parser.RangeCIDR("600:8801:9400:5a1:948b:ab15:dde3:61a3/128","low"),
-			parser.RangeCIDR("600:8801:9400:5a1:948b:ab15:dde3:61a3/128","high"),
+			parser.RangeCIDR("600:8801:9400:5a1:948b:ab15:dde3:61a3/128", "low"),
+			parser.RangeCIDR("600:8801:9400:5a1:948b:ab15:dde3:61a3/128", "high"),
 			4,
 			"91941",
 			32.7596,
 			-116.994,
 		},
 		parser.IPNode{
-			parser.RangeCIDR("2001:5::/32","low"),
-			parser.RangeCIDR("2001:5::/32","high"),
+			parser.RangeCIDR("2001:5::/32", "low"),
+			parser.RangeCIDR("2001:5::/32", "high"),
 			4,
 			"",
 			47,
 			8,
 		},
 		parser.IPNode{
-			parser.RangeCIDR("2001:200::/40","low"),
-			parser.RangeCIDR("2001:200::/40","high"),
+			parser.RangeCIDR("2001:200::/40", "low"),
+			parser.RangeCIDR("2001:200::/40", "high"),
 			4,
 			"",
 			36,
@@ -43,24 +96,24 @@ func TestIPLisGLite2(t *testing.T) {
 	}
 	var ipv4Expected = []parser.IPNode{
 		parser.IPNode{
-			parser.RangeCIDR("1.0.0.0/24","low"),
-			parser.RangeCIDR("1.0.0.0/24","high"),
+			parser.RangeCIDR("1.0.0.0/24", "low"),
+			parser.RangeCIDR("1.0.0.0/24", "high"),
 			0,
 			"3095",
 			-37.7,
 			145.1833,
 		},
 		parser.IPNode{
-			parser.RangeCIDR("1.0.1.0/24","low"),
-			parser.RangeCIDR("1.0.1.0/24","high"),
+			parser.RangeCIDR("1.0.1.0/24", "low"),
+			parser.RangeCIDR("1.0.1.0/24", "high"),
 			4,
 			"",
 			26.0614,
 			119.3061,
 		},
 		parser.IPNode{
-			parser.RangeCIDR("1.0.2.0/23","low"),
-			parser.RangeCIDR("1.0.2.0/23","high"),
+			parser.RangeCIDR("1.0.2.0/23", "low"),
+			parser.RangeCIDR("1.0.2.0/23", "high"),
 			4,
 			"",
 			26.0614,
@@ -84,7 +137,7 @@ func TestIPLisGLite2(t *testing.T) {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
 	defer rcIPv4.Close()
-	ipv4, err = parser.CreateIPList(rcIPv4, locationIdMap,"geolite2")
+	ipv4, err = parser.CreateIPList(rcIPv4, locationIdMap, "geolite2")
 	if err != nil {
 		t.Errorf("Failed to create ipv4")
 	}
@@ -98,7 +151,7 @@ func TestIPLisGLite2(t *testing.T) {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
 	defer rcIPv6.Close()
-	ipv6, err = parser.CreateIPList(rcIPv6, locationIdMap,"geolite2")
+	ipv6, err = parser.CreateIPList(rcIPv6, locationIdMap, "geolite2")
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Failed to create ipv6")
@@ -109,7 +162,7 @@ func TestIPLisGLite2(t *testing.T) {
 	}
 }
 
-func TestLocationListGlite2(t *testing.T) {
+func TestLocationListGLite2(t *testing.T) {
 	var locationList []parser.LocationNode
 	var idMap map[int]int
 	var LocList = []parser.LocationNode{
@@ -207,19 +260,20 @@ func floatToString(num float64) string {
 
 func compareIPLists(listComp, list []parser.IPNode) error {
 	for index, element := range list {
-		if !((element.IPAddressLow).Equal(listComp[index].IPAddressLow)){
+		if !((element.IPAddressLow).Equal(listComp[index].IPAddressLow)) {
 			output := strings.Join([]string{"IPAddress Low inconsistent\ngot:", element.IPAddressLow.String(), " \nwanted:", listComp[index].IPAddressLow.String()}, "")
 			log.Println(output)
 			return errors.New(output)
 		}
-		if !((element.IPAddressHigh).Equal(listComp[index].IPAddressHigh)){
+		if !((element.IPAddressHigh).Equal(listComp[index].IPAddressHigh)) {
 			output := strings.Join([]string{"IPAddressHigh inconsistent\ngot:", element.IPAddressHigh.String(), " \nwanted:", listComp[index].IPAddressHigh.String()}, "")
 			log.Println(output)
 			return errors.New(output)
 		}
-if element.LocationIndex != listComp[index].LocationIndex {
+		if element.LocationIndex != listComp[index].LocationIndex {
 			output := strings.Join([]string{"LocationIndex inconsistent\ngot:", strconv.Itoa(element.LocationIndex), " \nwanted:", strconv.Itoa(listComp[index].LocationIndex)}, "")
 			log.Println(output)
+			log.Println(element)
 			return errors.New(output)
 		}
 		if element.PostalCode != listComp[index].PostalCode {
@@ -236,7 +290,7 @@ if element.LocationIndex != listComp[index].LocationIndex {
 			output := strings.Join([]string{"Longitude inconsistent\ngot:", floatToString(element.Longitude), " \nwanted:", floatToString(listComp[index].Longitude)}, "")
 			log.Println(output)
 			return errors.New(output)
-		}		
+		}
 	}
 	return nil
 }

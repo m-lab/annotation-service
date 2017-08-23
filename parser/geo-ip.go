@@ -3,6 +3,7 @@
 package parser
 
 import (
+	"encoding/binary"
 	"encoding/csv"
 	"errors"
 	"io"
@@ -15,7 +16,7 @@ import (
 
 const ipNumColumnsGlite2 = 10
 const locationNumColumnsGlite2 = 13
-const ipNumColumnsGliteLatest = 9
+const ipNumColumnsGliteLatest = 3
 const mapMax = 200000
 
 // IPNode IPv4 and Block IPv6 databases
@@ -49,6 +50,15 @@ func CreateIPList(reader io.Reader, idMap map[int]int, glite string) ([]IPNode, 
 		log.Println("Empty input data")
 		return list, errors.New("Empty input data")
 	}
+
+	if glite == "geolatest" {
+		_, err := r.Read()
+		if err == io.EOF {
+			log.Println("Empty input data")
+			return list, errors.New("Empty input data")
+		}
+	}
+
 	for {
 		record, err := r.Read()
 		if err == io.EOF {
@@ -62,23 +72,24 @@ func CreateIPList(reader io.Reader, idMap map[int]int, glite string) ([]IPNode, 
 
 			}
 			var newNode IPNode
-			_, err := strconv.Atoi(record[0])
+			lowNum, err := strconv.Atoi(record[0])
 			if err != nil {
 				log.Println("startIpNum should be a number")
 				return nil, errors.New("Corrupted Data: startIpNum should be a number")
 			}
-			newNode.IPAddressLow = net.ParseIP(record[0])
-			_, err = strconv.Atoi(record[1])
+			newNode.IPAddressLow = int2ip(uint32(lowNum))
+			highNum, err := strconv.Atoi(record[1])
 			if err != nil {
 				log.Println("endIpNum should be a number")
 				return nil, errors.New("Corrupted Data: endIpNum should be a number")
 			}
-			newNode.IPAddressHigh = net.ParseIP(record[1])
+			newNode.IPAddressHigh = int2ip(uint32(highNum))
 			index, err := validateGeoId(record[2], idMap)
 			if err != nil {
 				return nil, err
 			}
 			newNode.LocationIndex = index
+			list = append(list, newNode)
 		} else if glite == "geolite2" {
 			if len(record) != ipNumColumnsGlite2 {
 				log.Println("Incorrect number of columns in IP list", ipNumColumnsGlite2, " got: ", len(record), record)
@@ -106,26 +117,32 @@ func CreateIPList(reader io.Reader, idMap map[int]int, glite string) ([]IPNode, 
 			if err != nil {
 				return nil, err
 			}
+			list = append(list, newNode)
 		}
-		list = append(list, newNode)
 	}
 	return list, nil
 }
 
+func int2ip(nn uint32) net.IP {
+	ip := make(net.IP, 4)
+	binary.BigEndian.PutUint32(ip, nn)
+	return ip
+}
+
 func RangeCIDR(cidr, bound string) net.IP {
-	ip,ipnet,_ := net.ParseCIDR(cidr)
-	if bound == "low"{
+	ip, ipnet, _ := net.ParseCIDR(cidr)
+	if bound == "low" {
 		return ip
 	}
-	mask := ipnet.Mask 
-	for x,_ := range ip{
+	mask := ipnet.Mask
+	for x, _ := range ip {
 		if len(mask) == 4 {
 			if x < 12 {
 				ip[x] |= 0
-			}else{
+			} else {
 				ip[x] |= ^mask[x-12]
 			}
-		}else{
+		} else {
 			ip[x] |= ^mask[x]
 		}
 	}
