@@ -7,18 +7,21 @@ import (
 	"errors"
 	"io"
 	"log"
+	"net"
 	"regexp"
 	"strconv"
 	"strings"
 )
 
-const ipNumColumns = 10
-const locationNumColumns = 13
+const ipNumColumnsGlite2 = 10
+const locationNumColumnsGlite2 = 13
+const ipNumColumnsGliteLatest = 9
 const mapMax = 200000
 
 // IPNode IPv4 and Block IPv6 databases
 type IPNode struct {
-	IPAddress     string
+	IPAddressLow  net.IP
+	IPAddressHigh net.IP
 	LocationIndex int // Index to slice of locations
 	PostalCode    string
 	Latitude      float64
@@ -36,7 +39,7 @@ type LocationNode struct {
 }
 
 // Creates a List of nodes for either IPv4 or IPv6 databases.
-func CreateIPList(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
+func CreateIPList(reader io.Reader, idMap map[int]int, glite string) ([]IPNode, error) {
 	list := []IPNode{}
 	r := csv.NewReader(reader)
 	r.TrimLeadingSpace = true
@@ -51,36 +54,95 @@ func CreateIPList(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 		if err == io.EOF {
 			break
 		}
-		if len(record) != ipNumColumns {
-			log.Println("Incorrect number of columns in IP list", ipNumColumns, " got: ", len(record), record)
-			return nil, errors.New("Corrupted Data: wrong number of columns")
-
-		}
 		var newNode IPNode
-		newNode.IPAddress = record[0]
-		geonameId, err := strconv.Atoi(record[1])
-		if err != nil {
-			log.Println("geonameID should be a number")
-			return nil, errors.New("Corrupted Data: geonameID should be a number")
-		}
-		loadIndex, ok := idMap[geonameId]
-		if !ok {
-			log.Println("geonameID not found ", geonameId)
-			return nil, errors.New("Corrupted Data: geonameId not found")
-		}
-		newNode.LocationIndex = loadIndex
-		newNode.PostalCode = record[6]
-		newNode.Latitude, err = stringToFloat(record[7], "Latitude")
-		if err != nil {
-			return nil, err
-		}
-		newNode.Longitude, err = stringToFloat(record[8], "Longitude")
-		if err != nil {
-			return nil, err
+		if glite == "geolatest" {
+			if len(record) != ipNumColumnsGliteLatest {
+				log.Println("Incorrect number of columns in IP list", ipNumColumnsGliteLatest, " got: ", len(record), record)
+				return nil, errors.New("Corrupted Data: wrong number of columns")
+
+			}
+			var newNode IPNode
+			_, err := strconv.Atoi(record[0])
+			if err != nil {
+				log.Println("startIpNum should be a number")
+				return nil, errors.New("Corrupted Data: startIpNum should be a number")
+			}
+			newNode.IPAddressLow = net.ParseIP(record[0])
+			_, err = strconv.Atoi(record[1])
+			if err != nil {
+				log.Println("endIpNum should be a number")
+				return nil, errors.New("Corrupted Data: endIpNum should be a number")
+			}
+			newNode.IPAddressHigh = net.ParseIP(record[1])
+			index, err := validateGeoId(record[2], idMap)
+			if err != nil {
+				return nil, err
+			}
+			newNode.LocationIndex = index
+		} else if glite == "geolite2" {
+			if len(record) != ipNumColumnsGlite2 {
+				log.Println("Incorrect number of columns in IP list", ipNumColumnsGlite2, " got: ", len(record), record)
+				return nil, errors.New("Corrupted Data: wrong number of columns")
+
+			}
+			_, _, err := net.ParseCIDR(record[0])
+			if err != nil {
+				log.Println("Incorrect CIDR form: ", record[0])
+				return nil, errors.New("Corrupted Data: invalid CIDR IP range")
+			}
+			newNode.IPAddressLow = RangeCIDR(record[0], "low")
+			newNode.IPAddressHigh = RangeCIDR(record[0], "high")
+			index, err := validateGeoId(record[1], idMap)
+			if err != nil {
+				return nil, err
+			}
+			newNode.LocationIndex = index
+			newNode.PostalCode = record[6]
+			newNode.Latitude, err = stringToFloat(record[7], "Latitude")
+			if err != nil {
+				return nil, err
+			}
+			newNode.Longitude, err = stringToFloat(record[8], "Longitude")
+			if err != nil {
+				return nil, err
+			}
 		}
 		list = append(list, newNode)
 	}
 	return list, nil
+}
+
+func RangeCIDR(cidr, bound string) net.IP {
+	ip,ipnet,_ := net.ParseCIDR(cidr)
+	if bound == "low"{
+		return ip
+	}
+	mask := ipnet.Mask 
+	for x,_ := range ip{
+		if len(mask) == 4 {
+			if x < 12 {
+				ip[x] |= 0
+			}else{
+				ip[x] |= ^mask[x-12]
+			}
+		}else{
+			ip[x] |= ^mask[x]
+		}
+	}
+	return ip
+}
+func validateGeoId(field string, idMap map[int]int) (int, error) {
+	geonameId, err := strconv.Atoi(field)
+	if err != nil {
+		log.Println("geonameID should be a number")
+		return 0, errors.New("Corrupted Data: geonameID should be a number")
+	}
+	loadIndex, ok := idMap[geonameId]
+	if !ok {
+		log.Println("geonameID not found ", geonameId)
+		return 0, errors.New("Corrupted Data: geonameId not found")
+	}
+	return loadIndex, nil
 }
 
 func stringToFloat(str, field string) (float64, error) {
@@ -125,8 +187,8 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		if err == io.EOF {
 			break
 		}
-		if len(record) != locationNumColumns {
-			log.Println("Incorrect number of columns in Location list\n\twanted: ", locationNumColumns, " got: ", len(record), record)
+		if len(record) != locationNumColumnsGlite2 {
+			log.Println("Incorrect number of columns in Location list\n\twanted: ", locationNumColumnsGlite2, " got: ", len(record), record)
 			return nil, nil, errors.New("Corrupted Data: wrong number of columns")
 		}
 		var newNode LocationNode

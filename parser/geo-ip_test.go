@@ -13,25 +13,28 @@ import (
 	"github.com/m-lab/annotation-service/parser"
 )
 
-func TestIPList(t *testing.T) {
+func TestIPLisGLite2(t *testing.T) {
 	var ipv4, ipv6 []parser.IPNode
 	var ipv6Expected = []parser.IPNode{
 		parser.IPNode{
-			"600:8801:9400:5a1:948b:ab15:dde3:61a3/128",
+			parser.RangeCIDR("600:8801:9400:5a1:948b:ab15:dde3:61a3/128","low"),
+			parser.RangeCIDR("600:8801:9400:5a1:948b:ab15:dde3:61a3/128","high"),
 			4,
 			"91941",
 			32.7596,
 			-116.994,
 		},
 		parser.IPNode{
-			"2001:5::/32",
+			parser.RangeCIDR("2001:5::/32","low"),
+			parser.RangeCIDR("2001:5::/32","high"),
 			4,
 			"",
 			47,
 			8,
 		},
 		parser.IPNode{
-			"2001:200::/40",
+			parser.RangeCIDR("2001:200::/40","low"),
+			parser.RangeCIDR("2001:200::/40","high"),
 			4,
 			"",
 			36,
@@ -40,21 +43,24 @@ func TestIPList(t *testing.T) {
 	}
 	var ipv4Expected = []parser.IPNode{
 		parser.IPNode{
-			"1.0.0.0/24",
+			parser.RangeCIDR("1.0.0.0/24","low"),
+			parser.RangeCIDR("1.0.0.0/24","high"),
 			0,
 			"3095",
 			-37.7,
 			145.1833,
 		},
 		parser.IPNode{
-			"1.0.1.0/24",
+			parser.RangeCIDR("1.0.1.0/24","low"),
+			parser.RangeCIDR("1.0.1.0/24","high"),
 			4,
 			"",
 			26.0614,
 			119.3061,
 		},
 		parser.IPNode{
-			"1.0.2.0/23",
+			parser.RangeCIDR("1.0.2.0/23","low"),
+			parser.RangeCIDR("1.0.2.0/23","high"),
 			4,
 			"",
 			26.0614,
@@ -78,7 +84,7 @@ func TestIPList(t *testing.T) {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
 	defer rcIPv4.Close()
-	ipv4, err = parser.CreateIPList(rcIPv4, locationIdMap)
+	ipv4, err = parser.CreateIPList(rcIPv4, locationIdMap,"geolite2")
 	if err != nil {
 		t.Errorf("Failed to create ipv4")
 	}
@@ -92,7 +98,7 @@ func TestIPList(t *testing.T) {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
 	defer rcIPv6.Close()
-	ipv6, err = parser.CreateIPList(rcIPv6, locationIdMap)
+	ipv6, err = parser.CreateIPList(rcIPv6, locationIdMap,"geolite2")
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Failed to create ipv6")
@@ -103,7 +109,7 @@ func TestIPList(t *testing.T) {
 	}
 }
 
-func TestLocationList(t *testing.T) {
+func TestLocationListGlite2(t *testing.T) {
 	var locationList []parser.LocationNode
 	var idMap map[int]int
 	var LocList = []parser.LocationNode{
@@ -199,14 +205,19 @@ func floatToString(num float64) string {
 	return strconv.FormatFloat(num, 'f', 6, 64)
 }
 
-func compareIPLists(list, listComp []parser.IPNode) error {
+func compareIPLists(listComp, list []parser.IPNode) error {
 	for index, element := range list {
-		if element.IPAddress != listComp[index].IPAddress {
-			output := strings.Join([]string{"IPAddress inconsistent\ngot:", element.IPAddress, " \nwanted:", listComp[index].IPAddress}, "")
+		if !((element.IPAddressLow).Equal(listComp[index].IPAddressLow)){
+			output := strings.Join([]string{"IPAddress Low inconsistent\ngot:", element.IPAddressLow.String(), " \nwanted:", listComp[index].IPAddressLow.String()}, "")
 			log.Println(output)
 			return errors.New(output)
 		}
-		if element.LocationIndex != listComp[index].LocationIndex {
+		if !((element.IPAddressHigh).Equal(listComp[index].IPAddressHigh)){
+			output := strings.Join([]string{"IPAddressHigh inconsistent\ngot:", element.IPAddressHigh.String(), " \nwanted:", listComp[index].IPAddressHigh.String()}, "")
+			log.Println(output)
+			return errors.New(output)
+		}
+if element.LocationIndex != listComp[index].LocationIndex {
 			output := strings.Join([]string{"LocationIndex inconsistent\ngot:", strconv.Itoa(element.LocationIndex), " \nwanted:", strconv.Itoa(listComp[index].LocationIndex)}, "")
 			log.Println(output)
 			return errors.New(output)
@@ -225,8 +236,7 @@ func compareIPLists(list, listComp []parser.IPNode) error {
 			output := strings.Join([]string{"Longitude inconsistent\ngot:", floatToString(element.Longitude), " \nwanted:", floatToString(listComp[index].Longitude)}, "")
 			log.Println(output)
 			return errors.New(output)
-		}
-
+		}		
 	}
 	return nil
 }
