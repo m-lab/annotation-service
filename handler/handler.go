@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"strconv"
@@ -76,8 +78,33 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func BatchValidateAndParse(source io.Reader) ([]schema.RequestData, error) {
-	return nil, nil
+func BatchValidateAndParse(source io.Reader) ([]RequestData, error) {
+	jsonBuffer, err := ioutil.ReadAll(source)
+	validatedData := []RequestData{}
+	if err != nil {
+		return nil, err
+	}
+	uncheckedData := []struct {
+		ip      string
+		unix_ts int64
+	}{}
+
+	err = json.Unmarshal(jsonBuffer, &uncheckedData)
+	if err != nil {
+		return nil, err
+	}
+	for _, data := range uncheckedData {
+		newIP := net.ParseIP(data.ip)
+		if newIP == nil {
+			return nil, errors.New("Invalid IP address.")
+		}
+		ipType := 6
+		if newIP.To4() != nil {
+			ipType = 4
+		}
+		validatedData = append(validatedData, RequestData{data.ip, ipType, time.Unix(data.unix_ts, 0)})
+	}
+	return validatedData, nil
 }
 
 func GetMetadataForSingleIP(request *schema.RequestData) *schema.MetaData {
