@@ -9,14 +9,14 @@ import (
 	"github.com/m-lab/annotation-service/handler"
 )
 
-func TestRequest(t *testing.T) {
+func TestAnnotate(t *testing.T) {
 	tests := []struct {
-		ip       string
-		time     string
-		res      string
-		time_num int64
+		ip   string
+		time string
+		res  string
 	}{
-		{"1.4.128.0", "625600", `{"Geo":{"city": "Not A Real City", "postal_code":"10583"},"ASN":{}}`, 625600},
+		{"1.4.128.0", "625600", `{"Geo":{"city": "Not A Real City", "postal_code":"10583"},"ASN":{}}`},
+		{"This will be an error.", "1000", "Invalid request"},
 	}
 	for _, test := range tests {
 		w := httptest.NewRecorder()

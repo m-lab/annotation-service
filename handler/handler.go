@@ -6,13 +6,21 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/m-lab/annotation-service/metrics"
 )
 
+// A mutex to make sure that we are not reading from the dataset while
+// trying to update it
+var currentDataMutex = &sync.RWMutex{}
+
+// A function to set up any handlers that are needed, including url
+// handlers and pubsub handlers
 func SetupHandlers() {
 	http.HandleFunc("/annotate", Annotate)
+	go waitForDownloaderMessages()
 }
 
 // Annotate looks up IP address and returns geodata.
@@ -22,6 +30,8 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Invalid request")
 	} else {
 		// Fake response
+		currentDataMutex.RLock()
+		defer currentDataMutex.RUnlock()
 		fmt.Fprintf(w, `{"Geo":{"city": "%s", "postal_code":"10583"},"ASN":{}}`, "Not A Real City")
 		// TODO: Figure out which table to use
 		// TODO: Handle request
