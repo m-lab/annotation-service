@@ -40,7 +40,7 @@ type LocationNode struct {
 }
 
 // Creates a List of nodes for either IPv4 or IPv6 databases.
-func CreateIPList(reader io.Reader, idMap map[int]int, glite string) ([]IPNode, error) {
+func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, error) {
 	list := []IPNode{}
 	r := csv.NewReader(reader)
 	r.TrimLeadingSpace = true
@@ -51,7 +51,7 @@ func CreateIPList(reader io.Reader, idMap map[int]int, glite string) ([]IPNode, 
 		return list, errors.New("Empty input data")
 	}
 
-	if glite == "geolatest" {
+	if file == "GeoLiteCity-Blocks.csv" {
 		_, err := r.Read()
 		if err == io.EOF {
 			log.Println("Empty input data")
@@ -65,7 +65,7 @@ func CreateIPList(reader io.Reader, idMap map[int]int, glite string) ([]IPNode, 
 			break
 		}
 		var newNode IPNode
-		if glite == "geolatest" {
+		if file == "GeoLiteCity-Blocks.csv" {
 			if len(record) != ipNumColumnsGliteLatest {
 				log.Println("Incorrect number of columns in IP list", ipNumColumnsGliteLatest, " got: ", len(record), record)
 				return nil, errors.New("Corrupted Data: wrong number of columns")
@@ -90,7 +90,7 @@ func CreateIPList(reader io.Reader, idMap map[int]int, glite string) ([]IPNode, 
 			}
 			newNode.LocationIndex = index
 			list = append(list, newNode)
-		} else if glite == "geolite2" {
+		} else if file == "GeoLite2-City-Blocks-IPv4.csv" || file == "GeoLite2-City-Blocks-IPv6.csv" {
 			if len(record) != ipNumColumnsGlite2 {
 				log.Println("Incorrect number of columns in IP list", ipNumColumnsGlite2, " got: ", len(record), record)
 				return nil, errors.New("Corrupted Data: wrong number of columns")
@@ -123,12 +123,14 @@ func CreateIPList(reader io.Reader, idMap map[int]int, glite string) ([]IPNode, 
 	return list, nil
 }
 
+// Converts integer to IPv4
 func int2ip(nn uint32) net.IP {
 	ip := make(net.IP, 4)
 	binary.BigEndian.PutUint32(ip, nn)
 	return ip
 }
 
+// Finds the smallest and largest net.IP from a CIDR range
 func RangeCIDR(cidr, bound string) net.IP {
 	ip, ipnet, _ := net.ParseCIDR(cidr)
 	if bound == "low" {
@@ -148,6 +150,7 @@ func RangeCIDR(cidr, bound string) net.IP {
 	}
 	return ip
 }
+
 func validateGeoId(field string, idMap map[int]int) (int, error) {
 	geonameId, err := strconv.Atoi(field)
 	if err != nil {

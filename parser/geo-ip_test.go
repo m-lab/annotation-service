@@ -57,7 +57,7 @@ func TestIPGLite1(t *testing.T) {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
 	defer rcIPv4.Close()
-	ipv4, err = parser.CreateIPList(rcIPv4, locationIdMap, "geolatest")
+	ipv4, err = parser.CreateIPList(rcIPv4, locationIdMap, "GeoLiteCity-Blocks.csv")
 	if err != nil {
 		t.Errorf("Failed to create ipv4")
 	}
