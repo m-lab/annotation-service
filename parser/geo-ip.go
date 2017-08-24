@@ -68,9 +68,9 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 		var newNode IPNode
 		switch {
 		case strings.HasPrefix(file, gLiteLatestPrefix):
-			err = checkColumnLength(record,ipNumColumnsGliteLatest)
+			err = checkColumnLength(record, ipNumColumnsGliteLatest)
 			if err != nil {
-				return nil,err
+				return nil, err
 			}
 			var newNode IPNode
 			newNode.IPAddressLow, err = Int2ip(record[0])
@@ -88,9 +88,9 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 			newNode.LocationIndex = index
 			list = append(list, newNode)
 		case strings.HasPrefix(file, gLite2CityPrefix):
-			err = checkColumnLength(record,ipNumColumnsGlite2)
+			err = checkColumnLength(record, ipNumColumnsGlite2)
 			if err != nil {
-				return nil,err
+				return nil, err
 			}
 			newNode.IPAddressLow, err = RangeCIDR(record[0], true)
 			if err != nil {
