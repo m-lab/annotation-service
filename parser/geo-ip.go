@@ -92,14 +92,12 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 			if err != nil {
 				return nil, err
 			}
-			newNode.IPAddressLow, err = RangeCIDR(record[0], true)
+			lowIp, highIp, err := RangeCIDR(record[0])
 			if err != nil {
 				return nil, err
 			}
-			newNode.IPAddressHigh, err = RangeCIDR(record[0], false)
-			if err != nil {
-				return nil, err
-			}
+			newNode.IPAddressLow = lowIp
+			newNode.IPAddressHigh = highIp
 			index, err := validateGeoId(record[1], idMap)
 			if err != nil {
 				return nil, err
@@ -132,7 +130,7 @@ func checkColumnLength(record []string, size int) error {
 	return nil
 }
 
-// Converts integer to IPv4
+// Converts integer to net.IP
 func Int2ip(str string) (net.IP, error) {
 	num, err := strconv.Atoi(str)
 	if err != nil {
@@ -145,15 +143,14 @@ func Int2ip(str string) (net.IP, error) {
 }
 
 // Finds the smallest and largest net.IP from a CIDR range
-// Example: "1.0.0.0/24" -> Low bound: 1.0.0.0 High bound: 1.0.0.255
-func RangeCIDR(cidr string, lowBound bool) (net.IP, error) {
+// Example: "1.0.0.0/24" -> 1.0.0.0 , 1.0.0.255
+func RangeCIDR(cidr string) (net.IP, net.IP, error) {
 	ip, ipnet, err := net.ParseCIDR(cidr)
 	if err != nil {
-		return nil, errors.New("Invalid CIDR IP range")
+		return nil, nil, errors.New("Invalid CIDR IP range")
 	}
-	if lowBound {
-		return ip, nil
-	}
+	lowIp := make(net.IP, len(ip))
+	copy(lowIp, ip)
 	mask := ipnet.Mask
 	for x, _ := range ip {
 		if len(mask) == 4 {
@@ -166,7 +163,7 @@ func RangeCIDR(cidr string, lowBound bool) (net.IP, error) {
 			ip[x] |= ^mask[x]
 		}
 	}
-	return ip, nil
+	return lowIp, ip, nil
 }
 
 // Returns the index of geonameId within idMap
