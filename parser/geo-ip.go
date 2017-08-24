@@ -41,7 +41,7 @@ type LocationNode struct {
 	CityName      string
 }
 
-// Creates a List of nodes for either IPv4 or IPv6 databases.
+// Creates a List of IPNodes
 func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, error) {
 	list := []IPNode{}
 	r := csv.NewReader(reader)
@@ -123,7 +123,7 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 	return list, nil
 }
 
-// Verify that the passed in array is the appropriate size
+// Verify column length
 func checkColumnLength(record []string, size int) error {
 	if len(record) != size {
 		log.Println("Incorrect number of columns in IP list", size, " got: ", len(record), record)
