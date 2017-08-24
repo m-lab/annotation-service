@@ -76,7 +76,7 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 }
 
 func BatchValidateAndParse(source io.Reader) ([]RequestData, error) {
-
+	return nil, nil
 }
 
 func GetMetadataForSingleIP(request *RequestData) *MetaData {
