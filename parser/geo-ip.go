@@ -18,8 +18,10 @@ const ipNumColumnsGlite2 = 10
 const locationNumColumnsGlite2 = 13
 const ipNumColumnsGliteLatest = 3
 const mapMax = 200000
+const gLiteLatestPrefix = "GeoLiteCity-Blocks"
+const gLite2CityPrefix = "GeoLite2-City-Blocks"
 
-// IPNode IPv4 and Block IPv6 databases
+// IPNode defines IPv4 and IPv6 databases
 type IPNode struct {
 	IPAddressLow  net.IP
 	IPAddressHigh net.IP
@@ -58,51 +60,46 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 			return list, errors.New("Empty input data")
 		}
 	}
-
 	for {
 		record, err := r.Read()
 		if err == io.EOF {
 			break
 		}
 		var newNode IPNode
-		if file == "GeoLiteCity-Blocks.csv" {
-			if len(record) != ipNumColumnsGliteLatest {
-				log.Println("Incorrect number of columns in IP list", ipNumColumnsGliteLatest, " got: ", len(record), record)
-				return nil, errors.New("Corrupted Data: wrong number of columns")
-
+		switch {
+		case strings.HasPrefix(file, gLiteLatestPrefix):
+			err = checkColumnLength(record,ipNumColumnsGliteLatest)
+			if err != nil {
+				return nil,err
 			}
 			var newNode IPNode
-			lowNum, err := strconv.Atoi(record[0])
+			newNode.IPAddressLow, err = Int2ip(record[0])
 			if err != nil {
-				log.Println("startIpNum should be a number")
-				return nil, errors.New("Corrupted Data: startIpNum should be a number")
+				return nil, err
 			}
-			newNode.IPAddressLow = int2ip(uint32(lowNum))
-			highNum, err := strconv.Atoi(record[1])
+			newNode.IPAddressHigh, err = Int2ip(record[1])
 			if err != nil {
-				log.Println("endIpNum should be a number")
-				return nil, errors.New("Corrupted Data: endIpNum should be a number")
+				return nil, err
 			}
-			newNode.IPAddressHigh = int2ip(uint32(highNum))
 			index, err := validateGeoId(record[2], idMap)
 			if err != nil {
 				return nil, err
 			}
 			newNode.LocationIndex = index
 			list = append(list, newNode)
-		} else if file == "GeoLite2-City-Blocks-IPv4.csv" || file == "GeoLite2-City-Blocks-IPv6.csv" {
-			if len(record) != ipNumColumnsGlite2 {
-				log.Println("Incorrect number of columns in IP list", ipNumColumnsGlite2, " got: ", len(record), record)
-				return nil, errors.New("Corrupted Data: wrong number of columns")
-
-			}
-			_, _, err := net.ParseCIDR(record[0])
+		case strings.HasPrefix(file, gLite2CityPrefix):
+			err = checkColumnLength(record,ipNumColumnsGlite2)
 			if err != nil {
-				log.Println("Incorrect CIDR form: ", record[0])
-				return nil, errors.New("Corrupted Data: invalid CIDR IP range")
+				return nil,err
 			}
-			newNode.IPAddressLow = RangeCIDR(record[0], "low")
-			newNode.IPAddressHigh = RangeCIDR(record[0], "high")
+			newNode.IPAddressLow, err = RangeCIDR(record[0], true)
+			if err != nil {
+				return nil, err
+			}
+			newNode.IPAddressHigh, err = RangeCIDR(record[0], false)
+			if err != nil {
+				return nil, err
+			}
 			index, err := validateGeoId(record[1], idMap)
 			if err != nil {
 				return nil, err
@@ -118,23 +115,44 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 				return nil, err
 			}
 			list = append(list, newNode)
+		default:
+			log.Println("Unaccepted csv file provided: ", file)
+			return list, errors.New("Unaccepted csv file provided")
 		}
 	}
 	return list, nil
 }
 
+// Verify that the passed in array is the appropriate size
+func checkColumnLength(record []string, size int) error {
+	if len(record) != size {
+		log.Println("Incorrect number of columns in IP list", size, " got: ", len(record), record)
+		return errors.New("Corrupted Data: wrong number of columns")
+	}
+	return nil
+}
+
 // Converts integer to IPv4
-func int2ip(nn uint32) net.IP {
+func Int2ip(str string) (net.IP, error) {
+	num, err := strconv.Atoi(str)
+	if err != nil {
+		log.Println("Provided IP should be a number")
+		return nil, errors.New("Inputed string cannot be converted to a number")
+	}
 	ip := make(net.IP, 4)
-	binary.BigEndian.PutUint32(ip, nn)
-	return ip
+	binary.BigEndian.PutUint32(ip, uint32(num))
+	return ip, nil
 }
 
 // Finds the smallest and largest net.IP from a CIDR range
-func RangeCIDR(cidr, bound string) net.IP {
-	ip, ipnet, _ := net.ParseCIDR(cidr)
-	if bound == "low" {
-		return ip
+// Example: "1.0.0.0/24" -> Low bound: 1.0.0.0 High bound: 1.0.0.255
+func RangeCIDR(cidr string, lowBound bool) (net.IP, error) {
+	ip, ipnet, err := net.ParseCIDR(cidr)
+	if err != nil {
+		return nil, errors.New("Invalid CIDR IP range")
+	}
+	if lowBound {
+		return ip, nil
 	}
 	mask := ipnet.Mask
 	for x, _ := range ip {
@@ -148,11 +166,12 @@ func RangeCIDR(cidr, bound string) net.IP {
 			ip[x] |= ^mask[x]
 		}
 	}
-	return ip
+	return ip, nil
 }
 
-func validateGeoId(field string, idMap map[int]int) (int, error) {
-	geonameId, err := strconv.Atoi(field)
+// Returns the index of geonameId within idMap
+func validateGeoId(gnid string, idMap map[int]int) (int, error) {
+	geonameId, err := strconv.Atoi(gnid)
 	if err != nil {
 		log.Println("geonameID should be a number")
 		return 0, errors.New("Corrupted Data: geonameID should be a number")

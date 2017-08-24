@@ -14,6 +14,25 @@ import (
 	"github.com/m-lab/annotation-service/parser"
 )
 
+func TestBadFile(t *testing.T) {
+	locationIdMap := map[int]int{
+		609013: 0,
+		104084: 4,
+		17:     4,
+	}
+	reader, err := zip.OpenReader("testdata/GeoLiteLatest.zip")
+	if err != nil {
+		t.Errorf("Error opening zip file")
+	}
+	rc, err := loader.FindFile("GeoLiteCity-Blocks.csv", &reader.Reader)
+	if err != nil {
+		t.Errorf("Failed to create io.ReaderCloser")
+	}
+	_, err = parser.CreateIPList(rc, locationIdMap, "BADFILE.csv")
+	if err.Error() != "Unaccepted csv file provided" {
+		t.Errorf("Failed to catch bad csv file")
+	}
+}
 func TestIPGLite1(t *testing.T) {
 	var ipv4 []parser.IPNode
 	var ipv4Expected = []parser.IPNode{
@@ -51,7 +70,6 @@ func TestIPGLite1(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error opening zip file")
 	}
-
 	rcIPv4, err := loader.FindFile("GeoLiteCity-Blocks.csv", &reader.Reader)
 	if err != nil {
 		t.Errorf("Failed to create io.ReaderCloser")
@@ -70,24 +88,24 @@ func TestIPLisGLite2(t *testing.T) {
 	var ipv4, ipv6 []parser.IPNode
 	var ipv6Expected = []parser.IPNode{
 		parser.IPNode{
-			parser.RangeCIDR("600:8801:9400:5a1:948b:ab15:dde3:61a3/128", "low"),
-			parser.RangeCIDR("600:8801:9400:5a1:948b:ab15:dde3:61a3/128", "high"),
+			net.ParseIP("600:8801:9400:5a1:948b:ab15:dde3:61a3"),
+			net.ParseIP("600:8801:9400:5a1:948b:ab15:dde3:61a3"),
 			4,
 			"91941",
 			32.7596,
 			-116.994,
 		},
 		parser.IPNode{
-			parser.RangeCIDR("2001:5::/32", "low"),
-			parser.RangeCIDR("2001:5::/32", "high"),
+			net.ParseIP("2001:5::"),
+			net.ParseIP("2001:0005:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF"),
 			4,
 			"",
 			47,
 			8,
 		},
 		parser.IPNode{
-			parser.RangeCIDR("2001:200::/40", "low"),
-			parser.RangeCIDR("2001:200::/40", "high"),
+			net.ParseIP("2001:200::"),
+			net.ParseIP("2001:0200:00FF:FFFF:FFFF:FFFF:FFFF:FFFF"),
 			4,
 			"",
 			36,
@@ -96,30 +114,31 @@ func TestIPLisGLite2(t *testing.T) {
 	}
 	var ipv4Expected = []parser.IPNode{
 		parser.IPNode{
-			parser.RangeCIDR("1.0.0.0/24", "low"),
-			parser.RangeCIDR("1.0.0.0/24", "high"),
+			net.ParseIP("1.0.0.0"),
+			net.ParseIP("1.0.0.255"),
 			0,
 			"3095",
 			-37.7,
 			145.1833,
 		},
 		parser.IPNode{
-			parser.RangeCIDR("1.0.1.0/24", "low"),
-			parser.RangeCIDR("1.0.1.0/24", "high"),
+			net.ParseIP("1.0.1.0"),
+			net.ParseIP("1.0.1.255"),
 			4,
 			"",
 			26.0614,
 			119.3061,
 		},
 		parser.IPNode{
-			parser.RangeCIDR("1.0.2.0/23", "low"),
-			parser.RangeCIDR("1.0.2.0/23", "high"),
+			net.ParseIP("1.0.2.0"),
+			net.ParseIP("1.0.3.255"),
 			4,
 			"",
 			26.0614,
 			119.3061,
 		},
 	}
+
 	locationIdMap := map[int]int{
 		2151718: 0,
 		1810821: 4,
@@ -137,7 +156,7 @@ func TestIPLisGLite2(t *testing.T) {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
 	defer rcIPv4.Close()
-	ipv4, err = parser.CreateIPList(rcIPv4, locationIdMap, "geolite2")
+	ipv4, err = parser.CreateIPList(rcIPv4, locationIdMap, "GeoLite2-City-Blocks-IPv4.csv")
 	if err != nil {
 		t.Errorf("Failed to create ipv4")
 	}
@@ -151,7 +170,7 @@ func TestIPLisGLite2(t *testing.T) {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
 	defer rcIPv6.Close()
-	ipv6, err = parser.CreateIPList(rcIPv6, locationIdMap, "geolite2")
+	ipv6, err = parser.CreateIPList(rcIPv6, locationIdMap, "GeoLite2-City-Blocks-IPv6.csv")
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Failed to create ipv6")
