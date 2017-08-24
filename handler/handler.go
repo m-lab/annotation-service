@@ -38,17 +38,19 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 	metrics.Metrics_activeRequests.Inc()
 	defer metrics.Metrics_activeRequests.Dec()
 
-	_, err := ValidateAndParse(r)
+	data, err := ValidateAndParse(r)
 	if err != nil {
 		fmt.Fprintf(w, "Invalid request")
-	} else {
-		// Fake response
-		currentDataMutex.RLock()
-		defer currentDataMutex.RUnlock()
-		fmt.Fprintf(w, `{"Geo":{"city": "%s", "postal_code":"10583"},"ASN":{}}`, "Not A Real City")
-		// TODO: Figure out which table to use
-		// TODO: Handle request
+		return
 	}
+
+	result := GetMetadataForSingleIP(data)
+	encodedResult, err := json.Marshal(result)
+	if err != nil {
+		fmt.Fprintf(w, "Unknown JSON Encoding Error")
+		return
+	}
+	fmt.Fprint(w, string(encodedResult))
 }
 
 // ValidateAndParse takes a request and validates the URL parameters,
@@ -75,6 +77,23 @@ func ValidateAndParse(r *http.Request) (*schema.RequestData, error) {
 }
 
 func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
+	// Setup timers and counters for prometheus metrics.
+	timerStart := time.Now()
+	defer func(tStart time.Time) {
+		metrics.Metrics_requestTimes.Observe(float64(time.Since(tStart).Nanoseconds()))
+	}(timerStart)
+
+	dataSlice, err := BatchValidateAndParse(r.Body)
+	r.Body.Close()
+
+	if err != nil {
+		fmt.Fprintf(w, "Invalid Request!")
+		return
+	}
+
+	_ = make(map[string]*MetaData)
+	for _, _ = range dataSlice {
+	}
 
 }
 
@@ -107,6 +126,11 @@ func BatchValidateAndParse(source io.Reader) ([]RequestData, error) {
 	return validatedData, nil
 }
 
-func GetMetadataForSingleIP(request *schema.RequestData) *schema.MetaData {
-	return nil
+// TODO: Figure out which table to use
+// TODO: Handle request
+func GetMetadataForSingleIP(request *RequestData) *MetaData {
+	currentDataMutex.RLock()
+	defer currentDataMutex.RUnlock()
+	// Fake response
+	return &MetaData{Geo: &GeolocationIP{City: "Not A Real City", Postal_code: "10583"}, ASN: &IPASNData{}}
 }

@@ -21,7 +21,7 @@ func TestAnnotate(t *testing.T) {
 		time string
 		res  string
 	}{
-		{"1.4.128.0", "625600", `{"Geo":{"city": "Not A Real City", "postal_code":"10583"},"ASN":{}}`},
+		{"1.4.128.0", "625600", `{"Geo":{"continent_code":"","country_code":"","country_code3":"","country_name":"","region":"","metro_code":0,"city":"Not A Real City","area_code":0,"postal_code":"10583","latitude":0,"longitude":0},"ASN":{}}`},
 		{"This will be an error.", "1000", "Invalid request"},
 	}
 	for _, test := range tests {
