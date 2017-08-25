@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io"
 	"log"
+	"math"
 	"net"
 	"regexp"
 	"strconv"
@@ -136,6 +137,10 @@ func Int2ip(str string) (net.IP, error) {
 	if err != nil {
 		log.Println("Provided IP should be a number")
 		return nil, errors.New("Inputed string cannot be converted to a number")
+	}
+	ft := float64(num)
+	if ft > math.Pow(2, 32) || num < 1 {
+		log.Println("Provided IP should be in the range of 0.0.0.1 and 255.255.255.255 ", str)
 	}
 	ip := make(net.IP, 4)
 	binary.BigEndian.PutUint32(ip, uint32(num))
