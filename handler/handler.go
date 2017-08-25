@@ -93,6 +93,7 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	r.Body.Close()
 
 	if err != nil {
+		fmt.Println(err)
 		fmt.Fprintf(w, "Invalid Request!")
 		return
 	}
@@ -121,10 +122,7 @@ func BatchValidateAndParse(source io.Reader) ([]schema.RequestData, error) {
 	if err != nil {
 		return nil, err
 	}
-	uncheckedData := []struct {
-		IP      string
-		Unix_ts int64
-	}{}
+	uncheckedData := []schema.RequestData{}
 
 	err = json.Unmarshal(jsonBuffer, &uncheckedData)
 	if err != nil {
@@ -139,7 +137,7 @@ func BatchValidateAndParse(source io.Reader) ([]schema.RequestData, error) {
 		if newIP.To4() != nil {
 			ipType = 4
 		}
-		validatedData = append(validatedData, schema.RequestData{data.IP, ipType, time.Unix(data.Unix_ts, 0)})
+		validatedData = append(validatedData, schema.RequestData{data.IP, ipType, data.Timestamp})
 	}
 	return validatedData, nil
 }

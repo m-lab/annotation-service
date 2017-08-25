@@ -87,6 +87,7 @@ func (badReader) Read(_ []byte) (n int, err error) {
 }
 
 func TestBatchValidateAndParse(t *testing.T) {
+	timeCon, _ := time.Parse(time.RFC3339, "2002-10-02T15:00:00Z")
 	tests := []struct {
 		source io.Reader
 		res    []schema.RequestData
@@ -108,16 +109,16 @@ func TestBatchValidateAndParse(t *testing.T) {
 			err:    nil,
 		},
 		{
-			source: bytes.NewBufferString(`[{"ip": "Bad IP", "unix_ts": 100}]`),
+			source: bytes.NewBufferString(`[{"ip": "Bad IP", "timestamp": "2002-10-02T15:00:00Z"}]`),
 			res:    nil,
 			err:    errors.New("Invalid IP address."),
 		},
 		{
-			source: bytes.NewBufferString(`[{"ip": "127.0.0.1", "unix_ts": 100},` +
-				`{"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "unix_ts":666}]`),
+			source: bytes.NewBufferString(`[{"ip": "127.0.0.1", "timestamp": "2002-10-02T15:00:00Z"},` +
+				`{"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "timestamp": "2002-10-02T15:00:00Z"}]`),
 			res: []schema.RequestData{
-				{"127.0.0.1", 4, time.Unix(100, 0)},
-				{"2620:0:1003:1008:5179:57e3:3c75:1886", 6, time.Unix(666, 0)},
+				{"127.0.0.1", 4, timeCon},
+				{"2620:0:1003:1008:5179:57e3:3c75:1886", 6, timeCon},
 			},
 			err: nil,
 		},
@@ -144,9 +145,9 @@ func TestBatchAnnotate(t *testing.T) {
 			res:  "Invalid Request!",
 		},
 		{
-			body: `[{"ip": "127.0.0.1", "unix_ts": 100980},
-                               {"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "unix_ts":666}]`,
-			res: `{"127.0.0.125x0":{"Geo":{"city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}},"2620:0:1003:1008:5179:57e3:3c75:1886ii":{"Geo":{"city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}}}`,
+			body: `[{"ip": "127.0.0.1", "timestamp": "2017-08-25T13:31:12.149678161-04:00"},
+                               {"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "timestamp": "2017-08-25T13:31:12.149678161-04:00"}]`,
+			res: `{"127.0.0.1ov94o0":{"Geo":{"city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}},"2620:0:1003:1008:5179:57e3:3c75:1886ov94o0":{"Geo":{"city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}}}`,
 		},
 	}
 	for _, test := range tests {
