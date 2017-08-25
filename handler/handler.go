@@ -24,6 +24,7 @@ var currentDataMutex = &sync.RWMutex{}
 // handlers and pubsub handlers
 func SetupHandlers() {
 	http.HandleFunc("/annotate", Annotate)
+	http.HandleFunc("/batch_annotate", BatchAnnotate)
 	go waitForDownloaderMessages()
 }
 
@@ -91,9 +92,16 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = make(map[string]*MetaData)
-	for _, _ = range dataSlice {
+	responseMap := make(map[string]*MetaData)
+	for _, data := range dataSlice {
+		responseMap[data.IP+strconv.FormatInt(data.Timestamp.Unix(), 36)] = GetMetadataForSingleIP(&data)
 	}
+	encodedResult, err := json.Marshal(responseMap)
+	if err != nil {
+		fmt.Fprintf(w, "Unknown JSON Encoding Error")
+		return
+	}
+	fmt.Fprint(w, string(encodedResult))
 
 }
 
@@ -128,9 +136,10 @@ func BatchValidateAndParse(source io.Reader) ([]RequestData, error) {
 
 // TODO: Figure out which table to use
 // TODO: Handle request
-func GetMetadataForSingleIP(request *RequestData) *MetaData {
+func GetMetadataForSingleIP(request *schema.RequestData) *schema.MetaData {
 	currentDataMutex.RLock()
 	defer currentDataMutex.RUnlock()
 	// Fake response
-	return &MetaData{Geo: &GeolocationIP{City: "Not A Real City", Postal_code: "10583"}, ASN: &IPASNData{}}
+	return &schema.MetaData{Geo: &schema.GeolocationIP{City: "Not A Real City", Postal_code: "10583"}, ASN: &schema.IPASNData{}}
+
 }
