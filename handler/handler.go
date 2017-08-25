@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"strconv"
@@ -18,10 +20,15 @@ import (
 // trying to update it
 var currentDataMutex = &sync.RWMutex{}
 
+// This is the base in which we should encode the timestamp when we
+// are creating the keys for the mapt to return for batch requests
+const encodingBase = 36
+
 // A function to set up any handlers that are needed, including url
 // handlers and pubsub handlers
 func SetupHandlers() {
 	http.HandleFunc("/annotate", Annotate)
+	http.HandleFunc("/batch_annotate", BatchAnnotate)
 	go waitForDownloaderMessages()
 }
 
@@ -36,17 +43,19 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 	metrics.Metrics_activeRequests.Inc()
 	defer metrics.Metrics_activeRequests.Dec()
 
-	_, err := ValidateAndParse(r)
+	data, err := ValidateAndParse(r)
 	if err != nil {
 		fmt.Fprintf(w, "Invalid request")
-	} else {
-		// Fake response
-		currentDataMutex.RLock()
-		defer currentDataMutex.RUnlock()
-		fmt.Fprintf(w, `{"Geo":{"city": "%s", "postal_code":"10583"},"ASN":{}}`, "Not A Real City")
-		// TODO: Figure out which table to use
-		// TODO: Handle request
+		return
 	}
+
+	result := GetMetadataForSingleIP(data)
+	encodedResult, err := json.Marshal(result)
+	if err != nil {
+		fmt.Fprintf(w, "Unknown JSON Encoding Error")
+		return
+	}
+	fmt.Fprint(w, string(encodedResult))
 }
 
 // ValidateAndParse takes a request and validates the URL parameters,
@@ -72,14 +81,81 @@ func ValidateAndParse(r *http.Request) (*schema.RequestData, error) {
 	return &schema.RequestData{ip, 6, time.Unix(time_milli, 0)}, nil
 }
 
+// BatchAnnotate is a URL handler that expects the body of the request
+// to contain a JSON encoded slice of schema.RequestDatas. It will
+// look up all the ip addresses and bundle them into a map of metadata
+// structs (with the keys being the ip concatenated with the base 36
+// encoded timestamp) and send them back, again JSON encoded.
 func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
+	// Setup timers and counters for prometheus metrics.
+	timerStart := time.Now()
+	defer func(tStart time.Time) {
+		metrics.Metrics_requestTimes.Observe(float64(time.Since(tStart).Nanoseconds()))
+	}(timerStart)
+
+	dataSlice, err := BatchValidateAndParse(r.Body)
+	r.Body.Close()
+
+	if err != nil {
+		fmt.Println(err)
+		fmt.Fprintf(w, "Invalid Request!")
+		return
+	}
+
+	responseMap := make(map[string]*schema.MetaData)
+	for _, data := range dataSlice {
+		responseMap[data.IP+strconv.FormatInt(data.Timestamp.Unix(), encodingBase)] = GetMetadataForSingleIP(&data)
+	}
+	encodedResult, err := json.Marshal(responseMap)
+	if err != nil {
+		fmt.Fprintf(w, "Unknown JSON Encoding Error")
+		return
+	}
+	fmt.Fprint(w, string(encodedResult))
 
 }
 
+// BatchValidateAndParse will take a reader (likely the body of a
+// request) containing the JSON encoded array of
+// schema.RequestDatas. It will then validate that json and use it to
+// construct a slice of schema.RequestDatas, which it will return. If
+// it encounters an error, then it will return nil and that error.
 func BatchValidateAndParse(source io.Reader) ([]schema.RequestData, error) {
-	return nil, nil
+	jsonBuffer, err := ioutil.ReadAll(source)
+	validatedData := []schema.RequestData{}
+	if err != nil {
+		return nil, err
+	}
+	uncheckedData := []schema.RequestData{}
+
+	err = json.Unmarshal(jsonBuffer, &uncheckedData)
+	if err != nil {
+		return nil, err
+	}
+	for _, data := range uncheckedData {
+		newIP := net.ParseIP(data.IP)
+		if newIP == nil {
+			return nil, errors.New("Invalid IP address.")
+		}
+		ipType := 6
+		if newIP.To4() != nil {
+			ipType = 4
+		}
+		validatedData = append(validatedData, schema.RequestData{data.IP, ipType, data.Timestamp})
+	}
+	return validatedData, nil
 }
 
+// GetMetadataForSingleIP takes a pointer to a schema.RequestData
+// struct and will use it to fetch the appropriate associated
+// metadata, returning a pointer. It is gaurenteed to return a non-nil
+// pointer, even if it cannot find the appropriate metadata.
 func GetMetadataForSingleIP(request *schema.RequestData) *schema.MetaData {
-	return nil
+	// TODO: Figure out which table to use
+	// TODO: Handle request
+	currentDataMutex.RLock()
+	defer currentDataMutex.RUnlock()
+	// Fake response
+	return &schema.MetaData{Geo: &schema.GeolocationIP{City: "Not A Real City", Postal_code: "10583"}, ASN: &schema.IPASNData{}}
+
 }

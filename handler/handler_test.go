@@ -1,11 +1,14 @@
 package handler_test
 
 import (
+	"bytes"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -19,7 +22,7 @@ func TestAnnotate(t *testing.T) {
 		time string
 		res  string
 	}{
-		{"1.4.128.0", "625600", `{"Geo":{"city": "Not A Real City", "postal_code":"10583"},"ASN":{}}`},
+		{"1.4.128.0", "625600", `{"Geo":{"city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}}`},
 		{"This will be an error.", "1000", "Invalid request"},
 	}
 	for _, test := range tests {
@@ -75,4 +78,108 @@ func TestValidateAndParse(t *testing.T) {
 		}
 	}
 
+}
+
+type badReader int
+
+func (badReader) Read(_ []byte) (n int, err error) {
+	return 0, errors.New("Bad Reader")
+}
+
+func TestBatchValidateAndParse(t *testing.T) {
+	timeCon, _ := time.Parse(time.RFC3339, "2002-10-02T15:00:00Z")
+	tests := []struct {
+		source io.Reader
+		res    []schema.RequestData
+		err    error
+	}{
+		{
+			source: badReader(0),
+			res:    nil,
+			err:    errors.New("Bad Reader"),
+		},
+		{
+			source: bytes.NewBufferString(`{`),
+			res:    nil,
+			err:    errors.New("unexpected end of JSON input"),
+		},
+		{
+			source: bytes.NewBufferString(`[]`),
+			res:    []schema.RequestData{},
+			err:    nil,
+		},
+		{
+			source: bytes.NewBufferString(`[{"ip": "Bad IP", "timestamp": "2002-10-02T15:00:00Z"}]`),
+			res:    nil,
+			err:    errors.New("Invalid IP address."),
+		},
+		{
+			source: bytes.NewBufferString(`[{"ip": "127.0.0.1", "timestamp": "2002-10-02T15:00:00Z"},` +
+				`{"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "timestamp": "2002-10-02T15:00:00Z"}]`),
+			res: []schema.RequestData{
+				{"127.0.0.1", 4, timeCon},
+				{"2620:0:1003:1008:5179:57e3:3c75:1886", 6, timeCon},
+			},
+			err: nil,
+		},
+	}
+	for _, test := range tests {
+		res, err := handler.BatchValidateAndParse(test.source)
+		if !reflect.DeepEqual(res, test.res) {
+			t.Errorf("Expected %+v, got %+v.", test.res, res)
+		}
+		if err != nil && test.err == nil || err == nil && test.err != nil {
+			t.Errorf("Expected %+v, got %+v.", test.err, err)
+		}
+	}
+
+}
+
+func TestBatchAnnotate(t *testing.T) {
+	tests := []struct {
+		body string
+		res  string
+	}{
+		{
+			body: "{",
+			res:  "Invalid Request!",
+		},
+		{
+			body: `[{"ip": "127.0.0.1", "timestamp": "2017-08-25T13:31:12.149678161-04:00"},
+                               {"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "timestamp": "2017-08-25T13:31:12.149678161-04:00"}]`,
+			res: `{"127.0.0.1ov94o0":{"Geo":{"city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}},"2620:0:1003:1008:5179:57e3:3c75:1886ov94o0":{"Geo":{"city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}}}`,
+		},
+	}
+	for _, test := range tests {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("POST", "/batch_annotate", strings.NewReader(test.body))
+		handler.BatchAnnotate(w, r)
+		body := w.Body.String()
+		if string(body) != test.res {
+			t.Errorf("\nGot\n__%s__\nexpected\n__%s__\n", body, test.res)
+		}
+	}
+}
+
+// TODO(JM) Update the test code/data here once we are no longer
+// returning a canned response
+func TestGetMetadataForSingleIP(t *testing.T) {
+	tests := []struct {
+		req *schema.RequestData
+		res *schema.MetaData
+	}{
+		{
+			req: nil,
+			res: &schema.MetaData{
+				Geo: &schema.GeolocationIP{City: "Not A Real City", Postal_code: "10583"},
+				ASN: &schema.IPASNData{}},
+		},
+	}
+
+	for _, test := range tests {
+		res := handler.GetMetadataForSingleIP(test.req)
+		if !reflect.DeepEqual(res, test.res) {
+			t.Errorf("Expected %s, got %s", test.res, res)
+		}
+	}
 }
