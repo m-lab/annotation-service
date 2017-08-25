@@ -1,12 +1,16 @@
 package handler_test
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"testing"
+	"time"
 
 	"github.com/m-lab/annotation-service/handler"
+	"github.com/m-lab/etl/schema"
 )
 
 func TestAnnotate(t *testing.T) {
@@ -28,4 +32,47 @@ func TestAnnotate(t *testing.T) {
 			t.Errorf("\nGot\n__%s__\nexpected\n__%s__\n", body, test.res)
 		}
 	}
+}
+
+func TestValidateAndParse(t *testing.T) {
+	tests := []struct {
+		req *http.Request
+		res *schema.RequestData
+		err error
+	}{
+		{
+			req: httptest.NewRequest("GET",
+				"http://example.com/annotate?ip_addr=127.0.0.1&since_epoch=fail", nil),
+			res: nil,
+			err: errors.New("Invalid time"),
+		},
+		{
+			req: httptest.NewRequest("GET",
+				"http://example.com/annotate?ip_addr=fail&since_epoch=10", nil),
+			res: nil,
+			err: errors.New("Invalid IP address"),
+		},
+		{
+			req: httptest.NewRequest("GET",
+				"http://example.com/annotate?ip_addr=127.0.0.1&since_epoch=10", nil),
+			res: &schema.RequestData{"127.0.0.1", 4, time.Unix(10, 0)},
+			err: nil,
+		},
+		{
+			req: httptest.NewRequest("GET",
+				"http://example.com/annotate?ip_addr=2620:0:1003:1008:5179:57e3:3c75:1886&since_epoch=10", nil),
+			res: &schema.RequestData{"2620:0:1003:1008:5179:57e3:3c75:1886", 6, time.Unix(10, 0)},
+			err: nil,
+		},
+	}
+	for _, test := range tests {
+		res, err := handler.ValidateAndParse(test.req)
+		if !reflect.DeepEqual(res, test.res) {
+			t.Errorf("Expected %+v, got %+v.", test.res, res)
+		}
+		if !reflect.DeepEqual(err, test.err) {
+			t.Errorf("Expected %+v, got %+v.", test.err, err)
+		}
+	}
+
 }
