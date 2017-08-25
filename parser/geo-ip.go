@@ -131,7 +131,7 @@ func checkColumnLength(record []string, size int) error {
 	return nil
 }
 
-// Converts integer to net.IP
+// Converts integer to net.IPv4
 func Int2ip(str string) (net.IP, error) {
 	num, err := strconv.Atoi(str)
 	if err != nil {
