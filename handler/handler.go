@@ -92,7 +92,7 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responseMap := make(map[string]*MetaData)
+	responseMap := make(map[string]*schema.MetaData)
 	for _, data := range dataSlice {
 		responseMap[data.IP+strconv.FormatInt(data.Timestamp.Unix(), 36)] = GetMetadataForSingleIP(&data)
 	}
@@ -105,9 +105,9 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func BatchValidateAndParse(source io.Reader) ([]RequestData, error) {
+func BatchValidateAndParse(source io.Reader) ([]schema.RequestData, error) {
 	jsonBuffer, err := ioutil.ReadAll(source)
-	validatedData := []RequestData{}
+	validatedData := []schema.RequestData{}
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func BatchValidateAndParse(source io.Reader) ([]RequestData, error) {
 		if newIP.To4() != nil {
 			ipType = 4
 		}
-		validatedData = append(validatedData, RequestData{data.IP, ipType, time.Unix(data.Unix_ts, 0)})
+		validatedData = append(validatedData, schema.RequestData{data.IP, ipType, time.Unix(data.Unix_ts, 0)})
 	}
 	return validatedData, nil
 }

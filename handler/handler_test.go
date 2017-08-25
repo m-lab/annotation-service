@@ -88,7 +88,7 @@ func (badReader) Read(_ []byte) (n int, err error) {
 func TestBatchValidateAndParse(t *testing.T) {
 	tests := []struct {
 		source io.Reader
-		res    []handler.RequestData
+		res    []schema.RequestData
 		err    error
 	}{
 		{
@@ -103,7 +103,7 @@ func TestBatchValidateAndParse(t *testing.T) {
 		},
 		{
 			source: bytes.NewBufferString(`[]`),
-			res:    []handler.RequestData{},
+			res:    []schema.RequestData{},
 			err:    nil,
 		},
 		{
@@ -114,7 +114,7 @@ func TestBatchValidateAndParse(t *testing.T) {
 		{
 			source: bytes.NewBufferString(`[{"ip": "127.0.0.1", "unix_ts": 100},` +
 				`{"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "unix_ts":666}]`),
-			res: []handler.RequestData{
+			res: []schema.RequestData{
 				{"127.0.0.1", 4, time.Unix(100, 0)},
 				{"2620:0:1003:1008:5179:57e3:3c75:1886", 6, time.Unix(666, 0)},
 			},
