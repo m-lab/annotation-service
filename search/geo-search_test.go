@@ -3,8 +3,8 @@ package search_test
 import (
 	"archive/zip"
 	"log"
-	"testing"
 	"net"
+	"testing"
 
 	"github.com/m-lab/annotation-service/loader"
 	"github.com/m-lab/annotation-service/parser"
@@ -62,10 +62,10 @@ func TestSearchGeoLatest(t *testing.T) {
 		log.Println(err)
 		t.Errorf("Search failed")
 	}
-	err = parser.CompareIPNodes(ipv4Expected[0],ip)
-	if err != nil{
+	err = parser.IsEqualIPNodes(ipv4Expected[0], ip)
+	if err != nil {
 		log.Println(err)
-		t.Errorf("Found ",ip," wanted",ipv4Expected[0])
+		t.Errorf("Found ", ip, " wanted", ipv4Expected[0])
 	}
 
 	ip, err = search.SearchList(ipv4, "1.0.3.254")
@@ -73,17 +73,17 @@ func TestSearchGeoLatest(t *testing.T) {
 		log.Println(err)
 		t.Errorf("Search failed")
 	}
-	err = parser.CompareIPNodes(ipv4Expected[1],ip)
-	if err != nil{
+	err = parser.IsEqualIPNodes(ipv4Expected[1], ip)
+	if err != nil {
 		log.Println(err)
-		t.Errorf("Found ",ip," wanted",ipv4Expected[1])
+		t.Errorf("Found ", ip, " wanted", ipv4Expected[1])
 	}
 
-	// Invalid IP provided 
+	// Invalid IP provided
 	ip, err = search.SearchList(ipv4, "255.255.255.255")
 	if err == nil {
 		log.Println(err)
-		t.Errorf("Found ",ip," wanted : ERROR")
+		t.Errorf("Found ", ip, " wanted : ERROR")
 	}
 }
 
@@ -169,12 +169,11 @@ func TestIPLisGLite2(t *testing.T) {
 		log.Println(err)
 		t.Errorf("Search failed")
 	}
-	err = parser.CompareIPNodes(ipv4Expected[0],ip)
-	if err != nil{
+	err = parser.IsEqualIPNodes(ipv4Expected[0], ip)
+	if err != nil {
 		log.Println(err)
-		t.Errorf("Found ",ip," wanted",ipv4Expected[0])
+		t.Errorf("Found ", ip, " wanted", ipv4Expected[0])
 	}
-
 
 	rcIPv6, err := loader.FindFile("GeoLite2-City-Blocks-IPv6.csv", &reader.Reader)
 	if err != nil {
@@ -192,10 +191,10 @@ func TestIPLisGLite2(t *testing.T) {
 		log.Println(err)
 		t.Errorf("Search failed")
 	}
-	err = parser.CompareIPNodes(ipv6Expected[1],ip)
-	if err != nil{
+	err = parser.IsEqualIPNodes(ipv6Expected[1], ip)
+	if err != nil {
 		log.Println(err)
-		t.Errorf("Found ",ip," wanted",ipv6Expected[1])
+		t.Errorf("Found ", ip, " wanted", ipv6Expected[1])
 	}
 
 }

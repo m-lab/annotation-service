@@ -9,6 +9,7 @@ import (
 	"github.com/m-lab/annotation-service/parser"
 )
 
+// Returns a parser.IPNode with the smallet range that includes the provided IP address
 func SearchList(list []parser.IPNode, ipLookUp string) (parser.IPNode, error) {
 	inRange := false
 	var lastNode parser.IPNode

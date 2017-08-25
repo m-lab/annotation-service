@@ -85,7 +85,7 @@ func TestIPGLite1(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to create ipv4")
 	}
-	err = compareIPLists(ipv4Expected, ipv4)
+	err = isEqualIPLists(ipv4Expected, ipv4)
 	if err != nil {
 		t.Errorf("Lists are not equal")
 	}
@@ -166,7 +166,7 @@ func TestIPLisGLite2(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to create ipv4")
 	}
-	err = compareIPLists(ipv4Expected, ipv4)
+	err = isEqualIPLists(ipv4Expected, ipv4)
 	if err != nil {
 		t.Errorf("Lists are not equal")
 	}
@@ -181,7 +181,7 @@ func TestIPLisGLite2(t *testing.T) {
 		log.Println(err)
 		t.Errorf("Failed to create ipv6")
 	}
-	err = compareIPLists(ipv6Expected, ipv6)
+	err = isEqualIPLists(ipv6Expected, ipv6)
 	if err != nil {
 		t.Errorf("Lists are not equal")
 	}
@@ -275,15 +275,14 @@ func TestCorruptData(t *testing.T) {
 				}
 
 			}
-		}	
+		}
 	}
 }
 
-
-func compareIPLists(listComp, list []parser.IPNode) error {
+func isEqualIPLists(listComp, list []parser.IPNode) error {
 	for index, element := range list {
-		err := parser.CompareIPNodes(element,listComp[index])
-		if err != nil{
+		err := parser.IsEqualIPNodes(element, listComp[index])
+		if err != nil {
 			return err
 		}
 	}
