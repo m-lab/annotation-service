@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/m-lab/annotation-service/metrics"
+	"github.com/m-lab/etl/schema"
 )
 
 // A mutex to make sure that we are not reading from the dataset while
@@ -51,7 +52,7 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 // ValidateAndParse takes a request and validates the URL parameters,
 // verifying that it has a valid ip address and time. Then, it uses
 // that to construct a RequestData struct and returns the pointer.
-func ValidateAndParse(r *http.Request) (*RequestData, error) {
+func ValidateAndParse(r *http.Request) (*schema.RequestData, error) {
 	query := r.URL.Query()
 
 	time_milli, err := strconv.ParseInt(query.Get("since_epoch"), 10, 64)
@@ -66,19 +67,19 @@ func ValidateAndParse(r *http.Request) (*RequestData, error) {
 		return nil, errors.New("Invalid IP address")
 	}
 	if newIP.To4() != nil {
-		return &RequestData{ip, 4, time.Unix(time_milli, 0)}, nil
+		return &schema.RequestData{ip, 4, time.Unix(time_milli, 0)}, nil
 	}
-	return &RequestData{ip, 6, time.Unix(time_milli, 0)}, nil
+	return &schema.RequestData{ip, 6, time.Unix(time_milli, 0)}, nil
 }
 
 func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func BatchValidateAndParse(source io.Reader) ([]RequestData, error) {
+func BatchValidateAndParse(source io.Reader) ([]schema.RequestData, error) {
 	return nil, nil
 }
 
-func GetMetadataForSingleIP(request *RequestData) *MetaData {
+func GetMetadataForSingleIP(request *schema.RequestData) *schema.MetaData {
 	return nil
 }

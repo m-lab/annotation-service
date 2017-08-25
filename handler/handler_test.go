@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/m-lab/annotation-service/handler"
+	"github.com/m-lab/etl/schema"
 )
 
 func TestAnnotate(t *testing.T) {
@@ -36,7 +37,7 @@ func TestAnnotate(t *testing.T) {
 func TestValidateAndParse(t *testing.T) {
 	tests := []struct {
 		req *http.Request
-		res *handler.RequestData
+		res *schema.RequestData
 		err error
 	}{
 		{
@@ -54,13 +55,13 @@ func TestValidateAndParse(t *testing.T) {
 		{
 			req: httptest.NewRequest("GET",
 				"http://example.com/annotate?ip_addr=127.0.0.1&since_epoch=10", nil),
-			res: &handler.RequestData{"127.0.0.1", 4, time.Unix(10, 0)},
+			res: &schema.RequestData{"127.0.0.1", 4, time.Unix(10, 0)},
 			err: nil,
 		},
 		{
 			req: httptest.NewRequest("GET",
 				"http://example.com/annotate?ip_addr=2620:0:1003:1008:5179:57e3:3c75:1886&since_epoch=10", nil),
-			res: &handler.RequestData{"2620:0:1003:1008:5179:57e3:3c75:1886", 6, time.Unix(10, 0)},
+			res: &schema.RequestData{"2620:0:1003:1008:5179:57e3:3c75:1886", 6, time.Unix(10, 0)},
 			err: nil,
 		},
 	}
