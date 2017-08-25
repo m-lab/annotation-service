@@ -20,6 +20,10 @@ import (
 // trying to update it
 var currentDataMutex = &sync.RWMutex{}
 
+// This is the base in which we should encode the timestamp when we
+// are creating the keys for the mapt to return for batch requests
+const encodingBase = 36
+
 // A function to set up any handlers that are needed, including url
 // handlers and pubsub handlers
 func SetupHandlers() {
@@ -100,7 +104,7 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 
 	responseMap := make(map[string]*schema.MetaData)
 	for _, data := range dataSlice {
-		responseMap[data.IP+strconv.FormatInt(data.Timestamp.Unix(), 36)] = GetMetadataForSingleIP(&data)
+		responseMap[data.IP+strconv.FormatInt(data.Timestamp.Unix(), encodingBase)] = GetMetadataForSingleIP(&data)
 	}
 	encodedResult, err := json.Marshal(responseMap)
 	if err != nil {

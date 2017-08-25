@@ -161,6 +161,8 @@ func TestBatchAnnotate(t *testing.T) {
 	}
 }
 
+// TODO(JM) Update the test code/data here once we are no longer
+// returning a canned response
 func TestGetMetadataForSingleIP(t *testing.T) {
 	tests := []struct {
 		req *schema.RequestData
