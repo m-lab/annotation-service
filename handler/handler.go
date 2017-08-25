@@ -77,6 +77,11 @@ func ValidateAndParse(r *http.Request) (*schema.RequestData, error) {
 	return &schema.RequestData{ip, 6, time.Unix(time_milli, 0)}, nil
 }
 
+// BatchAnnotate is a URL handler that expects the body of the request
+// to contain a JSON encoded slice of schema.RequestDatas. It will
+// look up all the ip addresses and bundle them into a map of metadata
+// structs (with the keys being the ip concatenated with the base 36
+// encoded timestamp) and send them back, again JSON encoded.
 func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	// Setup timers and counters for prometheus metrics.
 	timerStart := time.Now()
@@ -105,6 +110,11 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// BatchValidateAndParse will take a reader (likely the body of a
+// request) containing the JSON encoded array of
+// schema.RequestDatas. It will then validate that json and use it to
+// construct a slice of schema.RequestDatas, which it will return. If
+// it encounters an error, then it will return nil and that error.
 func BatchValidateAndParse(source io.Reader) ([]schema.RequestData, error) {
 	jsonBuffer, err := ioutil.ReadAll(source)
 	validatedData := []schema.RequestData{}
@@ -134,9 +144,13 @@ func BatchValidateAndParse(source io.Reader) ([]schema.RequestData, error) {
 	return validatedData, nil
 }
 
-// TODO: Figure out which table to use
-// TODO: Handle request
+// GetMetadataForSingleIP takes a pointer to a schema.RequestData
+// struct and will use it to fetch the appropriate associated
+// metadata, returning a pointer. It is gaurenteed to return a non-nil
+// pointer, even if it cannot find the appropriate metadata.
 func GetMetadataForSingleIP(request *schema.RequestData) *schema.MetaData {
+	// TODO: Figure out which table to use
+	// TODO: Handle request
 	currentDataMutex.RLock()
 	defer currentDataMutex.RUnlock()
 	// Fake response

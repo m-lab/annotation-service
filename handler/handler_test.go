@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -21,7 +22,7 @@ func TestAnnotate(t *testing.T) {
 		time string
 		res  string
 	}{
-		{"1.4.128.0", "625600", `{"Geo":{"continent_code":"","country_code":"","country_code3":"","country_name":"","region":"","metro_code":0,"city":"Not A Real City","area_code":0,"postal_code":"10583","latitude":0,"longitude":0},"ASN":{}}`},
+		{"1.4.128.0", "625600", `{"Geo":{"city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}}`},
 		{"This will be an error.", "1000", "Invalid request"},
 	}
 	for _, test := range tests {
@@ -131,4 +132,51 @@ func TestBatchValidateAndParse(t *testing.T) {
 		}
 	}
 
+}
+
+func TestBatchAnnotate(t *testing.T) {
+	tests := []struct {
+		body string
+		res  string
+	}{
+		{
+			body: "{",
+			res:  "Invalid Request!",
+		},
+		{
+			body: `[{"ip": "127.0.0.1", "unix_ts": 100980},
+                               {"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "unix_ts":666}]`,
+			res: `{"127.0.0.125x0":{"Geo":{"city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}},"2620:0:1003:1008:5179:57e3:3c75:1886ii":{"Geo":{"city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}}}`,
+		},
+	}
+	for _, test := range tests {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("POST", "/batch_annotate", strings.NewReader(test.body))
+		handler.BatchAnnotate(w, r)
+		body := w.Body.String()
+		if string(body) != test.res {
+			t.Errorf("\nGot\n__%s__\nexpected\n__%s__\n", body, test.res)
+		}
+	}
+}
+
+func TestGetMetadataForSingleIP(t *testing.T) {
+	tests := []struct {
+		req *schema.RequestData
+		res *schema.MetaData
+	}{
+		{
+			req: nil,
+			res: &schema.MetaData{
+				Geo: &schema.GeolocationIP{City: "Not A Real City", Postal_code: "10583"},
+				ASN: &schema.IPASNData{}},
+		},
+	}
+
+	for _, test := range tests {
+		res := handler.GetMetadataForSingleIP(test.req)
+		if !reflect.DeepEqual(res, test.res) {
+			t.Errorf("Expected %s, got %s", test.res, res)
+		}
+	}
 }
