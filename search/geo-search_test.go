@@ -2,17 +2,17 @@ package search_test
 
 import (
 	"log"
-	"net"
+	//"net"
 	"testing"
 
 	"google.golang.org/appengine/aetest"
 
 	"github.com/m-lab/annotation-service/loader"
 	"github.com/m-lab/annotation-service/parser"
-	"github.com/m-lab/annotation-service/search"
+	//"github.com/m-lab/annotation-service/search"
 )
 
-func TestSearchSmallRange(t *testing.T) {
+/*func TestSearchSmallRange(t *testing.T) {
 	var ipv4 = []parser.IPNode{
 		parser.IPNode{
 			net.ParseIP("1.0.0.0"),
@@ -126,9 +126,45 @@ func TestSearchSmallRange(t *testing.T) {
 		log.Println("Got ", ip, " wanted: Node not found")
 		t.Errorf("Search failed")
 	}
+}*/
+
+func TestGeoLiteLatest(t *testing.T){
+	ctx, done, err := aetest.NewContext()
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Failed to create aecontext")
+	}
+	defer done()
+	reader, err := loader.CreateZipReader(ctx, "test-annotator-sandbox", "MaxMind/2017/08/08/GeoLiteLatest.zip")
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Failed to create zipReader")
+	}
+
+	// Create Location list
+	rc, err := loader.FindFile("GeoLiteCity-Location.csv", reader)
+	if err != nil {
+		t.Errorf("Failed to create io.ReaderCloser")
+	}
+	defer rc.Close()
+
+	locationList, idMap, err := parser.CreateLocationList(rc)
+	if err != nil {
+		t.Errorf("Failed to CreateLocationList")
+	}
+	if locationList == nil || idMap == nil {
+		t.Errorf("Failed to create LocationList and mapID")
+	}
+
+	rcIPv4, err := loader.FindFile("GeoLiteCity-Blocks.csv", reader)
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Failed to create io.ReaderCloser")
+	}
+	defer rcIPv4.Close()
 }
 
-func TestGeoLite2(t *testing.T) {
+/*func TestGeoLite2(t *testing.T) {
 	ctx, done, err := aetest.NewContext()
 	if err != nil {
 		log.Println(err)
@@ -258,4 +294,4 @@ func TestGeoLite2(t *testing.T) {
 		t.Errorf("Found ", ip, " wanted", n)
 	}
 
-}
+}*/
