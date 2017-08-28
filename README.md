@@ -3,7 +3,7 @@ Annotation integration service provides geolocation for IPv4 and IPv6 MaxMind da
 
 If an annotation request is dated prior to August 2017, location data will be derived from
 MaxMind GeoLiteLatest databases. Otherwise, data will be provided by
-MaxMind GeoLite2 databases. The discrepencies between provided databases  are
+MaxMind GeoLite2 databases. The discrepencies between provided databases are
 provided below.
 
 MaxMind GeoLiteLatest databases include:
