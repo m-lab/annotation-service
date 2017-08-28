@@ -197,7 +197,6 @@ func stringToFloat(str, field string) (float64, error) {
 			log.Println(field, " was not a number")
 			output := strings.Join([]string{"Corrupted Data: ", field, " should be an int"}, "")
 			return 0, errors.New(output)
-
 		}
 	}
 	return flt, nil

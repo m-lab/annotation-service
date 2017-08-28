@@ -266,9 +266,7 @@ func TestCorruptData(t *testing.T) {
 			output := strings.Join([]string{"Error inconsistent:\ngot: ", err.Error(), "\nwanted: Corrupted Data: wrong number of columns"}, "")
 			t.Errorf(output)
 		}
-
 	}
-
 }
 
 // Returns nil of two lists are equal
