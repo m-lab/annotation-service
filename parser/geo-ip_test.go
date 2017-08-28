@@ -240,7 +240,7 @@ func TestLocationListGLite2(t *testing.T) {
 		t.Errorf("Failed to create LocationList and mapID")
 	}
 
-	err = compareLocLists(locationList, LocList)
+	err = isEqualLocLists(locationList, LocList)
 	if err != nil {
 		t.Errorf("Location lists are not equal")
 	}
@@ -289,7 +289,7 @@ func isEqualIPLists(listComp, list []parser.IPNode) error {
 	return nil
 }
 
-func compareLocLists(list, listComp []parser.LocationNode) error {
+func isEqualLocLists(list, listComp []parser.LocationNode) error {
 	for index, element := range list {
 		if element.GeonameID != listComp[index].GeonameID {
 			output := strings.Join([]string{"GeonameID inconsistent\ngot:", strconv.Itoa(element.GeonameID), " \nwanted:", strconv.Itoa(listComp[index].GeonameID)}, "")

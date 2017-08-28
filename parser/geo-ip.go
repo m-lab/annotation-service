@@ -61,6 +61,7 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 			return list, errors.New("Empty input data")
 		}
 	}
+	i := 0
 	for {
 		record, err := r.Read()
 		if err == io.EOF {
@@ -99,9 +100,15 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 			}
 			newNode.IPAddressLow = lowIp
 			newNode.IPAddressHigh = highIp
-			index, err := validateGeoId(record[1], idMap)
+			var index int
+			index, err = validateGeoId(record[1], idMap)
 			if err != nil {
-				return nil, err
+				//log.Println(i," ",record)
+				index,err = validateGeoId(record[2],idMap)
+				if err != nil {
+					log.Println(i," ",record)
+					//return nil,err
+				}
 			}
 			newNode.LocationIndex = index
 			newNode.PostalCode = record[6]
@@ -118,6 +125,7 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 			log.Println("Unaccepted csv file provided: ", file)
 			return list, errors.New("Unaccepted csv file provided")
 		}
+		i++
 	}
 	return list, nil
 }
@@ -177,7 +185,6 @@ func RangeCIDR(cidr string) (net.IP, net.IP, error) {
 func validateGeoId(gnid string, idMap map[int]int) (int, error) {
 	geonameId, err := strconv.Atoi(gnid)
 	if err != nil {
-		log.Println("geonameID should be a number")
 		return 0, errors.New("Corrupted Data: geonameID should be a number")
 	}
 	loadIndex, ok := idMap[geonameId]
@@ -214,6 +221,7 @@ func checkAllCaps(str, field string) (string, error) {
 }
 
 // Creates list for location databases
+// returns list with location data and a hashmap with index to geonameId
 func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 	idMap := make(map[int]int, mapMax)
 	list := []LocationNode{}
@@ -225,6 +233,7 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		log.Println("Empty input data")
 		return nil, nil, errors.New("Empty input data")
 	}
+	i := 0
 	for {
 		record, err := r.Read()
 		if err == io.EOF {
@@ -238,7 +247,7 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		newNode.GeonameID, err = strconv.Atoi(record[0])
 		if err != nil {
 			if len(record[0]) > 0 {
-				log.Println("GeonameID should be a number")
+				log.Println("GeonameID should be a number ",record[0]," ",i)
 				return nil, nil, errors.New("Corrupted Data: GeonameID should be a number")
 			}
 		}
@@ -250,11 +259,11 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		if err != nil {
 			return nil, nil, err
 		}
-		match, _ := regexp.MatchString("^[a-zA-Z]*$", record[5])
+		match, _ := regexp.MatchString(`^[^0-9]*$`, record[5])
 		if match {
 			newNode.CountryName = record[5]
 		} else {
-			log.Println("Country name should be letters only")
+			log.Println("Country name should be letters only : ",record[5]," ",i)
 			return nil, nil, errors.New("Corrupted Data: country name should be letters")
 		}
 		newNode.MetroCode, err = strconv.ParseInt(record[11], 10, 64)
@@ -267,6 +276,7 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		newNode.CityName = record[10]
 		list = append(list, newNode)
 		idMap[newNode.GeonameID] = len(list) - 1
+		i++
 	}
 	return list, idMap, nil
 }

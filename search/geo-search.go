@@ -22,12 +22,12 @@ func SearchList(list []parser.IPNode, ipLookUp string) (parser.IPNode, error) {
 		if bytes.Compare(userIP, n.IPAddressLow) >= 0 && bytes.Compare(userIP, n.IPAddressHigh) <= 0 {
 			inRange = true
 			lastNode = n
-		} else if inRange {
+		} else if inRange && bytes.Compare(userIP, n.IPAddressLow) < 0 {
 			return lastNode, nil
 		}
 	}
 	if inRange {
 		return lastNode, nil
 	}
-	return lastNode, errors.New("IP not found\n")
+	return lastNode, errors.New("Node not found\n")
 }
