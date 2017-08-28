@@ -1,10 +1,11 @@
 package search_test
 
 import (
-	"archive/zip"
 	"log"
 	"net"
 	"testing"
+
+	"google.golang.org/appengine/aetest"
 
 	"github.com/m-lab/annotation-service/loader"
 	"github.com/m-lab/annotation-service/parser"
@@ -128,13 +129,20 @@ func TestSearchSmallRange(t *testing.T) {
 }
 
 func TestGeoLite2(t *testing.T) {
-	reader, err := zip.OpenReader("testdata/GeoLite2.zip")
+	ctx, done, err := aetest.NewContext()
 	if err != nil {
-		t.Errorf("Error opening zip file")
+		log.Println(err)
+		t.Errorf("Failed to create aecontext")
+	}
+	defer done()
+	reader, err := loader.CreateZipReader(ctx, "test-annotator-sandbox", "MaxMind/2017/08/08/GeoLite2.zip")
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Failed to create zipReader")
 	}
 
 	// Create Location list
-	rc, err := loader.FindFile("GeoLite2-City-Locations-en.csv", &reader.Reader)
+	rc, err := loader.FindFile("GeoLite2-City-Locations-en.csv", reader)
 	if err != nil {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
@@ -149,7 +157,7 @@ func TestGeoLite2(t *testing.T) {
 	}
 
 	// Test IPv6
-	rcIPv6, err := loader.FindFile("GeoLite2-City-Blocks-IPv6.csv", &reader.Reader)
+	rcIPv6, err := loader.FindFile("GeoLite2-City-Blocks-IPv6.csv", reader)
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Failed to create io.ReaderCloser")
@@ -200,7 +208,7 @@ func TestGeoLite2(t *testing.T) {
 	}
 
 	// Test IPv4
-	rcIPv4, err := loader.FindFile("GeoLite2-City-Blocks-IPv4.csv", &reader.Reader)
+	rcIPv4, err := loader.FindFile("GeoLite2-City-Blocks-IPv4.csv", reader)
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Failed to create io.ReaderCloser")
