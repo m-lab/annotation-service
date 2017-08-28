@@ -2,8 +2,8 @@
 Annotation integration service provides geolocation for IPv4 and IPv6 MaxMind databases from Google Cloud Storage.
 
 If an annotation request is dated prior to August 2017, location data will be derived from
-MaxMind GeoLiteLatest databases. Otherwie, data will be provided by
-MaxMind GeoLite2 databases. The discrepency in provided information are
+MaxMind GeoLiteLatest databases. Otherwise, data will be provided by
+MaxMind GeoLite2 databases. The discrepencies between provided databases  are
 provided below.
 
 MaxMind GeoLiteLatest databases include:
