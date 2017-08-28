@@ -256,27 +256,19 @@ func TestCorruptData(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error opening zip file")
 	}
-	r := &(reader.Reader)
-	for _, f := range r.File {
-		if len(f.Name) >= len("GeoLite2-City-Locations-en.csv") && f.Name[len(f.Name)-len("GeoLite2-City-Locations-en.csv"):] == "GeoLite2-City-Locations-en.csv" {
-			rc, err := f.Open()
-			if err != nil {
-				t.Errorf("Failed to open GeoLite2-City-Locations-en.csv")
-			}
-			defer rc.Close()
-			_, _, err = parser.CreateLocationList(rc)
-			if err.Error() != "Corrupted Data: wrong number of columns" {
-				if err == nil {
-					t.Errorf("Error inconsistent:\ngot: nil\nwanted: Corrupted Data: wrong number of columns")
-				}
-				if err != nil {
-					output := strings.Join([]string{"Error inconsistent:\ngot: ", err.Error(), "\nwanted: Corrupted Data: wrong number of columns"}, "")
-					t.Errorf(output)
-				}
-
-			}
+	rc, err := loader.FindFile("GeoLite2-City-Locations-en.csv", &reader.Reader)
+	_, _, err = parser.CreateLocationList(rc)
+	if err.Error() != "Corrupted Data: wrong number of columns" {
+		if err == nil {
+			t.Errorf("Error inconsistent:\ngot: nil\nwanted: Corrupted Data: wrong number of columns")
 		}
+		if err != nil {
+			output := strings.Join([]string{"Error inconsistent:\ngot: ", err.Error(), "\nwanted: Corrupted Data: wrong number of columns"}, "")
+			t.Errorf(output)
+		}
+
 	}
+
 }
 
 // Returns nil of two lists are equal

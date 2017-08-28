@@ -17,10 +17,11 @@ import (
 
 const ipNumColumnsGlite2 = 10
 const locationNumColumnsGlite2 = 13
+const locationNumColumnsGliteLatest = 9
 const ipNumColumnsGliteLatest = 3
 const mapMax = 200000
-const gLiteLatestPrefix = "GeoLiteCity-Blocks"
-const gLite2CityPrefix = "GeoLite2-City-Blocks"
+const gLiteLatestPrefix = "GeoLiteCity"
+const gLite2CityPrefix = "GeoLite2-City"
 
 // IPNode defines IPv4 and IPv6 databases
 type IPNode struct {
@@ -47,6 +48,7 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 	list := []IPNode{}
 	r := csv.NewReader(reader)
 	r.TrimLeadingSpace = true
+
 	// Skip first line
 	_, err := r.Read()
 	if err == io.EOF {
@@ -233,7 +235,6 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		log.Println("Empty input data")
 		return nil, nil, errors.New("Empty input data")
 	}
-	i := 0
 	for {
 		record, err := r.Read()
 		if err == io.EOF {
@@ -247,7 +248,7 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		newNode.GeonameID, err = strconv.Atoi(record[0])
 		if err != nil {
 			if len(record[0]) > 0 {
-				log.Println("GeonameID should be a number ", record[0], " ", i)
+				log.Println("GeonameID should be a number ", record[0])
 				return nil, nil, errors.New("Corrupted Data: GeonameID should be a number")
 			}
 		}
@@ -263,7 +264,7 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		if match {
 			newNode.CountryName = record[5]
 		} else {
-			log.Println("Country name should be letters only : ", record[5], " ", i)
+			log.Println("Country name should be letters only : ", record[5])
 			return nil, nil, errors.New("Corrupted Data: country name should be letters")
 		}
 		newNode.MetroCode, err = strconv.ParseInt(record[11], 10, 64)
@@ -276,7 +277,6 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		newNode.CityName = record[10]
 		list = append(list, newNode)
 		idMap[newNode.GeonameID] = len(list) - 1
-		i++
 	}
 	return list, idMap, nil
 }
