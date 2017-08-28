@@ -49,10 +49,6 @@ type LocationNode struct {
 
 // Creates a List of IPNodes
 func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, error) {
-
-}
-
-func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, error) {
 	list := []IPNode{}
 	r := csv.NewReader(reader)
 	r.TrimLeadingSpace = true
