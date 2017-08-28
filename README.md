@@ -15,4 +15,4 @@ GeoLite2City databases provides a network IP range in CIDR format.
 GeoLiteLatest databases provide an IP range in decimal format.
 
 GeoLite2City identifies end-user location (geoname_id) as well as the country
-where the IP address is registered to the ISP(registered_country_geoname_id).
+where the IP address is registered to the ISP (registered_country_geoname_id).
