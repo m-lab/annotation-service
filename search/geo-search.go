@@ -16,7 +16,7 @@ func SearchList(list []parser.IPNode, ipLookUp string) (parser.IPNode, error) {
 	userIP := net.ParseIP(ipLookUp)
 	if userIP == nil {
 		log.Println("Inputed IP string could not be parsed to net.IP")
-		return lastNode, errors.New("Ivalid search IP")
+		return lastNode, errors.New("Invalid search IP")
 	}
 	for _, n := range list {
 		if bytes.Compare(userIP, n.IPAddressLow) >= 0 && bytes.Compare(userIP, n.IPAddressHigh) <= 0 {

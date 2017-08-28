@@ -15,13 +15,17 @@ import (
 	"strings"
 )
 
-const ipNumColumnsGlite2 = 10
-const locationNumColumnsGlite2 = 13
-const locationNumColumnsGliteLatest = 9
-const ipNumColumnsGliteLatest = 3
-const mapMax = 200000
-const gLiteLatestPrefix = "GeoLiteCity"
-const gLite2CityPrefix = "GeoLite2-City"
+const (
+	ipNumColumnsGlite2       = 10
+	locationNumColumnsGlite2 = 13
+	gLite2CityPrefix         = "GeoLite2-City"
+
+	ipNumColumnsGliteLatest       = 3
+	locationNumColumnsGliteLatest = 9
+	gLiteLatestPrefix             = "GeoLiteCity"
+
+	mapMax = 200000
+)
 
 // IPNode defines IPv4 and IPv6 databases
 type IPNode struct {
@@ -44,6 +48,10 @@ type LocationNode struct {
 }
 
 // Creates a List of IPNodes
+func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, error) {
+
+}
+
 func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, error) {
 	list := []IPNode{}
 	r := csv.NewReader(reader)
@@ -84,6 +92,7 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 			if err != nil {
 				return nil, err
 			}
+			// Look for GeoId within idMap and return index
 			index, err := validateGeoId(record[2], idMap)
 			if err != nil {
 				return nil, err
@@ -101,8 +110,8 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 			}
 			newNode.IPAddressLow = lowIp
 			newNode.IPAddressHigh = highIp
-			var index int
-			index, err = validateGeoId(record[1], idMap)
+			// Look for GeoId within idMap and return index
+			index, err := validateGeoId(record[1], idMap)
 			if err != nil {
 				index, err = validateGeoId(record[2], idMap)
 			}
@@ -176,10 +185,17 @@ func RangeCIDR(cidr string) (net.IP, net.IP, error) {
 	return lowIp, ip, nil
 }
 
-// Returns the index of geonameId within idMap
+// Finds provided geonameID within idMap and returns the index in idMap
+// locationIdMap := map[int]int{
+//	609013: 0,
+//	104084: 4,
+//	17:     4,
+// }
+// validateGeoId("17",locationIdMap) would return 2.
 func validateGeoId(gnid string, idMap map[int]int) (int, error) {
 	geonameId, err := strconv.Atoi(gnid)
 	if err != nil {
+		log.Println("geonameID should be a number")
 		return 0, errors.New("Corrupted Data: geonameID should be a number")
 	}
 	loadIndex, ok := idMap[geonameId]
@@ -273,7 +289,8 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 	return list, idMap, nil
 }
 
-// Returns nil of two nodes are equal
+// Returns nil if two nodes are equal
+// Used by the search package
 func IsEqualIPNodes(expected, node IPNode) error {
 	if !((node.IPAddressLow).Equal(expected.IPAddressLow)) {
 		output := strings.Join([]string{"IPAddress Low inconsistent\ngot:", node.IPAddressLow.String(), " \nwanted:", expected.IPAddressLow.String()}, "")

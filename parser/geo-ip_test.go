@@ -269,7 +269,7 @@ func TestCorruptData(t *testing.T) {
 	}
 }
 
-// Returns nil of two lists are equal
+// Returns nil if two IP Lists are equal
 func isEqualIPLists(listComp, list []parser.IPNode) error {
 	for index, element := range list {
 		err := parser.IsEqualIPNodes(element, listComp[index])
@@ -280,6 +280,7 @@ func isEqualIPLists(listComp, list []parser.IPNode) error {
 	return nil
 }
 
+// Returns nil if two Location lists are equal
 func isEqualLocLists(list, listComp []parser.LocationNode) error {
 	for index, element := range list {
 		if element.GeonameID != listComp[index].GeonameID {
