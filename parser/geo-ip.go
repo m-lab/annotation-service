@@ -104,9 +104,9 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 			index, err = validateGeoId(record[1], idMap)
 			if err != nil {
 				//log.Println(i," ",record)
-				index,err = validateGeoId(record[2],idMap)
+				index, err = validateGeoId(record[2], idMap)
 				if err != nil {
-					log.Println(i," ",record)
+					log.Println(i, " ", record)
 					//return nil,err
 				}
 			}
@@ -247,7 +247,7 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		newNode.GeonameID, err = strconv.Atoi(record[0])
 		if err != nil {
 			if len(record[0]) > 0 {
-				log.Println("GeonameID should be a number ",record[0]," ",i)
+				log.Println("GeonameID should be a number ", record[0], " ", i)
 				return nil, nil, errors.New("Corrupted Data: GeonameID should be a number")
 			}
 		}
@@ -263,7 +263,7 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		if match {
 			newNode.CountryName = record[5]
 		} else {
-			log.Println("Country name should be letters only : ",record[5]," ",i)
+			log.Println("Country name should be letters only : ", record[5], " ", i)
 			return nil, nil, errors.New("Corrupted Data: country name should be letters")
 		}
 		newNode.MetroCode, err = strconv.ParseInt(record[11], 10, 64)

@@ -10,6 +10,7 @@ import (
 	"github.com/m-lab/annotation-service/parser"
 	"github.com/m-lab/annotation-service/search"
 )
+
 func TestSearchSmallRange(t *testing.T) {
 	var ipv4 = []parser.IPNode{
 		parser.IPNode{
@@ -70,7 +71,7 @@ func TestSearchSmallRange(t *testing.T) {
 		},
 	}
 
-	// Test IP node within several subsets 
+	// Test IP node within several subsets
 	ip, err := search.SearchList(ipv4, "1.0.0.122")
 	if err != nil {
 		log.Println(err)
@@ -82,7 +83,7 @@ func TestSearchSmallRange(t *testing.T) {
 		t.Errorf("Found ", ip, " wanted", ipv4[4])
 	}
 
-	// Test IP node not in a subset 
+	// Test IP node not in a subset
 	ip, err = search.SearchList(ipv4, "1.0.0.254")
 	if err != nil {
 		log.Println(err)
@@ -118,10 +119,10 @@ func TestSearchSmallRange(t *testing.T) {
 		t.Errorf("Found ", ip, " wanted", ipv4[6])
 	}
 
-	// Test IP NOT in list 
+	// Test IP NOT in list
 	ip, err = search.SearchList(ipv4, "255.0.6.0")
 	if err == nil {
-		log.Println("Got ",ip," wanted: Node not found")
+		log.Println("Got ", ip, " wanted: Node not found")
 		t.Errorf("Search failed")
 	}
 }
@@ -132,7 +133,7 @@ func TestGeoLite2(t *testing.T) {
 		t.Errorf("Error opening zip file")
 	}
 
-	// Create Location list 
+	// Create Location list
 	rc, err := loader.FindFile("GeoLite2-City-Locations-en.csv", &reader.Reader)
 	if err != nil {
 		t.Errorf("Failed to create io.ReaderCloser")
@@ -147,12 +148,58 @@ func TestGeoLite2(t *testing.T) {
 		t.Errorf("Failed to create LocationList and mapID")
 	}
 
-	/*rcIPv6, err := loader.FindFile("GeoLite2-City-Blocks-IPv6.csv", &reader.Reader)
+	// Test IPv6
+	rcIPv6, err := loader.FindFile("GeoLite2-City-Blocks-IPv6.csv", &reader.Reader)
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
-	defer rcIPv6.Close() */
+	defer rcIPv6.Close()
+
+	ipv6, err := parser.CreateIPList(rcIPv6, idMap, "GeoLite2-City-Blocks-IPv6.csv")
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Failed to create ipv4")
+	}
+	ip, err := search.SearchList(ipv6, "2A02:0C7D:5DB7:0000:0000:FFFF:0000:0000")
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Search failed")
+	}
+	var n = parser.IPNode{
+		net.ParseIP("2A02:0C7D:5DB7:0000:0000:0000:0000:0000"),
+		net.ParseIP("2A02:0C7D:5DB7:FFFF:FFFF:FFFF:FFFF:FFFF"),
+		20548,
+		"IP1",
+		52.0713,
+		1.1444,
+	}
+	err = parser.IsEqualIPNodes(n, ip)
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Found ", ip, " wanted", n)
+	}
+
+	ip, err = search.SearchList(ipv6, "2A04:AB87:FFFF:FFFF:FFFF:FFFF:FFFF:0000")
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Search failed")
+	}
+	n = parser.IPNode{
+		net.ParseIP("2A04:AB80:0000:0000:0000:0000:0000:0000"),
+		net.ParseIP("2A04:AB87:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF"),
+		26082,
+		"",
+		52.5,
+		5.75,
+	}
+	err = parser.IsEqualIPNodes(n, ip)
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Found ", ip, " wanted", n)
+	}
+
+	// Test IPv4
 	rcIPv4, err := loader.FindFile("GeoLite2-City-Blocks-IPv4.csv", &reader.Reader)
 	if err != nil {
 		log.Println(err)
@@ -165,12 +212,12 @@ func TestGeoLite2(t *testing.T) {
 		t.Errorf("Failed to create ipv4")
 	}
 
-	ip, err := search.SearchList(ipv4, "1.0.120.0")
+	ip, err = search.SearchList(ipv4, "1.0.120.0")
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Search failed")
 	}
-	var n = parser.IPNode{
+	n = parser.IPNode{
 		net.ParseIP("1.0.120.0"),
 		net.ParseIP("1.0.123.255"),
 		11622,
@@ -184,12 +231,12 @@ func TestGeoLite2(t *testing.T) {
 		t.Errorf("Found ", ip, " wanted", n)
 	}
 
-	ip, err = search.SearchList(ipv4,"80.231.5.200")
+	ip, err = search.SearchList(ipv4, "80.231.5.200")
 	if err != nil {
-		log.Println(err) 
-		t.Errorf("Search failed") 
+		log.Println(err)
+		t.Errorf("Search failed")
 	}
-	var x = parser.IPNode{
+	n = parser.IPNode{
 		net.ParseIP("80.231.5.0"),
 		net.ParseIP("80.231.5.255"),
 		0,
@@ -197,11 +244,10 @@ func TestGeoLite2(t *testing.T) {
 		0,
 		0,
 	}
-	err = parser.IsEqualIPNodes(x, ip)
+	err = parser.IsEqualIPNodes(n, ip)
 	if err != nil {
 		log.Println(err)
-		t.Errorf("Found ", ip, " wanted", x)
+		t.Errorf("Found ", ip, " wanted", n)
 	}
-
 
 }
