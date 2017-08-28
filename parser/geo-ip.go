@@ -63,7 +63,6 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 			return list, errors.New("Empty input data")
 		}
 	}
-	i := 0
 	for {
 		record, err := r.Read()
 		if err == io.EOF {
@@ -105,12 +104,7 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 			var index int
 			index, err = validateGeoId(record[1], idMap)
 			if err != nil {
-				//log.Println(i," ",record)
 				index, err = validateGeoId(record[2], idMap)
-				if err != nil {
-					log.Println(i, " ", record)
-					//return nil,err
-				}
 			}
 			newNode.LocationIndex = index
 			newNode.PostalCode = record[6]
@@ -127,7 +121,6 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 			log.Println("Unaccepted csv file provided: ", file)
 			return list, errors.New("Unaccepted csv file provided")
 		}
-		i++
 	}
 	return list, nil
 }
