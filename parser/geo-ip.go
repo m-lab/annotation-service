@@ -232,7 +232,7 @@ func stringToFloat(str, field string) (float64, error) {
 }
 
 func checkAllCaps(str, field string) (string, error) {
-	match, _ := regexp.MatchString("^[A-Z]*$", str)
+	match, _ := regexp.MatchString("^[0-9A-Z]*$", str)
 	if match {
 		return str, nil
 	} else {
@@ -242,23 +242,93 @@ func checkAllCaps(str, field string) (string, error) {
 
 	}
 }
-
-// Creates list for location databases
+// Create Location list
+// GeoLite2 will return ([]LocationNode, nil, map[int]int, error)
 // returns list with location data and a hashmap with index to geonameId
-func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
+func CreateLocationList(reader io.Reader, file string) ([]LocationNode, []GLite1HelpNode, map[int]int, error) {
+	switch {
+	case strings.HasPrefix(file, gLite1Prefix):
+		loclist, glitelist, idMap, err := createLocListGLite1(reader)
+		if err != nil {
+			return nil, nil, nil, errors.New("Error creating Location List")
+		}
+		return loclist, glitelist, idMap, nil
+	case strings.HasPrefix(file, gLite2Prefix):
+		loclist, idMap, err := createLocListGLite2(reader)
+		if err != nil {
+			return nil, nil, nil, errors.New("Error creating Location List")
+		}
+		return loclist, nil, idMap, nil
+	default:
+		log.Println("Unaccepted csv file provided: ", file)
+		return nil, nil, nil, errors.New("Unaccepted csv file provided")
+	}
+}
+
+// Create Location list for GLite1 databases
+func createLocListGLite1(reader io.Reader) ([]LocationNode, []GLite1HelpNode, map[int]int, error) {
+	r := csv.NewReader(reader)
+	idMap := make(map[int]int, mapMax)
+	list := []LocationNode{}
+	glite := []GLite1HelpNode{}
+	// Skip the first 2 lines
+	_, err := r.Read()
+	if err == io.EOF {
+		log.Println("Empty input data")
+		return nil, nil, nil, errors.New("Empty input data")
+	}
+	_, err = r.Read()
+	if err == io.EOF {
+		log.Println("Empty input data")
+		return nil, nil, nil, errors.New("Empty input data")
+	}
+	for {
+		record, err := r.Read()
+		if err == io.EOF {
+			break
+		}
+		if len(record) != locationNumColumnsGlite1 {
+			log.Println("Incorrect number of columns in Location list\n\twanted: ", locationNumColumnsGlite1, " got: ", len(record), record)
+			return nil, nil, nil, errors.New("Corrupted Data: wrong number of columns")
+		}
+		var lNode LocationNode
+		lNode.GeonameID, err = strconv.Atoi(record[0])
+		if err != nil {
+			return nil, nil, nil, errors.New("Corrupted Data: GeonameID should be a number")
+		}
+		lNode.CountryCode, err = checkAllCaps(record[1], "Country code")
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		lNode.CityName = record[3]
+		var gNode GLite1HelpNode
+		gNode.PostalCode = record[4]
+		gNode.Latitude, err = stringToFloat(record[5], "Latitude")
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		gNode.Longitude, err = stringToFloat(record[6], "Longitude")
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		list = append(list, lNode)
+		glite = append(glite, gNode)
+		idMap[lNode.GeonameID] = len(list) - 1
+	}
+	return list, glite, idMap, nil
+}
+
+// Create Location list for GLite2 databases
+func createLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 	idMap := make(map[int]int, mapMax)
 	list := []LocationNode{}
 	r := csv.NewReader(reader)
-	r.TrimLeadingSpace = true
 	// Skip the first line
 	_, err := r.Read()
 	if err == io.EOF {
 		log.Println("Empty input data")
 		return nil, nil, errors.New("Empty input data")
-	}
-	if err != nil {
-		log.Println("Error reading file")
-		return nil, nil, errors.New("Error reading file")
 	}
 	for {
 		record, err := r.Read()
@@ -269,44 +339,46 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 			log.Println("Incorrect number of columns in Location list\n\twanted: ", locationNumColumnsGlite2, " got: ", len(record), record)
 			return nil, nil, errors.New("Corrupted Data: wrong number of columns")
 		}
-		var newNode LocationNode
-		newNode.GeonameID, err = strconv.Atoi(record[0])
+		var lNode LocationNode
+		lNode.GeonameID, err = strconv.Atoi(record[0])
 		if err != nil {
 			if len(record[0]) > 0 {
 				log.Println("GeonameID should be a number ", record[0])
 				return nil, nil, errors.New("Corrupted Data: GeonameID should be a number")
 			}
 		}
-		newNode.ContinentCode, err = checkAllCaps(record[2], "Continent code")
+		lNode.ContinentCode, err = checkAllCaps(record[2], "Continent code")
 		if err != nil {
 			return nil, nil, err
 		}
-		newNode.CountryCode, err = checkAllCaps(record[4], "Country code")
+		lNode.CountryCode, err = checkAllCaps(record[4], "Country code")
 		if err != nil {
 			return nil, nil, err
 		}
-		match, _ := regexp.MatchString(`^[^\d]*$`, record[5])
+		match, _ := regexp.MatchString(`^[^0-9]*$`, record[5])
 		if match {
-			newNode.CountryName = record[5]
+			lNode.CountryName = record[5]
 		} else {
-			log.Println("Country name should be letters only: ", record[5])
-
+			log.Println("Country name should be letters only : ", record[5])
 			return nil, nil, errors.New("Corrupted Data: country name should be letters")
 		}
-		newNode.MetroCode, err = strconv.ParseInt(record[11], 10, 64)
+		lNode.MetroCode, err = strconv.ParseInt(record[11], 10, 64)
+		if err != nil {
+			return nil,nil, errors.New("country name should be letters")
+		}
+		lNode.MetroCode, err = strconv.ParseInt(record[11], 10, 64)
 		if err != nil {
 			if len(record[11]) > 0 {
 				log.Println("MetroCode should be a number")
 				return nil, nil, errors.New("Corrupted Data: metrocode should be a number")
 			}
 		}
-		newNode.CityName = record[10]
-		list = append(list, newNode)
-		idMap[newNode.GeonameID] = len(list) - 1
+		lNode.CityName = record[10]
+		list = append(list, lNode)
+		idMap[lNode.GeonameID] = len(list) - 1
 	}
 	return list, idMap, nil
 }
-
 // Returns nil if two nodes are equal
 // Used by the search package
 func IsEqualIPNodes(expected, node IPNode) error {

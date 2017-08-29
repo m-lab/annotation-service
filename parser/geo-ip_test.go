@@ -91,6 +91,70 @@ func TestIPGLite1(t *testing.T) {
 		t.Errorf("Lists are not equal")
 	}
 }
+func TestLocationListGLite1(t *testing.T) {
+	var locationList []parser.LocationNode
+	var idMap map[int]int
+	var LocList = []parser.LocationNode{
+		parser.LocationNode{
+			1,
+			"",
+			"O1",
+			"",
+			0,
+			"",
+		},
+		parser.LocationNode{
+			2,
+			"",
+			"AP",
+			"",
+			0,
+			"",
+		},
+		parser.LocationNode{
+			3,
+			"",
+			"EU",
+			"",
+			0,
+			"",
+		},
+	}
+	LocIdMap := map[int]int{
+		3: 2,
+		2: 1,
+		1: 0,
+	}
+	reader, err := zip.OpenReader("testdata/GeoLiteLatest.zip")
+	if err != nil {
+		t.Errorf("Error opening zip file")
+	}
+
+	rc, err := loader.FindFile("GeoLiteCity-Location.csv", &reader.Reader)
+	if err != nil {
+		t.Errorf("Failed to create io.ReaderCloser")
+	}
+	defer rc.Close()
+	locationList, _, idMap, err = parser.CreateLocationList(rc, "GeoLiteCity-Location.csv")
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Failed to CreateLocationList")
+	}
+	if locationList == nil || idMap == nil {
+		t.Errorf("Failed to create LocationList and mapID")
+	}
+
+	err = isEqualLocLists(locationList, LocList)
+	if err != nil {
+		t.Errorf("Location lists are not equal")
+	}
+
+	eq := reflect.DeepEqual(LocIdMap, idMap)
+	if !eq {
+		t.Errorf("Location maps are not equal")
+	}
+}
+
 func TestIPLisGLite2(t *testing.T) {
 	var ipv4, ipv6 []parser.IPNode
 	var ipv6Expected = []parser.IPNode{
@@ -233,7 +297,7 @@ func TestLocationListGLite2(t *testing.T) {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
 	defer rc.Close()
-	locationList, idMap, err = parser.CreateLocationList(rc)
+	locationList, _, idMap, err = parser.CreateLocationList(rc)
 	if err != nil {
 		t.Errorf("Failed to CreateLocationList")
 	}
