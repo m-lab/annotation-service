@@ -258,6 +258,9 @@ func TestCorruptData(t *testing.T) {
 		t.Errorf("Error opening zip file")
 	}
 	rc, err := loader.FindFile("GeoLite2-City-Locations-en.csv", &reader.Reader)
+	if err != nil {
+		t.Errorf("Error finding file")
+	}
 	_, _, err = parser.CreateLocationList(rc)
 	if err.Error() != "Corrupted Data: wrong number of columns" {
 		if err == nil {

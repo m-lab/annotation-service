@@ -10,6 +10,7 @@ import (
 	"log"
 	"math"
 	"net"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -49,21 +50,26 @@ type LocationNode struct {
 
 // Creates a List of IPNodes
 func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, error) {
+	g1IP := []string{"startIpNum", "endIpNum", "locId"}
 	list := []IPNode{}
 	r := csv.NewReader(reader)
 	// Skip first line
-	_, err := r.Read()
+	title, err := r.Read()
 	if err == io.EOF {
 		log.Println("Empty input data")
-		return list, errors.New("Empty input data")
+		return nil, errors.New("Empty input data")
 	}
 	switch {
 	case strings.HasPrefix(file, gLite1Prefix):
-		// Skip 2nd line 
-		_, err := r.Read()
+		// Skip 2nd line
+		title, err = r.Read()
 		if err == io.EOF {
 			log.Println("Empty input data")
-			return list, errors.New("Empty input data")
+			return nil, errors.New("Empty input data")
+		}
+		if !reflect.DeepEqual(g1IP, title) {
+			log.Println("Improper data format got: ", title, " wanted: ", g1IP)
+			return nil, errors.New("Improper data format")
 		}
 		for {
 			// Example:
@@ -244,6 +250,10 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 	if err == io.EOF {
 		log.Println("Empty input data")
 		return nil, nil, errors.New("Empty input data")
+	}
+	if err != nil {
+		log.Println("Error reading file")
+		return nil, nil, errors.New("Error reading file")
 	}
 	for {
 		record, err := r.Read()
