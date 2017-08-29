@@ -59,6 +59,7 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 	}
 	switch {
 	case strings.HasPrefix(file, gLite1Prefix):
+		// Skip 2nd line 
 		_, err := r.Read()
 		if err == io.EOF {
 			log.Println("Empty input data")
