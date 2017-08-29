@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -33,18 +32,6 @@ func SetupHandlers() {
 	http.HandleFunc("/annotate", Annotate)
 	http.HandleFunc("/batch_annotate", BatchAnnotate)
 	go waitForDownloaderMessages()
-	PopulateLatestData()
-
-}
-
-func PopulateLatestData() {
-	data, err := LoadLatestGeolite2File()
-	if err != nil {
-		log.Fatal(err)
-	}
-	currentDataMutex.Lock()
-	currentGeoDataset = data
-	currentDataMutex.Unlock()
 }
 
 // Annotate is a URL handler that looks up IP address and puts
