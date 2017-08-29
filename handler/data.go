@@ -14,11 +14,12 @@ import (
 	"cloud.google.com/go/storage"
 )
 
+// The GeoDataset struct bundles all the data needed to search and
+// find data into one common structure
 type GeoDataset struct {
-	IP4Nodes      []parser.IPNode
-	IP6Nodes      []parser.IPNode
-	LocationNodes []parser.LocationNode
-	GeoidMap      map[int]int
+	IP4Nodes      []parser.IPNode       // The IPNode list containing IP4Nodes
+	IP6Nodes      []parser.IPNode       // The IPNode list containing IP6Nodes
+	LocationNodes []parser.LocationNode // The location nodes corresponding to the IPNodes
 }
 
 // This is the regex used to filter for which files we want to consider acceptable for using with Geolite2
@@ -87,6 +88,7 @@ func LoadLatestGeolite2File() (*GeoDataset, error) {
 	if err != nil {
 		return nil, err
 	}
+	// geoidMap is just a temporary map that will be discarded once the blocks are parsed
 	locationNodes, geoidMap, err := parser.CreateLocationList(locations)
 	if err != nil {
 		return nil, err
@@ -107,5 +109,5 @@ func LoadLatestGeolite2File() (*GeoDataset, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &GeoDataset{IP4Nodes: ipNodes4, IP6Nodes: ipNodes6, LocationNodes: locationNodes, GeoidMap: geoidMap}, nil
+	return &GeoDataset{IP4Nodes: ipNodes4, IP6Nodes: ipNodes6, LocationNodes: locationNodes}, nil
 }

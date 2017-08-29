@@ -256,7 +256,7 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		if match {
 			newNode.CountryName = record[5]
 		} else {
-			log.Println("Country name should be letters only: %s", record[5])
+			log.Println("Country name should be letters only: ", record[5])
 			return nil, nil, errors.New("Corrupted Data: country name should be letters")
 		}
 		newNode.MetroCode, err = strconv.ParseInt(record[11], 10, 64)
