@@ -101,7 +101,12 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 			newNode.IPAddressHigh = highIp
 			index, err := validateGeoId(record[1], idMap)
 			if err != nil {
-				return nil, err
+				if backupIndex, err := validateGeoId(record[2], idMap); err == nil {
+					index = backupIndex
+				} else {
+					log.Println("Couldn't get a valid Geoname id!", record)
+					//TODO: Add a prometheus metric here
+				}
 			}
 			newNode.LocationIndex = index
 			newNode.PostalCode = record[6]
@@ -175,7 +180,6 @@ func RangeCIDR(cidr string) (net.IP, net.IP, error) {
 func validateGeoId(gnid string, idMap map[int]int) (int, error) {
 	geonameId, err := strconv.Atoi(gnid)
 	if err != nil {
-		log.Println("geonameID should be a number")
 		return 0, errors.New("Corrupted Data: geonameID should be a number")
 	}
 	loadIndex, ok := idMap[geonameId]
@@ -248,11 +252,11 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		if err != nil {
 			return nil, nil, err
 		}
-		match, _ := regexp.MatchString("^[a-zA-Z]*$", record[5])
+		match, _ := regexp.MatchString(`^[^\d]*$`, record[5])
 		if match {
 			newNode.CountryName = record[5]
 		} else {
-			log.Println("Country name should be letters only")
+			log.Println("Country name should be letters only: %s", record[5])
 			return nil, nil, errors.New("Corrupted Data: country name should be letters")
 		}
 		newNode.MetroCode, err = strconv.ParseInt(record[11], 10, 64)

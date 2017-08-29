@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -20,6 +21,8 @@ import (
 // trying to update it
 var currentDataMutex = &sync.RWMutex{}
 
+var currentGeoDataset *GeoDataset = nil
+
 // This is the base in which we should encode the timestamp when we
 // are creating the keys for the mapt to return for batch requests
 const encodingBase = 36
@@ -30,6 +33,18 @@ func SetupHandlers() {
 	http.HandleFunc("/annotate", Annotate)
 	http.HandleFunc("/batch_annotate", BatchAnnotate)
 	go waitForDownloaderMessages()
+	PopulateLatestData()
+
+}
+
+func PopulateLatestData() {
+	data, err := LoadLatestGeolite2File()
+	if err != nil {
+		log.Fatal(err)
+	}
+	currentDataMutex.Lock()
+	currentGeoDataset = data
+	currentDataMutex.Unlock()
 }
 
 // Annotate is a URL handler that looks up IP address and puts
