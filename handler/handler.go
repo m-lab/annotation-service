@@ -20,6 +20,8 @@ import (
 // trying to update it
 var currentDataMutex = &sync.RWMutex{}
 
+// This is a pointer to a GeoDataset struct containing the absolute
+// latest data for the annotator to search and reply with
 var currentGeoDataset *GeoDataset = nil
 
 // This is the base in which we should encode the timestamp when we
