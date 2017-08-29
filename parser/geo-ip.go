@@ -121,7 +121,7 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 			// Look for GeoId within idMap and return index
 			index, err := lookupGeoId(record[1], idMap)
 			if err != nil {
-				if backupIndex, err := validateGeoId(record[2], idMap); err == nil {
+				if backupIndex, err := lookupGeoId(record[2], idMap); err == nil {
 					index = backupIndex
 				} else {
 					log.Println("Couldn't get a valid Geoname id!", record)
