@@ -57,5 +57,6 @@ func FindFile(fn string, zrdr *zip.Reader) (io.ReadCloser, error) {
 			return rc, nil
 		}
 	}
+	log.Println("File not found")
 	return nil, errors.New("File not found")
 }

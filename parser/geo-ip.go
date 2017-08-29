@@ -10,17 +10,23 @@ import (
 	"log"
 	"math"
 	"net"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 )
 
-const ipNumColumnsGlite2 = 10
-const locationNumColumnsGlite2 = 13
-const ipNumColumnsGliteLatest = 3
-const mapMax = 200000
-const gLiteLatestPrefix = "GeoLiteCity-Blocks"
-const gLite2CityPrefix = "GeoLite2-City-Blocks"
+const (
+	ipNumColumnsGlite2       = 10
+	locationNumColumnsGlite2 = 13
+	gLite2Prefix             = "GeoLite2-City"
+
+	ipNumColumnsGlite1       = 3
+	locationNumColumnsGlite1 = 9
+	gLite1Prefix             = "GeoLiteCity"
+
+	mapMax = 200000
+)
 
 // IPNode defines IPv4 and IPv6 databases
 type IPNode struct {
@@ -44,32 +50,35 @@ type LocationNode struct {
 
 // Creates a List of IPNodes
 func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, error) {
+	g1IP := []string{"startIpNum", "endIpNum", "locId"}
 	list := []IPNode{}
 	r := csv.NewReader(reader)
-	r.TrimLeadingSpace = true
 	// Skip first line
-	_, err := r.Read()
+	title, err := r.Read()
 	if err == io.EOF {
 		log.Println("Empty input data")
-		return list, errors.New("Empty input data")
+		return nil, errors.New("Empty input data")
 	}
-
-	if file == "GeoLiteCity-Blocks.csv" {
-		_, err := r.Read()
+	switch {
+	case strings.HasPrefix(file, gLite1Prefix):
+		// Skip 2nd line, which contains column labels
+		title, err = r.Read()
 		if err == io.EOF {
 			log.Println("Empty input data")
-			return list, errors.New("Empty input data")
+			return nil, errors.New("Empty input data")
 		}
-	}
-	for {
-		record, err := r.Read()
-		if err == io.EOF {
-			break
+		if !reflect.DeepEqual(g1IP, title) {
+			log.Println("Improper data format got: ", title, " wanted: ", g1IP)
+			return nil, errors.New("Improper data format")
 		}
-		var newNode IPNode
-		switch {
-		case strings.HasPrefix(file, gLiteLatestPrefix):
-			err = checkColumnLength(record, ipNumColumnsGliteLatest)
+		for {
+			// Example:
+			// GLite1 : record = [16777216,16777471,17]
+			record, err := r.Read()
+			if err == io.EOF {
+				break
+			}
+			err = checkColumnLength(record, ipNumColumnsGlite1)
 			if err != nil {
 				return nil, err
 			}
@@ -82,13 +91,23 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 			if err != nil {
 				return nil, err
 			}
-			index, err := validateGeoId(record[2], idMap)
+			// Look for GeoId within idMap and return index
+			index, err := lookupGeoId(record[2], idMap)
 			if err != nil {
 				return nil, err
 			}
 			newNode.LocationIndex = index
 			list = append(list, newNode)
-		case strings.HasPrefix(file, gLite2CityPrefix):
+		}
+	case strings.HasPrefix(file, gLite2Prefix):
+		for {
+			// Example:
+			// GLite2 : record = [2a04:97c0::/29,2658434,2658434,0,0,47,8,100]
+			record, err := r.Read()
+			if err == io.EOF {
+				break
+			}
+			var newNode IPNode
 			err = checkColumnLength(record, ipNumColumnsGlite2)
 			if err != nil {
 				return nil, err
@@ -99,7 +118,8 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 			}
 			newNode.IPAddressLow = lowIp
 			newNode.IPAddressHigh = highIp
-			index, err := validateGeoId(record[1], idMap)
+			// Look for GeoId within idMap and return index
+			index, err := lookupGeoId(record[1], idMap)
 			if err != nil {
 				if backupIndex, err := validateGeoId(record[2], idMap); err == nil {
 					index = backupIndex
@@ -119,10 +139,10 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 				return nil, err
 			}
 			list = append(list, newNode)
-		default:
-			log.Println("Unaccepted csv file provided: ", file)
-			return list, errors.New("Unaccepted csv file provided")
 		}
+	default:
+		log.Println("Unaccepted csv file provided: ", file)
+		return list, errors.New("Unaccepted csv file provided")
 	}
 	return list, nil
 }
@@ -149,6 +169,7 @@ func Int2ip(str string) (net.IP, error) {
 	}
 	ip := make(net.IP, 4)
 	binary.BigEndian.PutUint32(ip, uint32(num))
+	ip = net.IPv4(ip[0], ip[1], ip[2], ip[3])
 	return ip, nil
 }
 
@@ -176,8 +197,15 @@ func RangeCIDR(cidr string) (net.IP, net.IP, error) {
 	return lowIp, ip, nil
 }
 
-// Returns the index of geonameId within idMap
-func validateGeoId(gnid string, idMap map[int]int) (int, error) {
+// Finds provided geonameID within idMap and returns the index in idMap
+// locationIdMap := map[int]int{
+//	609013: 0,
+//	104084: 4,
+//	17:     4,
+// }
+// lookupGeoId("17",locationIdMap) would return (2,nil).
+// TODO: Add error metrics
+func lookupGeoId(gnid string, idMap map[int]int) (int, error) {
 	geonameId, err := strconv.Atoi(gnid)
 	if err != nil {
 		return 0, errors.New("Corrupted Data: geonameID should be a number")
@@ -197,7 +225,6 @@ func stringToFloat(str, field string) (float64, error) {
 			log.Println(field, " was not a number")
 			output := strings.Join([]string{"Corrupted Data: ", field, " should be an int"}, "")
 			return 0, errors.New(output)
-
 		}
 	}
 	return flt, nil
@@ -216,6 +243,7 @@ func checkAllCaps(str, field string) (string, error) {
 }
 
 // Creates list for location databases
+// returns list with location data and a hashmap with index to geonameId
 func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 	idMap := make(map[int]int, mapMax)
 	list := []LocationNode{}
@@ -226,6 +254,10 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 	if err == io.EOF {
 		log.Println("Empty input data")
 		return nil, nil, errors.New("Empty input data")
+	}
+	if err != nil {
+		log.Println("Error reading file")
+		return nil, nil, errors.New("Error reading file")
 	}
 	for {
 		record, err := r.Read()
@@ -240,7 +272,7 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		newNode.GeonameID, err = strconv.Atoi(record[0])
 		if err != nil {
 			if len(record[0]) > 0 {
-				log.Println("GeonameID should be a number")
+				log.Println("GeonameID should be a number ", record[0])
 				return nil, nil, errors.New("Corrupted Data: GeonameID should be a number")
 			}
 		}
@@ -271,4 +303,43 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		idMap[newNode.GeonameID] = len(list) - 1
 	}
 	return list, idMap, nil
+}
+
+// Returns nil if two nodes are equal
+// Used by the search package
+func IsEqualIPNodes(expected, node IPNode) error {
+	if !((node.IPAddressLow).Equal(expected.IPAddressLow)) {
+		output := strings.Join([]string{"IPAddress Low inconsistent\ngot:", node.IPAddressLow.String(), " \nwanted:", expected.IPAddressLow.String()}, "")
+		log.Println(output)
+		return errors.New(output)
+	}
+	if !((node.IPAddressHigh).Equal(expected.IPAddressHigh)) {
+		output := strings.Join([]string{"IPAddressHigh inconsistent\ngot:", node.IPAddressHigh.String(), " \nwanted:", expected.IPAddressHigh.String()}, "")
+		log.Println(output)
+		return errors.New(output)
+	}
+	if node.LocationIndex != expected.LocationIndex {
+		output := strings.Join([]string{"LocationIndex inconsistent\ngot:", strconv.Itoa(node.LocationIndex), " \nwanted:", strconv.Itoa(expected.LocationIndex)}, "")
+		log.Println(output)
+		return errors.New(output)
+	}
+	if node.PostalCode != expected.PostalCode {
+		output := strings.Join([]string{"PostalCode inconsistent\ngot:", node.PostalCode, " \nwanted:", expected.PostalCode}, "")
+		log.Println(output)
+		return errors.New(output)
+	}
+	if node.Latitude != expected.Latitude {
+		output := strings.Join([]string{"Latitude inconsistent\ngot:", floatToString(node.Latitude), " \nwanted:", floatToString(expected.Latitude)}, "")
+		log.Println(output)
+		return errors.New(output)
+	}
+	if node.Longitude != expected.Longitude {
+		output := strings.Join([]string{"Longitude inconsistent\ngot:", floatToString(node.Longitude), " \nwanted:", floatToString(expected.Longitude)}, "")
+		log.Println(output)
+		return errors.New(output)
+	}
+	return nil
+}
+func floatToString(num float64) string {
+	return strconv.FormatFloat(num, 'f', 6, 64)
 }
