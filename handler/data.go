@@ -74,7 +74,7 @@ func DetermineFilenameOfLatestGeolite2File() (string, error) {
 
 // LoadLatestGeolite2File will check GCS for the latest file, download
 // it, process it, and load it into memory so that it can be easily
-// searched, then it will return a pointer to that file or an error.
+// searched, then it will return a pointer to that GeoDataset or an error.
 func LoadLatestGeolite2File() (*GeoDataset, error) {
 	filename, err := DetermineFilenameOfLatestGeolite2File()
 	if err != nil {
