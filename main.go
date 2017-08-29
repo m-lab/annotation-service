@@ -9,10 +9,9 @@ import (
 )
 
 func main() {
+	handler.PopulateLatestData()
 	handler.SetupHandlers()
 	metrics.SetupPrometheus()
-	// TODO setup data structures here
-	// TODO(JM) setup pubsub here
 	log.Print("Listening on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
