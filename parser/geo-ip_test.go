@@ -15,10 +15,11 @@ import (
 )
 
 func TestInt2ip(t *testing.T) {
-	_, err := parser.Int2ip("4294967297")
+	ip, err := parser.Int2ip("16777216")
 	if err != nil {
 		t.Errorf("Failed to catch out of bounds IP")
 	}
+	log.Println(ip)
 }
 func TestBadFile(t *testing.T) {
 	locationIdMap := map[int]int{

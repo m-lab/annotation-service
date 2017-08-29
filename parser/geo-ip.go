@@ -18,7 +18,7 @@ import (
 const (
 	ipNumColumnsGlite2       = 10
 	locationNumColumnsGlite2 = 13
-	gLite2Prefix         = "GeoLite2-City"
+	gLite2Prefix             = "GeoLite2-City"
 
 	ipNumColumnsGlite1       = 3
 	locationNumColumnsGlite1 = 9
@@ -51,33 +51,26 @@ type LocationNode struct {
 func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, error) {
 	list := []IPNode{}
 	r := csv.NewReader(reader)
-	r.TrimLeadingSpace = true
-
 	// Skip first line
 	_, err := r.Read()
 	if err == io.EOF {
 		log.Println("Empty input data")
 		return list, errors.New("Empty input data")
 	}
-
-	if file == "GeoLiteCity-Blocks.csv" {
+	switch {
+	case strings.HasPrefix(file, gLite1Prefix):
 		_, err := r.Read()
 		if err == io.EOF {
 			log.Println("Empty input data")
 			return list, errors.New("Empty input data")
 		}
-	}
-	for {
-		// Example: 
-		// GLite1 : record = [16777216,16777471,17]
-		// GLite2 : record = [2a04:97c0::/29,2658434,2658434,0,0,47,8,100]
-		record, err := r.Read()
-		if err == io.EOF {
-			break
-		}
-		var newNode IPNode
-		switch {
-		case strings.HasPrefix(file, gLite1Prefix):
+		for {
+			// Example:
+			// GLite1 : record = [16777216,16777471,17]
+			record, err := r.Read()
+			if err == io.EOF {
+				break
+			}
 			err = checkColumnLength(record, ipNumColumnsGlite1)
 			if err != nil {
 				return nil, err
@@ -98,7 +91,16 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 			}
 			newNode.LocationIndex = index
 			list = append(list, newNode)
-		case strings.HasPrefix(file, gLite2Prefix):
+		}
+	case strings.HasPrefix(file, gLite2Prefix):
+		for {
+			// Example:
+			// GLite2 : record = [2a04:97c0::/29,2658434,2658434,0,0,47,8,100]
+			record, err := r.Read()
+			if err == io.EOF {
+				break
+			}
+			var newNode IPNode
 			err = checkColumnLength(record, ipNumColumnsGlite2)
 			if err != nil {
 				return nil, err
@@ -125,10 +127,10 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 				return nil, err
 			}
 			list = append(list, newNode)
-		default:
-			log.Println("Unaccepted csv file provided: ", file)
-			return list, errors.New("Unaccepted csv file provided")
 		}
+	default:
+		log.Println("Unaccepted csv file provided: ", file)
+		return list, errors.New("Unaccepted csv file provided")
 	}
 	return list, nil
 }
@@ -155,8 +157,7 @@ func Int2ip(str string) (net.IP, error) {
 	}
 	ip := make(net.IP, 4)
 	binary.BigEndian.PutUint32(ip, uint32(num))
-	// Matches the Golang's internal IPv4 structure
-	ip = append([]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff}, ip...)
+	ip = net.IPv4(ip[0], ip[1], ip[2], ip[3])
 	return ip, nil
 }
 
