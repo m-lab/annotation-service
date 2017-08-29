@@ -27,7 +27,7 @@ MaxMind GeoLite2 databases include:
       registered to an ISP)
     - Latitude
     - Longitude
-  2. GeoLite2-City0Locations-en.csv
+  2. GeoLite2-City-Locations-en.csv
     - GeonameID
     - Continent Code
     - Country ISO
@@ -52,5 +52,5 @@ Annotatation service will respond with the following data:
 - Metro Code
 - City Name
 
-geoname_id is the same with registered_country_geoname_id most of time, but with some exceptions.
-Either geoname_id or registered_country_geoname_id could be not available for some IP addresses.
+GeonameID is the same with Registered Country Geoname ID most of time, but with some exceptions.
+Either GeonameID or Registered Country Geoname ID could be not available for some IP addresses.
