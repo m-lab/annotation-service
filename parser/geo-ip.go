@@ -124,6 +124,7 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 				if backupIndex, err := lookupGeoId(record[2], idMap); err == nil {
 					index = backupIndex
 				} else {
+					index = -1
 					log.Println("Couldn't get a valid Geoname id!", record)
 					//TODO: Add a prometheus metric here
 				}

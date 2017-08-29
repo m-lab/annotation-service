@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/m-lab/annotation-service/metrics"
+	"github.com/m-lab/annotation-service/parser"
 	"github.com/m-lab/etl/schema"
 )
 
@@ -161,5 +162,27 @@ func GetMetadataForSingleIP(request *schema.RequestData) *schema.MetaData {
 	defer currentDataMutex.RUnlock()
 	// Fake response
 	return &schema.MetaData{Geo: &schema.GeolocationIP{City: "Not A Real City", Postal_code: "10583"}, ASN: &schema.IPASNData{}}
+
+}
+
+// ConvertIPNodeToMetaData takes a NON-NIL pointer to a parser.IPNode,
+// plus a list of locationNodes. It will then use that data to fill in
+// a MetaData struct and return its pointer.
+func ConvertIPNodeToMetaData(ipNode *parser.IPNode, locationNodes []parser.LocationNode) *schema.MetaData {
+	locNode := parser.LocationNode{}
+	if ipNode.LocationIndex > 0 {
+		locNode = locationNodes[ipNode.LocationIndex]
+	}
+	return &schema.MetaData{
+		Geo: &schema.GeolocationIP{
+			Continent_code: locNode.ContinentCode,
+			Country_code:   locNode.CountryCode,
+			Country_name:   locNode.CountryName,
+			Metro_code:     locNode.MetroCode,
+			City:           locNode.CityName,
+			Latitude:       ipNode.Latitude,
+			Longitude:      ipNode.Longitude,
+		},
+	}
 
 }
