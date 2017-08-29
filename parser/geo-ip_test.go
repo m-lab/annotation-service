@@ -85,7 +85,7 @@ func TestIPGLite1(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to create ipv4")
 	}
-	err = compareIPLists(ipv4Expected, ipv4)
+	err = isEqualIPLists(ipv4Expected, ipv4)
 	if err != nil {
 		t.Errorf("Lists are not equal")
 	}
@@ -166,7 +166,7 @@ func TestIPLisGLite2(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to create ipv4")
 	}
-	err = compareIPLists(ipv4Expected, ipv4)
+	err = isEqualIPLists(ipv4Expected, ipv4)
 	if err != nil {
 		t.Errorf("Lists are not equal")
 	}
@@ -181,7 +181,7 @@ func TestIPLisGLite2(t *testing.T) {
 		log.Println(err)
 		t.Errorf("Failed to create ipv6")
 	}
-	err = compareIPLists(ipv6Expected, ipv6)
+	err = isEqualIPLists(ipv6Expected, ipv6)
 	if err != nil {
 		t.Errorf("Lists are not equal")
 	}
@@ -240,7 +240,7 @@ func TestLocationListGLite2(t *testing.T) {
 		t.Errorf("Failed to create LocationList and mapID")
 	}
 
-	err = compareLocLists(locationList, LocList)
+	err = isEqualLocLists(locationList, LocList)
 	if err != nil {
 		t.Errorf("Location lists are not equal")
 	}
@@ -279,47 +279,18 @@ func TestCorruptData(t *testing.T) {
 	}
 }
 
-func floatToString(num float64) string {
-	return strconv.FormatFloat(num, 'f', 6, 64)
-}
-
-func compareIPLists(listComp, list []parser.IPNode) error {
+// Returns nil of two lists are equal
+func isEqualIPLists(listComp, list []parser.IPNode) error {
 	for index, element := range list {
-		if !((element.IPAddressLow).Equal(listComp[index].IPAddressLow)) {
-			output := strings.Join([]string{"IPAddress Low inconsistent\ngot:", element.IPAddressLow.String(), " \nwanted:", listComp[index].IPAddressLow.String()}, "")
-			log.Println(output)
-			return errors.New(output)
-		}
-		if !((element.IPAddressHigh).Equal(listComp[index].IPAddressHigh)) {
-			output := strings.Join([]string{"IPAddressHigh inconsistent\ngot:", element.IPAddressHigh.String(), " \nwanted:", listComp[index].IPAddressHigh.String()}, "")
-			log.Println(output)
-			return errors.New(output)
-		}
-		if element.LocationIndex != listComp[index].LocationIndex {
-			output := strings.Join([]string{"LocationIndex inconsistent\ngot:", strconv.Itoa(element.LocationIndex), " \nwanted:", strconv.Itoa(listComp[index].LocationIndex)}, "")
-			log.Println(output)
-			return errors.New(output)
-		}
-		if element.PostalCode != listComp[index].PostalCode {
-			output := strings.Join([]string{"PostalCode inconsistent\ngot:", element.PostalCode, " \nwanted:", listComp[index].PostalCode}, "")
-			log.Println(output)
-			return errors.New(output)
-		}
-		if element.Latitude != listComp[index].Latitude {
-			output := strings.Join([]string{"Latitude inconsistent\ngot:", floatToString(element.Latitude), " \nwanted:", floatToString(listComp[index].Latitude)}, "")
-			log.Println(output)
-			return errors.New(output)
-		}
-		if element.Longitude != listComp[index].Longitude {
-			output := strings.Join([]string{"Longitude inconsistent\ngot:", floatToString(element.Longitude), " \nwanted:", floatToString(listComp[index].Longitude)}, "")
-			log.Println(output)
-			return errors.New(output)
+		err := parser.IsEqualIPNodes(element, listComp[index])
+		if err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
-func compareLocLists(list, listComp []parser.LocationNode) error {
+func isEqualLocLists(list, listComp []parser.LocationNode) error {
 	for index, element := range list {
 		if element.GeonameID != listComp[index].GeonameID {
 			output := strings.Join([]string{"GeonameID inconsistent\ngot:", strconv.Itoa(element.GeonameID), " \nwanted:", strconv.Itoa(listComp[index].GeonameID)}, "")
