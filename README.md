@@ -35,6 +35,9 @@ MaxMind GeoLite2 databases include:
     - City Name
     - Metro Code
 
+GeonameID is the same with Registered Country Geoname ID most of time, but with some exceptions.
+Either GeonameID or Registered Country Geoname ID could be not available for some IP addresses.
+
 Important descrepencies to note include:
 1. GeoLite2 databases provides a network IP range in CIDR format while
    GeoLiteLatest databases provide an IP range in decimal format.
@@ -48,9 +51,9 @@ Annotatation service will respond with the following data:
 - Latitude
 - Longitude
 - Continent Code
+- Country Code 
 - Country Name
 - Metro Code
 - City Name
 
-GeonameID is the same with Registered Country Geoname ID most of time, but with some exceptions.
-Either GeonameID or Registered Country Geoname ID could be not available for some IP addresses.
+
