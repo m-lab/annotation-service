@@ -127,6 +127,7 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 					log.Println("Couldn't get a valid Geoname id!", record)
 					//TODO: Add a prometheus metric here
 				}
+
 			}
 			newNode.LocationIndex = index
 			newNode.PostalCode = record[6]
@@ -289,6 +290,7 @@ func CreateLocationList(reader io.Reader) ([]LocationNode, map[int]int, error) {
 			newNode.CountryName = record[5]
 		} else {
 			log.Println("Country name should be letters only: ", record[5])
+
 			return nil, nil, errors.New("Corrupted Data: country name should be letters")
 		}
 		newNode.MetroCode, err = strconv.ParseInt(record[11], 10, 64)
