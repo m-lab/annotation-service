@@ -15,11 +15,10 @@ import (
 )
 
 func TestInt2ip(t *testing.T) {
-	ip, err := parser.Int2ip("16777216")
+	_, err := parser.Int2ip("16777216")
 	if err != nil {
 		t.Errorf("Failed to catch out of bounds IP")
 	}
-	log.Println(ip)
 }
 func TestBadFile(t *testing.T) {
 	locationIdMap := map[int]int{
@@ -35,7 +34,7 @@ func TestBadFile(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
-	_, err = parser.CreateIPList(rc, locationIdMap, "BADFILE.csv")
+	_, err = parser.CreateIPList(rc, locationIdMap,nil, "BADFILE.csv")
 	if err.Error() != "Unaccepted csv file provided" {
 		t.Errorf("Failed to catch bad csv file")
 	}
@@ -46,43 +45,46 @@ func TestIPGLite1(t *testing.T) {
 		parser.IPNode{
 			net.ParseIP("1.0.0.0"),
 			net.ParseIP("1.0.0.255"),
-			0,
+			1,
 			"",
-			0,
-			0,
+			35,
+			105,
 		},
 		parser.IPNode{
 			net.ParseIP("1.0.1.0"),
 			net.ParseIP("1.0.3.255"),
-			4,
+			2,
 			"",
-			0,
-			0,
+			47,
+			8,
 		},
 		parser.IPNode{
 			net.ParseIP("1.0.4.0"),
 			net.ParseIP("1.0.7.255"),
-			4,
+			0,
 			"",
 			0,
 			0,
 		},
 	}
 	locationIdMap := map[int]int{
-		609013: 0,
-		104084: 4,
-		17:     4,
+		17:     0,
+		609013: 1,
+		104084: 2,
 	}
 	reader, err := zip.OpenReader("testdata/GeoLiteLatest.zip")
 	if err != nil {
 		t.Errorf("Error opening zip file")
 	}
+	rcloc, err := loader.FindFile("GeoLiteCity-Location.csv",&reader.Reader)
+	_, glitehelp,_, err := parser.CreateLocationList(rcloc, "GeoLiteCity-Location.csv")
+	log.Println(glitehelp)
 	rcIPv4, err := loader.FindFile("GeoLiteCity-Blocks.csv", &reader.Reader)
 	if err != nil {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
 	defer rcIPv4.Close()
-	ipv4, err = parser.CreateIPList(rcIPv4, locationIdMap, "GeoLiteCity-Blocks.csv")
+	ipv4, err = parser.CreateIPList(rcIPv4, locationIdMap, glitehelp, "GeoLiteCity-Blocks.csv")
 	if err != nil {
 		t.Errorf("Failed to create ipv4")
 	}
@@ -227,7 +229,7 @@ func TestIPLisGLite2(t *testing.T) {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
 	defer rcIPv4.Close()
-	ipv4, err = parser.CreateIPList(rcIPv4, locationIdMap, "GeoLite2-City-Blocks-IPv4.csv")
+	ipv4, err = parser.CreateIPList(rcIPv4, locationIdMap,nil, "GeoLite2-City-Blocks-IPv4.csv")
 	if err != nil {
 		t.Errorf("Failed to create ipv4")
 	}
@@ -241,7 +243,7 @@ func TestIPLisGLite2(t *testing.T) {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
 	defer rcIPv6.Close()
-	ipv6, err = parser.CreateIPList(rcIPv6, locationIdMap, "GeoLite2-City-Blocks-IPv6.csv")
+	ipv6, err = parser.CreateIPList(rcIPv6, locationIdMap,nil, "GeoLite2-City-Blocks-IPv6.csv")
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Failed to create ipv6")
@@ -297,8 +299,9 @@ func TestLocationListGLite2(t *testing.T) {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
 	defer rc.Close()
-	locationList, _, idMap, err = parser.CreateLocationList(rc)
+	locationList, _, idMap, err = parser.CreateLocationList(rc,"GeoLite2-City-Locations-en.csv")
 	if err != nil {
+		log.Println(err)
 		t.Errorf("Failed to CreateLocationList")
 	}
 	if locationList == nil || idMap == nil {
@@ -325,8 +328,8 @@ func TestCorruptData(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error finding file")
 	}
-	_, _, err = parser.CreateLocationList(rc)
-	if err.Error() != "Corrupted Data: wrong number of columns" {
+	_, _, _, err = parser.CreateLocationList(rc,"GeoLite2-City-Locations-en.csv")
+	if err.Error() != "Error creating Location List" {
 		if err == nil {
 			t.Errorf("Error inconsistent:\ngot: nil\nwanted: Corrupted Data: wrong number of columns")
 		}

@@ -48,8 +48,16 @@ type LocationNode struct {
 	CityName      string
 }
 
+// Glite1HelpNode defines IPNode data defined inside
+// GeoLite1 Location files
+type GLite1HelpNode struct {
+	Latitude   float64
+	Longitude  float64
+	PostalCode string
+}
+
 // Creates a List of IPNodes
-func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, error) {
+func CreateIPList(reader io.Reader, idMap map[int]int, glite1 []GLite1HelpNode, file string) ([]IPNode, error) {
 	g1IP := []string{"startIpNum", "endIpNum", "locId"}
 	list := []IPNode{}
 	r := csv.NewReader(reader)
@@ -97,6 +105,13 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 				return nil, err
 			}
 			newNode.LocationIndex = index
+			if glite1[index].Latitude != 0 {
+				newNode.Latitude = glite1[index].Latitude 
+			}
+			if glite1[index].Longitude != 0{
+				newNode.Longitude = glite1[index].Longitude
+			}
+			newNode.PostalCode = glite1[index].PostalCode
 			list = append(list, newNode)
 		}
 	case strings.HasPrefix(file, gLite2Prefix):
@@ -121,7 +136,7 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 			// Look for GeoId within idMap and return index
 			index, err := lookupGeoId(record[1], idMap)
 			if err != nil {
-				if backupIndex, err := validateGeoId(record[2], idMap); err == nil {
+				if backupIndex, err := lookupGeoId(record[2], idMap); err == nil {
 					index = backupIndex
 				} else {
 					log.Println("Couldn't get a valid Geoname id!", record)
@@ -243,6 +258,7 @@ func checkAllCaps(str, field string) (string, error) {
 	}
 }
 // Create Location list
+// GeoLite1 will return ([]LocationNode, []GLiteHelpNode, map[int]int, error)
 // GeoLite2 will return ([]LocationNode, nil, map[int]int, error)
 // returns list with location data and a hashmap with index to geonameId
 func CreateLocationList(reader io.Reader, file string) ([]LocationNode, []GLite1HelpNode, map[int]int, error) {
@@ -250,12 +266,14 @@ func CreateLocationList(reader io.Reader, file string) ([]LocationNode, []GLite1
 	case strings.HasPrefix(file, gLite1Prefix):
 		loclist, glitelist, idMap, err := createLocListGLite1(reader)
 		if err != nil {
+			log.Println(err)
 			return nil, nil, nil, errors.New("Error creating Location List")
 		}
 		return loclist, glitelist, idMap, nil
 	case strings.HasPrefix(file, gLite2Prefix):
 		loclist, idMap, err := createLocListGLite2(reader)
 		if err != nil {
+			log.Println(err)
 			return nil, nil, nil, errors.New("Error creating Location List")
 		}
 		return loclist, nil, idMap, nil
@@ -301,6 +319,7 @@ func createLocListGLite1(reader io.Reader) ([]LocationNode, []GLite1HelpNode, ma
 			return nil, nil, nil, err
 		}
 		lNode.CityName = record[3]
+		//GLiteHelpNode contains information that populate fields in IPNode
 		var gNode GLite1HelpNode
 		gNode.PostalCode = record[4]
 		gNode.Latitude, err = stringToFloat(record[5], "Latitude")
@@ -361,10 +380,6 @@ func createLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) 
 		} else {
 			log.Println("Country name should be letters only : ", record[5])
 			return nil, nil, errors.New("Corrupted Data: country name should be letters")
-		}
-		lNode.MetroCode, err = strconv.ParseInt(record[11], 10, 64)
-		if err != nil {
-			return nil,nil, errors.New("country name should be letters")
 		}
 		lNode.MetroCode, err = strconv.ParseInt(record[11], 10, 64)
 		if err != nil {

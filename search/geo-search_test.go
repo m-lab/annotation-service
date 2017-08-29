@@ -148,7 +148,7 @@ func TestGeoLite2(t *testing.T) {
 	}
 	defer rc.Close()
 
-	locationList, idMap, err := parser.CreateLocationList(rc)
+	locationList, _, idMap, err := parser.CreateLocationList(rc,"GeoLite2-City-Locations-en.csv")
 	if err != nil {
 		t.Errorf("Failed to CreateLocationList")
 	}
@@ -164,7 +164,7 @@ func TestGeoLite2(t *testing.T) {
 	}
 	defer rcIPv6.Close()
 
-	ipv6, err := parser.CreateIPList(rcIPv6, idMap, "GeoLite2-City-Blocks-IPv6.csv")
+	ipv6, err := parser.CreateIPList(rcIPv6, idMap, nil, "GeoLite2-City-Blocks-IPv6.csv")
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Failed to create ipv4")
@@ -214,7 +214,7 @@ func TestGeoLite2(t *testing.T) {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
 	defer rcIPv4.Close()
-	ipv4, err := parser.CreateIPList(rcIPv4, idMap, "GeoLite2-City-Blocks-IPv4.csv")
+	ipv4, err := parser.CreateIPList(rcIPv4, idMap,nil, "GeoLite2-City-Blocks-IPv4.csv")
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Failed to create ipv4")

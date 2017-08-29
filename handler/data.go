@@ -89,7 +89,7 @@ func LoadLatestGeolite2File() (*GeoDataset, error) {
 		return nil, err
 	}
 	// geoidMap is just a temporary map that will be discarded once the blocks are parsed
-	locationNodes, geoidMap, err := parser.CreateLocationList(locations)
+	locationNodes, _, geoidMap, err := parser.CreateLocationList(locations, filename)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func LoadLatestGeolite2File() (*GeoDataset, error) {
 	if err != nil {
 		return nil, err
 	}
-	ipNodes4, err := parser.CreateIPList(blocks4, geoidMap, "GeoLite2-City-Blocks")
+	ipNodes4, err := parser.CreateIPList(blocks4, geoidMap,nil, "GeoLite2-City-Blocks")
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +105,7 @@ func LoadLatestGeolite2File() (*GeoDataset, error) {
 	if err != nil {
 		return nil, err
 	}
-	ipNodes6, err := parser.CreateIPList(blocks6, geoidMap, "GeoLite2-City-Blocks")
+	ipNodes6, err := parser.CreateIPList(blocks6, geoidMap,nil,"GeoLite2-City-Blocks")
 	if err != nil {
 		return nil, err
 	}
