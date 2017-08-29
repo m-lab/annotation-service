@@ -18,11 +18,11 @@ import (
 const (
 	ipNumColumnsGlite2       = 10
 	locationNumColumnsGlite2 = 13
-	gLite2CityPrefix         = "GeoLite2-City"
+	gLite2Prefix         = "GeoLite2-City"
 
-	ipNumColumnsGliteLatest       = 3
-	locationNumColumnsGliteLatest = 9
-	gLiteLatestPrefix             = "GeoLiteCity"
+	ipNumColumnsGlite1       = 3
+	locationNumColumnsGlite1 = 9
+	gLite1Prefix             = "GeoLiteCity"
 
 	mapMax = 200000
 )
@@ -68,14 +68,17 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 		}
 	}
 	for {
+		// Example: 
+		// GLite1 : record = [16777216,16777471,17]
+		// GLite2 : record = [2a04:97c0::/29,2658434,2658434,0,0,47,8,100]
 		record, err := r.Read()
 		if err == io.EOF {
 			break
 		}
 		var newNode IPNode
 		switch {
-		case strings.HasPrefix(file, gLiteLatestPrefix):
-			err = checkColumnLength(record, ipNumColumnsGliteLatest)
+		case strings.HasPrefix(file, gLite1Prefix):
+			err = checkColumnLength(record, ipNumColumnsGlite1)
 			if err != nil {
 				return nil, err
 			}
@@ -89,13 +92,13 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 				return nil, err
 			}
 			// Look for GeoId within idMap and return index
-			index, err := validateGeoId(record[2], idMap)
+			index, err := lookupGeoId(record[2], idMap)
 			if err != nil {
 				return nil, err
 			}
 			newNode.LocationIndex = index
 			list = append(list, newNode)
-		case strings.HasPrefix(file, gLite2CityPrefix):
+		case strings.HasPrefix(file, gLite2Prefix):
 			err = checkColumnLength(record, ipNumColumnsGlite2)
 			if err != nil {
 				return nil, err
@@ -107,9 +110,9 @@ func CreateIPList(reader io.Reader, idMap map[int]int, file string) ([]IPNode, e
 			newNode.IPAddressLow = lowIp
 			newNode.IPAddressHigh = highIp
 			// Look for GeoId within idMap and return index
-			index, err := validateGeoId(record[1], idMap)
+			index, err := lookupGeoId(record[1], idMap)
 			if err != nil {
-				index, err = validateGeoId(record[2], idMap)
+				index, err = lookupGeoId(record[2], idMap)
 			}
 			newNode.LocationIndex = index
 			newNode.PostalCode = record[6]
@@ -187,8 +190,9 @@ func RangeCIDR(cidr string) (net.IP, net.IP, error) {
 //	104084: 4,
 //	17:     4,
 // }
-// validateGeoId("17",locationIdMap) would return 2.
-func validateGeoId(gnid string, idMap map[int]int) (int, error) {
+// lookupGeoId("17",locationIdMap) would return (2,nil).
+// TODO: Add error metrics
+func lookupGeoId(gnid string, idMap map[int]int) (int, error) {
 	geonameId, err := strconv.Atoi(gnid)
 	if err != nil {
 		log.Println("geonameID should be a number")
