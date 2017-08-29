@@ -40,7 +40,9 @@ Important descrepencies to note include:
 1. GeoLite2 databases provides a network IP range in CIDR format while
    GeoLiteLatest databases provide an IP range in decimal format.
 2. GeoLite2 provides both end user location as well as country registration
-   information while GeoLiteLatest includes only end user location.
+   information while GeoLiteLatest includes only end user location. On average
+   end user location and country registration are the same but there are
+   exceptions of one or more missing. 
    www.maxmind.com/en/geoip2-precision-city-service
 
 Annotatation service will respond with the following data:
