@@ -48,6 +48,7 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 		metrics.Metrics_requestTimes.Observe(float64(time.Since(tStart).Nanoseconds()))
 	}(timerStart)
 	metrics.Metrics_activeRequests.Inc()
+	metrics.Metrics_totalRequests.Inc()
 	defer metrics.Metrics_activeRequests.Dec()
 
 	data, err := ValidateAndParse(r)
@@ -99,6 +100,9 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	defer func(tStart time.Time) {
 		metrics.Metrics_requestTimes.Observe(float64(time.Since(tStart).Nanoseconds()))
 	}(timerStart)
+	metrics.Metrics_activeRequests.Inc()
+	metrics.Metrics_totalRequests.Inc()
+	defer metrics.Metrics_activeRequests.Dec()
 
 	dataSlice, err := BatchValidateAndParse(r.Body)
 	r.Body.Close()
@@ -158,6 +162,7 @@ func BatchValidateAndParse(source io.Reader) ([]schema.RequestData, error) {
 // metadata, returning a pointer. It is gaurenteed to return a non-nil
 // pointer, even if it cannot find the appropriate metadata.
 func GetMetadataForSingleIP(request *schema.RequestData) *schema.MetaData {
+	metrics.Metrics_totalLookups.Inc()
 	if currentGeoDataset == nil {
 		return nil
 	}
