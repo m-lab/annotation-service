@@ -4,29 +4,16 @@ package parser
 
 import (
 	"encoding/binary"
-	"encoding/csv"
 	"errors"
-	"io"
 	"log"
 	"math"
 	"net"
-	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 )
 
-const (
-	ipNumColumnsGlite2       = 10
-	locationNumColumnsGlite2 = 13
-	gLite2Prefix             = "GeoLite2-City"
-
-	ipNumColumnsGlite1       = 3
-	locationNumColumnsGlite1 = 9
-	gLite1Prefix             = "GeoLiteCity"
-
-	mapMax = 200000
-)
+const mapMax = 200000
 
 // IPNode defines IPv4 and IPv6 databases
 type IPNode struct {
@@ -48,120 +35,7 @@ type LocationNode struct {
 	CityName      string
 }
 
-// Glite1HelpNode defines IPNode data defined inside
-// GeoLite1 Location files
-type GLite1HelpNode struct {
-	Latitude   float64
-	Longitude  float64
-	PostalCode string
-}
 
-// Creates a List of IPNodes
-func CreateIPList(reader io.Reader, idMap map[int]int, glite1 []GLite1HelpNode, file string) ([]IPNode, error) {
-	g1IP := []string{"startIpNum", "endIpNum", "locId"}
-	list := []IPNode{}
-	r := csv.NewReader(reader)
-	// Skip first line
-	title, err := r.Read()
-	if err == io.EOF {
-		log.Println("Empty input data")
-		return nil, errors.New("Empty input data")
-	}
-	switch {
-	case strings.HasPrefix(file, gLite1Prefix):
-		// Skip 2nd line, which contains column labels
-		title, err = r.Read()
-		if err == io.EOF {
-			log.Println("Empty input data")
-			return nil, errors.New("Empty input data")
-		}
-		if !reflect.DeepEqual(g1IP, title) {
-			log.Println("Improper data format got: ", title, " wanted: ", g1IP)
-			return nil, errors.New("Improper data format")
-		}
-		for {
-			// Example:
-			// GLite1 : record = [16777216,16777471,17]
-			record, err := r.Read()
-			if err == io.EOF {
-				break
-			}
-			err = checkColumnLength(record, ipNumColumnsGlite1)
-			if err != nil {
-				return nil, err
-			}
-			var newNode IPNode
-			newNode.IPAddressLow, err = Int2ip(record[0])
-			if err != nil {
-				return nil, err
-			}
-			newNode.IPAddressHigh, err = Int2ip(record[1])
-			if err != nil {
-				return nil, err
-			}
-			// Look for GeoId within idMap and return index
-			index, err := lookupGeoId(record[2], idMap)
-			if err != nil {
-				return nil, err
-			}
-			newNode.LocationIndex = index
-			if glite1[index].Latitude != 0 {
-				newNode.Latitude = glite1[index].Latitude 
-			}
-			if glite1[index].Longitude != 0{
-				newNode.Longitude = glite1[index].Longitude
-			}
-			newNode.PostalCode = glite1[index].PostalCode
-			list = append(list, newNode)
-		}
-	case strings.HasPrefix(file, gLite2Prefix):
-		for {
-			// Example:
-			// GLite2 : record = [2a04:97c0::/29,2658434,2658434,0,0,47,8,100]
-			record, err := r.Read()
-			if err == io.EOF {
-				break
-			}
-			var newNode IPNode
-			err = checkColumnLength(record, ipNumColumnsGlite2)
-			if err != nil {
-				return nil, err
-			}
-			lowIp, highIp, err := RangeCIDR(record[0])
-			if err != nil {
-				return nil, err
-			}
-			newNode.IPAddressLow = lowIp
-			newNode.IPAddressHigh = highIp
-			// Look for GeoId within idMap and return index
-			index, err := lookupGeoId(record[1], idMap)
-			if err != nil {
-				if backupIndex, err := lookupGeoId(record[2], idMap); err == nil {
-					index = backupIndex
-				} else {
-					log.Println("Couldn't get a valid Geoname id!", record)
-					//TODO: Add a prometheus metric here
-				}
-
-			}
-			newNode.LocationIndex = index
-			newNode.PostalCode = record[6]
-			newNode.Latitude, err = stringToFloat(record[7], "Latitude")
-			if err != nil {
-				return nil, err
-			}
-			newNode.Longitude, err = stringToFloat(record[8], "Longitude")
-			if err != nil {
-				return nil, err
-			}
-			list = append(list, newNode)
-		}
-	default:
-		log.Println("Unaccepted csv file provided: ", file)
-		return list, errors.New("Unaccepted csv file provided")
-	}
-	return list, nil
-}
 
 // Verify column length
 func checkColumnLength(record []string, size int) error {
@@ -257,143 +131,7 @@ func checkAllCaps(str, field string) (string, error) {
 
 	}
 }
-// Create Location list
-// GeoLite1 will return ([]LocationNode, []GLiteHelpNode, map[int]int, error)
-// GeoLite2 will return ([]LocationNode, nil, map[int]int, error)
-// returns list with location data and a hashmap with index to geonameId
-func CreateLocationList(reader io.Reader, file string) ([]LocationNode, []GLite1HelpNode, map[int]int, error) {
-	switch {
-	case strings.HasPrefix(file, gLite1Prefix):
-		loclist, glitelist, idMap, err := createLocListGLite1(reader)
-		if err != nil {
-			log.Println(err)
-			return nil, nil, nil, errors.New("Error creating Location List")
-		}
-		return loclist, glitelist, idMap, nil
-	case strings.HasPrefix(file, gLite2Prefix):
-		loclist, idMap, err := createLocListGLite2(reader)
-		if err != nil {
-			log.Println(err)
-			return nil, nil, nil, errors.New("Error creating Location List")
-		}
-		return loclist, nil, idMap, nil
-	default:
-		log.Println("Unaccepted csv file provided: ", file)
-		return nil, nil, nil, errors.New("Unaccepted csv file provided")
-	}
-}
 
-// Create Location list, map, and Glite1HelpNode for GLite1 databases
-// GLiteHelpNode contains information that populate fields in IPNode
-func createLocListGLite1(reader io.Reader) ([]LocationNode, []GLite1HelpNode, map[int]int, error) {
-	r := csv.NewReader(reader)
-	idMap := make(map[int]int, mapMax)
-	list := []LocationNode{}
-	glite := []GLite1HelpNode{}
-	// Skip the first 2 lines
-	_, err := r.Read()
-	if err == io.EOF {
-		log.Println("Empty input data")
-		return nil, nil, nil, errors.New("Empty input data")
-	}
-	_, err = r.Read()
-	if err == io.EOF {
-		log.Println("Empty input data")
-		return nil, nil, nil, errors.New("Empty input data")
-	}
-	for {
-		record, err := r.Read()
-		if err == io.EOF {
-			break
-		}
-		if len(record) != locationNumColumnsGlite1 {
-			log.Println("Incorrect number of columns in Location list\n\twanted: ", locationNumColumnsGlite1, " got: ", len(record), record)
-			return nil, nil, nil, errors.New("Corrupted Data: wrong number of columns")
-		}
-		var lNode LocationNode
-		lNode.GeonameID, err = strconv.Atoi(record[0])
-		if err != nil {
-			return nil, nil, nil, errors.New("Corrupted Data: GeonameID should be a number")
-		}
-		lNode.CountryCode, err = checkAllCaps(record[1], "Country code")
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		lNode.CityName = record[3]
-		var gNode GLite1HelpNode
-		gNode.PostalCode = record[4]
-		gNode.Latitude, err = stringToFloat(record[5], "Latitude")
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		gNode.Longitude, err = stringToFloat(record[6], "Longitude")
-		if err != nil {
-			return nil, nil, nil, err
-		}
-
-		list = append(list, lNode)
-		glite = append(glite, gNode)
-		idMap[lNode.GeonameID] = len(list) - 1
-	}
-	return list, glite, idMap, nil
-}
-
-// Create Location list for GLite2 databases
-func createLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
-	idMap := make(map[int]int, mapMax)
-	list := []LocationNode{}
-	r := csv.NewReader(reader)
-	// Skip the first line
-	_, err := r.Read()
-	if err == io.EOF {
-		log.Println("Empty input data")
-		return nil, nil, errors.New("Empty input data")
-	}
-	for {
-		record, err := r.Read()
-		if err == io.EOF {
-			break
-		}
-		if len(record) != locationNumColumnsGlite2 {
-			log.Println("Incorrect number of columns in Location list\n\twanted: ", locationNumColumnsGlite2, " got: ", len(record), record)
-			return nil, nil, errors.New("Corrupted Data: wrong number of columns")
-		}
-		var lNode LocationNode
-		lNode.GeonameID, err = strconv.Atoi(record[0])
-		if err != nil {
-			if len(record[0]) > 0 {
-				log.Println("GeonameID should be a number ", record[0])
-				return nil, nil, errors.New("Corrupted Data: GeonameID should be a number")
-			}
-		}
-		lNode.ContinentCode, err = checkAllCaps(record[2], "Continent code")
-		if err != nil {
-			return nil, nil, err
-		}
-		lNode.CountryCode, err = checkAllCaps(record[4], "Country code")
-		if err != nil {
-			return nil, nil, err
-		}
-		match, _ := regexp.MatchString(`^[^0-9]*$`, record[5])
-		if match {
-			lNode.CountryName = record[5]
-		} else {
-			log.Println("Country name should be letters only : ", record[5])
-			return nil, nil, errors.New("Corrupted Data: country name should be letters")
-		}
-		lNode.MetroCode, err = strconv.ParseInt(record[11], 10, 64)
-		if err != nil {
-			if len(record[11]) > 0 {
-				log.Println("MetroCode should be a number")
-				return nil, nil, errors.New("Corrupted Data: metrocode should be a number")
-			}
-		}
-		lNode.CityName = record[10]
-		list = append(list, lNode)
-		idMap[lNode.GeonameID] = len(list) - 1
-	}
-	return list, idMap, nil
-}
 // Returns nil if two nodes are equal
 // Used by the search package
 func IsEqualIPNodes(expected, node IPNode) error {
@@ -429,6 +167,7 @@ func IsEqualIPNodes(expected, node IPNode) error {
 	}
 	return nil
 }
+
 func floatToString(num float64) string {
 	return strconv.FormatFloat(num, 'f', 6, 64)
 }
