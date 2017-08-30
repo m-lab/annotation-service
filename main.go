@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/metrics"
