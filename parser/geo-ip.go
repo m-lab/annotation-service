@@ -25,7 +25,7 @@ type IPNode struct {
 	Longitude     float64
 }
 
-// LocationNode defines Location databases
+// locationNode defines Location databases
 type LocationNode struct {
 	GeonameID     int
 	ContinentCode string
@@ -54,7 +54,7 @@ func checkColumnLength(record []string, size int) error {
 }
 
 // Converts integer to net.IPv4
-func Int2ip(str string) (net.IP, error) {
+func int2ip(str string) (net.IP, error) {
 	num, err := strconv.Atoi(str)
 	if err != nil {
 		log.Println("Provided IP should be a number")
@@ -70,29 +70,6 @@ func Int2ip(str string) (net.IP, error) {
 	return ip, nil
 }
 
-// Finds the smallest and largest net.IP from a CIDR range
-// Example: "1.0.0.0/24" -> 1.0.0.0 , 1.0.0.255
-func RangeCIDR(cidr string) (net.IP, net.IP, error) {
-	ip, ipnet, err := net.ParseCIDR(cidr)
-	if err != nil {
-		return nil, nil, errors.New("Invalid CIDR IP range")
-	}
-	lowIp := make(net.IP, len(ip))
-	copy(lowIp, ip)
-	mask := ipnet.Mask
-	for x, _ := range ip {
-		if len(mask) == 4 {
-			if x < 12 {
-				ip[x] |= 0
-			} else {
-				ip[x] |= ^mask[x-12]
-			}
-		} else {
-			ip[x] |= ^mask[x]
-		}
-	}
-	return lowIp, ip, nil
-}
 
 // Finds provided geonameID within idMap and returns the index in idMap
 // locationIdMap := map[int]int{
