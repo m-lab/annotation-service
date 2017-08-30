@@ -283,7 +283,8 @@ func CreateLocationList(reader io.Reader, file string) ([]LocationNode, []GLite1
 	}
 }
 
-// Create Location list for GLite1 databases
+// Create Location list, map, and Glite1HelpNode for GLite1 databases
+// GLiteHelpNode contains information that populate fields in IPNode
 func createLocListGLite1(reader io.Reader) ([]LocationNode, []GLite1HelpNode, map[int]int, error) {
 	r := csv.NewReader(reader)
 	idMap := make(map[int]int, mapMax)
@@ -319,7 +320,6 @@ func createLocListGLite1(reader io.Reader) ([]LocationNode, []GLite1HelpNode, ma
 			return nil, nil, nil, err
 		}
 		lNode.CityName = record[3]
-		//GLiteHelpNode contains information that populate fields in IPNode
 		var gNode GLite1HelpNode
 		gNode.PostalCode = record[4]
 		gNode.Latitude, err = stringToFloat(record[5], "Latitude")
