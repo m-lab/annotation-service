@@ -253,3 +253,32 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 		}
 	}
 }
+
+func TestConvertIPNodeToMetaData(t *testing.T) {
+	tests := []struct {
+		node parser.IPNode
+		locs []parser.LocationNode
+		res  *schema.MetaData
+	}{
+		{
+			node: parser.IPNode{LocationIndex: 0, PostalCode: "10583"},
+			locs: []parser.LocationNode{{CityName: "Not A Real City"}},
+			res: &schema.MetaData{
+				Geo: &schema.GeolocationIP{City: "Not A Real City", Postal_code: "10583"},
+				ASN: &schema.IPASNData{}},
+		},
+		{
+			node: parser.IPNode{LocationIndex: -1, PostalCode: "10583"},
+			locs: nil,
+			res: &schema.MetaData{
+				Geo: &schema.GeolocationIP{Postal_code: "10583"},
+				ASN: &schema.IPASNData{}},
+		},
+	}
+	for _, test := range tests {
+		res := handler.ConvertIPNodeToMetaData(test.node, test.locs)
+		if !reflect.DeepEqual(res, test.res) {
+			t.Errorf("Expected %s, got %s", test.res, res)
+		}
+	}
+}
