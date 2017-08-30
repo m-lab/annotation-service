@@ -35,6 +35,13 @@ type LocationNode struct {
 	CityName      string
 }
 
+// The GeoDataset struct bundles all the data needed to search and
+// find data into one common structure
+type GeoDataset struct {
+	IP4Nodes      []IPNode       // The IPNode list containing IP4Nodes
+	IP6Nodes      []IPNode       // The IPNode list containing IP6Nodes
+	LocationNodes []LocationNode // The location nodes corresponding to the IPNodes
+}
 
 
 // Verify column length

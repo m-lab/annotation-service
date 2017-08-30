@@ -3,8 +3,8 @@ package handler
 import (
 	"context"
 	"log"
-	"os"
 	"regexp"
+	"os"
 
 	"github.com/m-lab/annotation-service/loader"
 	"github.com/m-lab/annotation-service/parser"
@@ -14,14 +14,6 @@ import (
 	"cloud.google.com/go/storage"
 )
 
-// The GeoDataset struct bundles all the data needed to search and
-// find data into one common structure
-type GeoDataset struct {
-	IP4Nodes      []parser.IPNode       // The IPNode list containing IP4Nodes
-	IP6Nodes      []parser.IPNode       // The IPNode list containing IP6Nodes
-	LocationNodes []parser.LocationNode // The location nodes corresponding to the IPNodes
-}
-
 // This is the regex used to filter for which files we want to consider acceptable for using with Geolite2
 var GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
 
@@ -29,10 +21,9 @@ var BucketName = "downloader-" + os.Getenv("GCLOUD_PROJECT") // This is the buck
 
 const (
 	MaxmindPrefix             = "Maxmind/"                       // Folder containing the maxmind files
-	GeoLite2BlocksFilenameIP4 = "GeoLite2-City-Blocks-IPv4.csv"  // Filename of ipv4 blocks file
-	GeoLite2BlocksFilenameIP6 = "GeoLite2-City-Blocks-IPv6.csv"  // Filename of ipv6 blocks file
-	GeoLite2LocationsFilename = "GeoLite2-City-Locations-en.csv" // Filename of locations file
+
 )
+
 
 // PopulateLatestData will search to the latest Geolite2 files
 // available in GCS and will use them to create a new GeoDataset which
@@ -48,6 +39,7 @@ func PopulateLatestData() {
 	currentGeoDataset = data
 	currentDataMutex.Unlock()
 }
+
 
 // DetermineFilenameOfLatestGeolite2File will get a list of filenames
 // from GCS and search through them, eventually returing either the
@@ -75,7 +67,7 @@ func DetermineFilenameOfLatestGeolite2File() (string, error) {
 // LoadLatestGeolite2File will check GCS for the latest file, download
 // it, process it, and load it into memory so that it can be easily
 // searched, then it will return a pointer to that GeoDataset or an error.
-func LoadLatestGeolite2File() (*GeoDataset, error) {
+func LoadLatestGeolite2File() (*parser.GeoDataset, error) {
 	filename, err := DetermineFilenameOfLatestGeolite2File()
 	if err != nil {
 		return nil, err
@@ -84,30 +76,5 @@ func LoadLatestGeolite2File() (*GeoDataset, error) {
 	if err != nil {
 		return nil, err
 	}
-	locations, err := loader.FindFile(GeoLite2LocationsFilename, zip)
-	if err != nil {
-		return nil, err
-	}
-	// geoidMap is just a temporary map that will be discarded once the blocks are parsed
-	locationNodes, geoidMap, err := parser.CreateLocListGLite2(locations)
-	if err != nil {
-		return nil, err
-	}
-	blocks4, err := loader.FindFile(GeoLite2BlocksFilenameIP4, zip)
-	if err != nil {
-		return nil, err
-	}
-	ipNodes4, err := parser.CreateIPListGLite2(blocks4, geoidMap)
-	if err != nil {
-		return nil, err
-	}
-	blocks6, err := loader.FindFile(GeoLite2BlocksFilenameIP6, zip)
-	if err != nil {
-		return nil, err
-	}
-	ipNodes6, err := parser.CreateIPListGLite2(blocks6, geoidMap)
-	if err != nil {
-		return nil, err
-	}
-	return &GeoDataset{IP4Nodes: ipNodes4, IP6Nodes: ipNodes6, LocationNodes: locationNodes}, nil
+	return parser.LoadGeoLite2(zip)
 }

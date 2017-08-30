@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/m-lab/annotation-service/parser"
 	"github.com/m-lab/annotation-service/metrics"
 	"github.com/m-lab/etl/schema"
 )
@@ -22,7 +23,7 @@ var currentDataMutex = &sync.RWMutex{}
 
 // This is a pointer to a GeoDataset struct containing the absolute
 // latest data for the annotator to search and reply with
-var currentGeoDataset *GeoDataset = nil
+var currentGeoDataset *parser.GeoDataset = nil
 
 // This is the base in which we should encode the timestamp when we
 // are creating the keys for the mapt to return for batch requests
