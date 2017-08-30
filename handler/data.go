@@ -45,7 +45,7 @@ func PopulateLatestData() {
 		log.Fatal(err)
 	}
 	currentDataMutex.Lock()
-	currentGeoDataset = data
+	CurrentGeoDataset = data
 	currentDataMutex.Unlock()
 }
 

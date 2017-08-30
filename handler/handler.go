@@ -25,7 +25,7 @@ var currentDataMutex = &sync.RWMutex{}
 
 // This is a pointer to a GeoDataset struct containing the absolute
 // latest data for the annotator to search and reply with
-var currentGeoDataset *GeoDataset = nil
+var CurrentGeoDataset *GeoDataset = nil
 
 // This is the base in which we should encode the timestamp when we
 // are creating the keys for the mapt to return for batch requests
@@ -163,7 +163,7 @@ func BatchValidateAndParse(source io.Reader) ([]schema.RequestData, error) {
 // pointer, even if it cannot find the appropriate metadata.
 func GetMetadataForSingleIP(request *schema.RequestData) *schema.MetaData {
 	metrics.Metrics_totalLookups.Inc()
-	if currentGeoDataset == nil {
+	if CurrentGeoDataset == nil {
 		return nil
 	}
 	// TODO: Figure out which table to use based on time
@@ -172,17 +172,18 @@ func GetMetadataForSingleIP(request *schema.RequestData) *schema.MetaData {
 	defer currentDataMutex.RUnlock()
 	var node parser.IPNode
 	if request.IPFormat == 4 {
-		node, err = search.SearchList(currentGeoDataset.IP4Nodes, request.IP)
+		node, err = search.SearchList(CurrentGeoDataset.IP4Nodes, request.IP)
 	} else if request.IPFormat == 6 {
-		node, err = search.SearchList(currentGeoDataset.IP6Nodes, request.IP)
+		node, err = search.SearchList(CurrentGeoDataset.IP6Nodes, request.IP)
 	}
+
 	if err != nil {
 		log.Println(err)
 		//TODO metric here
 		return nil
 	}
 
-	return ConvertIPNodeToMetaData(node, currentGeoDataset.LocationNodes)
+	return ConvertIPNodeToMetaData(node, CurrentGeoDataset.LocationNodes)
 }
 
 // ConvertIPNodeToMetaData takes a parser.IPNode, plus a list of
@@ -190,7 +191,7 @@ func GetMetadataForSingleIP(request *schema.RequestData) *schema.MetaData {
 // struct and return its pointer.
 func ConvertIPNodeToMetaData(ipNode parser.IPNode, locationNodes []parser.LocationNode) *schema.MetaData {
 	locNode := parser.LocationNode{}
-	if ipNode.LocationIndex > 0 {
+	if ipNode.LocationIndex >= 0 {
 		locNode = locationNodes[ipNode.LocationIndex]
 	}
 	return &schema.MetaData{
@@ -198,11 +199,13 @@ func ConvertIPNodeToMetaData(ipNode parser.IPNode, locationNodes []parser.Locati
 			Continent_code: locNode.ContinentCode,
 			Country_code:   locNode.CountryCode,
 			Country_name:   locNode.CountryName,
+			Postal_code:    ipNode.PostalCode,
 			Metro_code:     locNode.MetroCode,
 			City:           locNode.CityName,
 			Latitude:       ipNode.Latitude,
 			Longitude:      ipNode.Longitude,
 		},
+		ASN: &schema.IPASNData{},
 	}
 
 }
