@@ -8,6 +8,7 @@ resources:
   # Actual memory available is exposed via GAE_MEMORY_MB environment variable.
   memory_gb: 8
 
+
 # Note: add a public port for GCE auto discovery by prometheus.
 # TODO(dev): are any values redundant or irrelevant?
 network:
@@ -18,3 +19,4 @@ network:
   # Note: the default AppEngine container port 8080 cannot be forwarded.
   forwarded_ports:
     - 9090/tcp
+

@@ -12,22 +12,22 @@ import (
 // Returns a parser.IPNode with the smallet range that includes the provided IP address
 func SearchList(list []parser.IPNode, ipLookUp string) (parser.IPNode, error) {
 	inRange := false
-	var lastNode parser.IPNode
+	var lastNodeIndex int
 	userIP := net.ParseIP(ipLookUp)
 	if userIP == nil {
 		log.Println("Inputed IP string could not be parsed to net.IP")
-		return lastNode, errors.New("Invalid search IP")
+		return parser.IPNode{}, errors.New("Invalid search IP")
 	}
-	for _, n := range list {
-		if bytes.Compare(userIP, n.IPAddressLow) >= 0 && bytes.Compare(userIP, n.IPAddressHigh) <= 0 {
+	for i := range list {
+		if bytes.Compare(userIP, list[i].IPAddressLow) >= 0 && bytes.Compare(userIP, list[i].IPAddressHigh) <= 0 {
 			inRange = true
-			lastNode = n
-		} else if inRange && bytes.Compare(userIP, n.IPAddressLow) < 0 {
-			return lastNode, nil
+			lastNodeIndex = i
+		} else if inRange && bytes.Compare(userIP, list[i].IPAddressLow) < 0 {
+			return list[lastNodeIndex], nil
 		}
 	}
 	if inRange {
-		return lastNode, nil
+		return list[lastNodeIndex], nil
 	}
-	return lastNode, errors.New("Node not found\n")
+	return parser.IPNode{}, errors.New("Node not found\n")
 }

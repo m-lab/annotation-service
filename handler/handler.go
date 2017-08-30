@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/m-lab/annotation-service/metrics"
 	"github.com/m-lab/annotation-service/parser"
+	"github.com/m-lab/annotation-service/search"
 	"github.com/m-lab/etl/schema"
 )
 
@@ -156,19 +158,32 @@ func BatchValidateAndParse(source io.Reader) ([]schema.RequestData, error) {
 // metadata, returning a pointer. It is gaurenteed to return a non-nil
 // pointer, even if it cannot find the appropriate metadata.
 func GetMetadataForSingleIP(request *schema.RequestData) *schema.MetaData {
-	// TODO: Figure out which table to use
-	// TODO: Handle request
+	if currentGeoDataset == nil {
+		return nil
+	}
+	// TODO: Figure out which table to use based on time
+	err := errors.New("Unknown IP Format!")
 	currentDataMutex.RLock()
 	defer currentDataMutex.RUnlock()
-	// Fake response
-	return &schema.MetaData{Geo: &schema.GeolocationIP{City: "Not A Real City", Postal_code: "10583"}, ASN: &schema.IPASNData{}}
+	var node parser.IPNode
+	if request.IPFormat == 4 {
+		node, err = search.SearchList(currentGeoDataset.IP4Nodes, request.IP)
+	} else if request.IPFormat == 6 {
+		node, err = search.SearchList(currentGeoDataset.IP6Nodes, request.IP)
+	}
+	if err != nil {
+		log.Println(err)
+		//TODO metric here
+		return nil
+	}
 
+	return ConvertIPNodeToMetaData(node, currentGeoDataset.LocationNodes)
 }
 
-// ConvertIPNodeToMetaData takes a NON-NIL pointer to a parser.IPNode,
-// plus a list of locationNodes. It will then use that data to fill in
-// a MetaData struct and return its pointer.
-func ConvertIPNodeToMetaData(ipNode *parser.IPNode, locationNodes []parser.LocationNode) *schema.MetaData {
+// ConvertIPNodeToMetaData takes a parser.IPNode, plus a list of
+// locationNodes. It will then use that data to fill in a MetaData
+// struct and return its pointer.
+func ConvertIPNodeToMetaData(ipNode parser.IPNode, locationNodes []parser.LocationNode) *schema.MetaData {
 	locNode := parser.LocationNode{}
 	if ipNode.LocationIndex > 0 {
 		locNode = locationNodes[ipNode.LocationIndex]
