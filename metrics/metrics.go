@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"net/http"
+	"net/http/pprof"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -20,7 +21,22 @@ var (
 )
 
 func SetupPrometheus() {
+	// Define a custom serve mux for prometheus to listen on a separate port.
+	// We listen on a separate port so we can forward this port on the host VM.
+	// We cannot forward port 8080 because it is used by AppEngine.
+	mux := http.NewServeMux()
+	// Assign the default prometheus handler to the standard exporter path.
+	mux.Handle("/metrics", promhttp.Handler())
+	// Assign the pprof handling paths to the external port to access individual
+	// instances.
+	mux.HandleFunc("/debug/pprof/", pprof.Index)
+	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+
 	http.Handle("/metrics", promhttp.Handler())
 	prometheus.MustRegister(Metrics_activeRequests)
 	prometheus.MustRegister(Metrics_requestTimes)
+	go http.ListenAndServe(":9090", mux)
 }
