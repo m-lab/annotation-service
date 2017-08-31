@@ -110,10 +110,10 @@ func TestIPLisGLite2(t *testing.T) {
 }
 
 func TestLocationListGLite2(t *testing.T) {
-	var locationList []parser.LocationNode  
+	var locationList []parser.LocationNode
 	var idMap map[int]int
-	var LocList = []parser.LocationNode  {
-		parser.LocationNode  {
+	var LocList = []parser.LocationNode{
+		parser.LocationNode{
 			32909,
 			"AS",
 			"IR",
@@ -121,7 +121,7 @@ func TestLocationListGLite2(t *testing.T) {
 			0,
 			"Shahre Jadide Andisheh",
 		},
-		parser.LocationNode  {
+		parser.LocationNode{
 			49518,
 			"AF",
 			"RW",
@@ -129,7 +129,7 @@ func TestLocationListGLite2(t *testing.T) {
 			0,
 			"",
 		},
-		parser.LocationNode  {
+		parser.LocationNode{
 			51537,
 			"AF",
 			"SO",

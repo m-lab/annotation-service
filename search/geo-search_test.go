@@ -163,7 +163,7 @@ func TestGeoLite2(t *testing.T) {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
 	defer rcIPv6.Close()
-
+	// TODO: update tests to use high level data loader functions instead of low level funcs
 	ipv6, err := parser.LoadIPListGLite2(rcIPv6, idMap)
 	if err != nil {
 		log.Println(err)

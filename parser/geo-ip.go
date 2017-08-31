@@ -3,10 +3,8 @@
 package parser
 
 import (
-	"encoding/binary"
 	"errors"
 	"log"
-	"math"
 	"net"
 	"regexp"
 	"strconv"
@@ -43,33 +41,14 @@ type GeoDataset struct {
 	LocationNodes []LocationNode // The location nodes corresponding to the IPNodes
 }
 
-
 // Verify column length
-func checkColumnLength(record []string, size int) error {
+func checkNumColumns(record []string, size int) error {
 	if len(record) != size {
 		log.Println("Incorrect number of columns in IP list", size, " got: ", len(record), record)
 		return errors.New("Corrupted Data: wrong number of columns")
 	}
 	return nil
 }
-
-// Converts integer to net.IPv4
-func int2ip(str string) (net.IP, error) {
-	num, err := strconv.Atoi(str)
-	if err != nil {
-		log.Println("Provided IP should be a number")
-		return nil, errors.New("Inputed string cannot be converted to a number")
-	}
-	ft := float64(num)
-	if ft > math.Pow(2, 32) || num < 1 {
-		log.Println("Provided IP should be in the range of 0.0.0.1 and 255.255.255.255 ", str)
-	}
-	ip := make(net.IP, 4)
-	binary.BigEndian.PutUint32(ip, uint32(num))
-	ip = net.IPv4(ip[0], ip[1], ip[2], ip[3])
-	return ip, nil
-}
-
 
 // Finds provided geonameID within idMap and returns the index in idMap
 // locationIdMap := map[int]int{
@@ -104,13 +83,13 @@ func stringToFloat(str, field string) (float64, error) {
 	return flt, nil
 }
 
-func checkAllCaps(str, field string) (string, error) {
+func checkCaps(str, field string) (string, error) {
 	match, _ := regexp.MatchString("^[0-9A-Z]*$", str)
 	if match {
 		return str, nil
 	} else {
-		log.Println(field, "should be all capitals and no numbers")
-		output := strings.Join([]string{"Corrupted Data: ", field, " should be all caps"}, "")
+		log.Println(field, "should be all capitals and no punctuation: ",str)
+		output := strings.Join([]string{"Corrupted Data: ", field, " should be all caps and no punctuation"}, "")
 		return "", errors.New(output)
 
 	}

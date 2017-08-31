@@ -12,6 +12,7 @@ import (
 )
 
 func TestIPGLite1(t *testing.T) {
+	// TODO: move this test to g1_whitebox_test.go or remove
 	var ipv4 []parser.IPNode
 	var ipv4Expected = []parser.IPNode{
 		parser.IPNode{
@@ -50,6 +51,11 @@ func TestIPGLite1(t *testing.T) {
 	}
 	rcloc, err := loader.FindFile("GeoLiteCity-Location.csv", &reader.Reader)
 	_, glitehelp, _, err := parser.LoadLocListGLite1(rcloc)
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Failed to parse Glitehelp")
+	}
+	defer rcloc.Close()
 	rcIPv4, err := loader.FindFile("GeoLiteCity-Blocks.csv", &reader.Reader)
 	if err != nil {
 		t.Errorf("Failed to create io.ReaderCloser")
@@ -66,10 +72,10 @@ func TestIPGLite1(t *testing.T) {
 }
 
 func TestLocationListGLite1(t *testing.T) {
-	var locationList []parser.LocationNode  
+	var locationList []parser.LocationNode
 	var idMap map[int]int
-	var LocList = []parser.LocationNode  {
-		parser.LocationNode  {
+	var LocList = []parser.LocationNode{
+		parser.LocationNode{
 			1,
 			"",
 			"O1",
@@ -77,7 +83,7 @@ func TestLocationListGLite1(t *testing.T) {
 			0,
 			"",
 		},
-		parser.LocationNode  {
+		parser.LocationNode{
 			2,
 			"",
 			"AP",
@@ -85,7 +91,7 @@ func TestLocationListGLite1(t *testing.T) {
 			0,
 			"",
 		},
-		parser.LocationNode  {
+		parser.LocationNode{
 			3,
 			"",
 			"EU",

@@ -1,29 +1,29 @@
 package parser
 
 import (
+	"archive/zip"
 	"encoding/csv"
 	"errors"
 	"io"
 	"log"
+	"net"
 	"regexp"
 	"strconv"
-	"archive/zip"
-	"net"
 
 	"github.com/m-lab/annotation-service/loader"
 )
 
 const (
-	ipNumColumnsGlite2       = 10
-	locationNumColumnsGlite2 = 13
-	gLite2Prefix             = "GeoLite2-City"
-	GeoLite2BlocksFilenameIP4 = "GeoLite2-City-Blocks-IPv4.csv"  // Filename of ipv4 blocks file
-	GeoLite2BlocksFilenameIP6 = "GeoLite2-City-Blocks-IPv6.csv"  // Filename of ipv6 blocks file
-	GeoLite2LocationsFilename = "GeoLite2-City-Locations-en.csv" // Filename of locations file
+	ipNumColumnsGlite2        = 10
+	locationNumColumnsGlite2  = 13
+	gLite2Prefix              = "GeoLite2-City"
+	geoLite2BlocksFilenameIP4 = "GeoLite2-City-Blocks-IPv4.csv"  // Filename of ipv4 blocks file
+	geoLite2BlocksFilenameIP6 = "GeoLite2-City-Blocks-IPv6.csv"  // Filename of ipv6 blocks file
+	geoLite2LocationsFilename = "GeoLite2-City-Locations-en.csv" // Filename of locations file
 )
 
 func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
-	locations, err := loader.FindFile(GeoLite2LocationsFilename, zip)
+	locations, err := loader.FindFile(geoLite2LocationsFilename, zip)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +32,7 @@ func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
 	if err != nil {
 		return nil, err
 	}
-	blocks4, err := loader.FindFile(GeoLite2BlocksFilenameIP4, zip)
+	blocks4, err := loader.FindFile(geoLite2BlocksFilenameIP4, zip)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,7 @@ func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
 	if err != nil {
 		return nil, err
 	}
-	blocks6, err := loader.FindFile(GeoLite2BlocksFilenameIP6, zip)
+	blocks6, err := loader.FindFile(geoLite2BlocksFilenameIP6, zip)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func rangeCIDR(cidr string) (net.IP, net.IP, error) {
 // Create Location list for GLite2 databases
 func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 	idMap := make(map[int]int, mapMax)
-	list := []LocationNode  {}
+	list := []LocationNode{}
 	r := csv.NewReader(reader)
 	// Skip the first line
 	_, err := r.Read()
@@ -86,16 +86,21 @@ func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		log.Println("Empty input data")
 		return nil, nil, errors.New("Empty input data")
 	}
+	r.FieldsPerRecord = locationNumColumnsGlite2
 	for {
 		record, err := r.Read()
-		if err == io.EOF {
-			break
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			if len(record) != locationNumColumnsGlite2 {
+				log.Println("Incorrect number of columns in Location list\n\twanted: ", locationNumColumnsGlite2, " got: ", len(record), record)
+				return nil, nil, errors.New("Corrupted Data: wrong number of columns")
+			}
+			log.Println(err, ": ", record)
+			return nil, nil, errors.New("Error reading file")
 		}
-		if len(record) != locationNumColumnsGlite2 {
-			log.Println("Incorrect number of columns in Location list\n\twanted: ", locationNumColumnsGlite2, " got: ", len(record), record)
-			return nil, nil, errors.New("Corrupted Data: wrong number of columns")
-		}
-		var lNode LocationNode  
+		var lNode LocationNode
 		lNode.GeonameID, err = strconv.Atoi(record[0])
 		if err != nil {
 			if len(record[0]) > 0 {
@@ -103,11 +108,11 @@ func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 				return nil, nil, errors.New("Corrupted Data: GeonameID should be a number")
 			}
 		}
-		lNode.ContinentCode, err = checkAllCaps(record[2], "Continent code")
+		lNode.ContinentCode, err = checkCaps  (record[2], "Continent code")
 		if err != nil {
 			return nil, nil, err
 		}
-		lNode.CountryCode, err = checkAllCaps(record[4], "Country code")
+		lNode.CountryCode, err = checkCaps  (record[4], "Country code")
 		if err != nil {
 			return nil, nil, err
 		}
@@ -142,48 +147,46 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 		log.Println("Empty input data")
 		return nil, errors.New("Empty input data")
 	}
-		for {
-			// Example:
-			// GLite2 : record = [2a04:97c0::/29,2658434,2658434,0,0,47,8,100]
-			record, err := r.Read()
-			if err == io.EOF {
-				break
-			}
-			var newNode IPNode
-			err = checkColumnLength(record, ipNumColumnsGlite2)
-			if err != nil {
-				return nil, err
-			}
-			lowIp, highIp, err := rangeCIDR(record[0])
-			if err != nil {
-				return nil, err
-			}
-			newNode.IPAddressLow = lowIp
-			newNode.IPAddressHigh = highIp
-			// Look for GeoId within idMap and return index
-			index, err := lookupGeoId(record[1], idMap)
-			if err != nil {
-				if backupIndex, err := lookupGeoId(record[2], idMap); err == nil {
-					index = backupIndex
-				} else {
-					log.Println("Couldn't get a valid Geoname id!", record)
-					//TODO: Add a prometheus metric here
-				}
-
-			}
-			newNode.LocationIndex = index
-			newNode.PostalCode = record[6]
-			newNode.Latitude, err = stringToFloat(record[7], "Latitude")
-			if err != nil {
-				return nil, err
-			}
-			newNode.Longitude, err = stringToFloat(record[8], "Longitude")
-			if err != nil {
-				return nil, err
-			}
-			list = append(list, newNode)
+	for {
+		// Example:
+		// GLite2 : record = [2a04:97c0::/29,2658434,2658434,0,0,47,8,100]
+		record, err := r.Read()
+		if err == io.EOF {
+			break
 		}
+		var newNode IPNode
+		err = checkNumColumns(record, ipNumColumnsGlite2)
+		if err != nil {
+			return nil, err
+		}
+		lowIp, highIp, err := rangeCIDR(record[0])
+		if err != nil {
+			return nil, err
+		}
+		newNode.IPAddressLow = lowIp
+		newNode.IPAddressHigh = highIp
+		// Look for GeoId within idMap and return index
+		index, err := lookupGeoId(record[1], idMap)
+		if err != nil {
+			if backupIndex, err := lookupGeoId(record[2], idMap); err == nil {
+				index = backupIndex
+			} else {
+				log.Println("Couldn't get a valid Geoname id!", record)
+				//TODO: Add a prometheus metric here
+			}
+
+		}
+		newNode.LocationIndex = index
+		newNode.PostalCode = record[6]
+		newNode.Latitude, err = stringToFloat(record[7], "Latitude")
+		if err != nil {
+			return nil, err
+		}
+		newNode.Longitude, err = stringToFloat(record[8], "Longitude")
+		if err != nil {
+			return nil, err
+		}
+		list = append(list, newNode)
+	}
 	return list, nil
 }
-
-
