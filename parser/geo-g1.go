@@ -1,15 +1,15 @@
 package parser
 
 import (
-	"encoding/csv"
 	"encoding/binary"
+	"encoding/csv"
 	"errors"
-	"math"
 	"io"
 	"log"
+	"math"
+	"net"
 	"reflect"
 	"strconv"
-	"net"
 )
 
 const (
@@ -56,9 +56,10 @@ func LoadLocListGLite1(reader io.Reader) ([]LocationNode, []gLite1HelpNode, map[
 			if len(record) != locationNumColumnsGlite1 {
 				log.Println("Incorrect number of columns in Location list\n\twanted: ", locationNumColumnsGlite1, " got: ", len(record), record)
 				return nil, nil, nil, errors.New("Corrupted Data: wrong number of columns")
+			} else {
+				log.Println(err, ": ", record)
+				return nil, nil, nil, errors.New("Error reading file")
 			}
-			log.Println(err, ": ", record)
-			return nil, nil, nil, errors.New("Error reading file")
 		}
 		var lNode LocationNode
 		lNode.GeonameID, err = strconv.Atoi(record[0])
@@ -136,8 +137,8 @@ func LoadIPListGLite1(reader io.Reader, idMap map[int]int, glite1 []gLite1HelpNo
 		}
 		newNode.LocationIndex = index
 		log.Println(glite1)
-			newNode.Latitude = glite1[index].Latitude
-			newNode.Longitude = glite1[index].Longitude
+		newNode.Latitude = glite1[index].Latitude
+		newNode.Longitude = glite1[index].Longitude
 		newNode.PostalCode = glite1[index].PostalCode
 		list = append(list, newNode)
 	}
@@ -151,13 +152,13 @@ func int2ip(str string) (net.IP, error) {
 		log.Println("Provided IP should be a number")
 		return nil, errors.New("Inputed string cannot be converted to a number")
 	}
-	// TODO: get rid of floating point 
+	// TODO: get rid of floating point
 	ft := float64(num)
 	if ft > math.Pow(2, 32) || num < 1 {
 		log.Println("Provided IP should be in the range of 0.0.0.1 and 255.255.255.255 ", str)
 	}
 	ip := make(net.IP, 4)
-	// Split number into array of bytes 
+	// Split number into array of bytes
 	binary.BigEndian.PutUint32(ip, uint32(num))
 	ip = net.IPv4(ip[0], ip[1], ip[2], ip[3])
 	return ip, nil

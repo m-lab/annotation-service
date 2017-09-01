@@ -88,7 +88,7 @@ func checkCaps(str, field string) (string, error) {
 	if match {
 		return str, nil
 	} else {
-		log.Println(field, "should be all capitals and no punctuation: ",str)
+		log.Println(field, "should be all capitals and no punctuation: ", str)
 		output := strings.Join([]string{"Corrupted Data: ", field, " should be all caps and no punctuation"}, "")
 		return "", errors.New(output)
 

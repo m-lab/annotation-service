@@ -96,9 +96,10 @@ func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 			if len(record) != locationNumColumnsGlite2 {
 				log.Println("Incorrect number of columns in Location list\n\twanted: ", locationNumColumnsGlite2, " got: ", len(record), record)
 				return nil, nil, errors.New("Corrupted Data: wrong number of columns")
+			} else {
+				log.Println(err, ": ", record)
+				return nil, nil, errors.New("Error reading file")
 			}
-			log.Println(err, ": ", record)
-			return nil, nil, errors.New("Error reading file")
 		}
 		var lNode LocationNode
 		lNode.GeonameID, err = strconv.Atoi(record[0])
@@ -108,11 +109,11 @@ func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 				return nil, nil, errors.New("Corrupted Data: GeonameID should be a number")
 			}
 		}
-		lNode.ContinentCode, err = checkCaps  (record[2], "Continent code")
+		lNode.ContinentCode, err = checkCaps(record[2], "Continent code")
 		if err != nil {
 			return nil, nil, err
 		}
-		lNode.CountryCode, err = checkCaps  (record[4], "Country code")
+		lNode.CountryCode, err = checkCaps(record[4], "Country code")
 		if err != nil {
 			return nil, nil, err
 		}

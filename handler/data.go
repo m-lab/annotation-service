@@ -3,8 +3,8 @@ package handler
 import (
 	"context"
 	"log"
-	"regexp"
 	"os"
+	"regexp"
 
 	"github.com/m-lab/annotation-service/loader"
 	"github.com/m-lab/annotation-service/parser"
@@ -20,10 +20,9 @@ var GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-G
 var BucketName = "downloader-" + os.Getenv("GCLOUD_PROJECT") // This is the bucket containing maxmind files
 
 const (
-	MaxmindPrefix             = "Maxmind/"                       // Folder containing the maxmind files
+	MaxmindPrefix = "Maxmind/" // Folder containing the maxmind files
 
 )
-
 
 // PopulateLatestData will search to the latest Geolite2 files
 // available in GCS and will use them to create a new GeoDataset which
@@ -39,7 +38,6 @@ func PopulateLatestData() {
 	currentGeoDataset = data
 	currentDataMutex.Unlock()
 }
-
 
 // DetermineFilenameOfLatestGeolite2File will get a list of filenames
 // from GCS and search through them, eventually returing either the
