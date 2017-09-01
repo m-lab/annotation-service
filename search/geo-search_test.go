@@ -73,7 +73,7 @@ func TestSearchSmallRange(t *testing.T) {
 	}
 
 	// Test IP node within several subsets
-	ip, err := search.SearchList(ipv4, "1.0.0.122")
+	ip, err := search.SearchBinary(ipv4, "1.0.0.122")
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Search failed")
@@ -85,7 +85,7 @@ func TestSearchSmallRange(t *testing.T) {
 	}
 
 	// Test IP node not in a subset
-	ip, err = search.SearchList(ipv4, "1.0.0.254")
+	ip, err = search.SearchBinary(ipv4, "1.0.0.254")
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Search failed")
@@ -97,7 +97,7 @@ func TestSearchSmallRange(t *testing.T) {
 	}
 
 	// Test first IP node
-	ip, err = search.SearchList(ipv4, "1.0.0.254")
+	ip, err = search.SearchBinary(ipv4, "1.0.0.254")
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Search failed")
@@ -109,7 +109,7 @@ func TestSearchSmallRange(t *testing.T) {
 	}
 
 	// Test last IP node in the list
-	ip, err = search.SearchList(ipv4, "1.0.6.0")
+	ip, err = search.SearchBinary(ipv4, "1.0.6.0")
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Search failed")
@@ -121,7 +121,7 @@ func TestSearchSmallRange(t *testing.T) {
 	}
 
 	// Test IP NOT in list
-	ip, err = search.SearchList(ipv4, "255.0.6.0")
+	ip, err = search.SearchBinary(ipv4, "255.0.6.0")
 	if err == nil {
 		log.Println("Got ", ip, " wanted: Node not found")
 		t.Errorf("Search failed")
@@ -169,7 +169,7 @@ func TestGeoLite2Linear(t *testing.T) {
 		log.Println(err)
 		t.Errorf("Failed to create ipv4")
 	}
-	ip, err := search.SearchList(ipv6, "2A02:0C7D:5DB7:0000:0000:FFFF:0000:0000")
+	ip, err := search.SearchBinary(ipv6, "2A02:0C7D:5DB7:0000:0000:FFFF:0000:0000")
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Search failed")
@@ -188,7 +188,7 @@ func TestGeoLite2Linear(t *testing.T) {
 		t.Errorf("Found ", ip, " wanted", n)
 	}
 
-	ip, err = search.SearchList(ipv6, "2A04:AB87:FFFF:FFFF:FFFF:FFFF:FFFF:0000")
+	ip, err = search.SearchBinary(ipv6, "2A04:AB87:FFFF:FFFF:FFFF:FFFF:FFFF:0000")
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Search failed")
@@ -220,7 +220,7 @@ func TestGeoLite2Linear(t *testing.T) {
 		t.Errorf("Failed to create ipv4")
 	}
 
-	ip, err = search.SearchList(ipv4, "1.0.120.0")
+	ip, err = search.SearchBinary(ipv4, "1.0.120.0")
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Search failed")
@@ -239,7 +239,7 @@ func TestGeoLite2Linear(t *testing.T) {
 		t.Errorf("Found ", ip, " wanted", n)
 	}
 
-	ip, err = search.SearchList(ipv4, "80.231.5.200")
+	ip, err = search.SearchBinary(ipv4, "80.231.5.200")
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Search failed")
