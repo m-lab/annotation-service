@@ -128,7 +128,7 @@ func TestSearchSmallRange(t *testing.T) {
 	}
 }
 
-func TestGeoLite2(t *testing.T) {
+func TestGeoLite2Linear(t *testing.T) {
 	ctx, done, err := aetest.NewContext()
 	if err != nil {
 		log.Println(err)
@@ -240,6 +240,137 @@ func TestGeoLite2(t *testing.T) {
 	}
 
 	ip, err = search.SearchList(ipv4, "80.231.5.200")
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Search failed")
+	}
+	n = parser.IPNode{
+		net.ParseIP("80.231.5.0"),
+		net.ParseIP("80.231.5.255"),
+		0,
+		"",
+		0,
+		0,
+	}
+	err = parser.IsEqualIPNodes(n, ip)
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Found ", ip, " wanted", n)
+	}
+
+}
+func TestGeoLite2Binary(t *testing.T) {
+	ctx, done, err := aetest.NewContext()
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Failed to create aecontext")
+	}
+	defer done()
+	reader, err := loader.CreateZipReader(ctx, "test-annotator-sandbox", "MaxMind/2017/08/08/GeoLite2.zip")
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Failed to create zipReader")
+	}
+
+	// Create Location list
+	rc, err := loader.FindFile("GeoLite2-City-Locations-en.csv", reader)
+	if err != nil {
+		t.Errorf("Failed to create io.ReaderCloser")
+	}
+	defer rc.Close()
+
+	locationList, idMap, err := parser.CreateLocationList(rc)
+	if err != nil {
+		t.Errorf("Failed to CreateLocationList")
+	}
+	if locationList == nil || idMap == nil {
+		t.Errorf("Failed to create LocationList and mapID")
+	}
+
+	// Test IPv6
+	rcIPv6, err := loader.FindFile("GeoLite2-City-Blocks-IPv6.csv", reader)
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Failed to create io.ReaderCloser")
+	}
+	defer rcIPv6.Close()
+
+	ipv6, err := parser.CreateIPList(rcIPv6, idMap, "GeoLite2-City-Blocks-IPv6.csv")
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Failed to create ipv4")
+	}
+	ip, err := search.SearchBinary(ipv6, "2A02:0C7D:5DB7:0000:0000:FFFF:0000:0000")
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Search failed")
+	}
+	var n = parser.IPNode{
+		net.ParseIP("2A02:0C7D:5DB7:0000:0000:0000:0000:0000"),
+		net.ParseIP("2A02:0C7D:5DB7:FFFF:FFFF:FFFF:FFFF:FFFF"),
+		20548,
+		"IP1",
+		52.0713,
+		1.1444,
+	}
+	err = parser.IsEqualIPNodes(n, ip)
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Found ", ip, " wanted", n)
+	}
+
+	ip, err = search.SearchBinary(ipv6, "2A04:AB87:FFFF:FFFF:FFFF:FFFF:FFFF:0000")
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Search failed")
+	}
+	n = parser.IPNode{
+		net.ParseIP("2A04:AB80:0000:0000:0000:0000:0000:0000"),
+		net.ParseIP("2A04:AB87:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF"),
+		26082,
+		"",
+		52.5,
+		5.75,
+	}
+	err = parser.IsEqualIPNodes(n, ip)
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Found ", ip, " wanted", n)
+	}
+
+	// Test IPv4
+	rcIPv4, err := loader.FindFile("GeoLite2-City-Blocks-IPv4.csv", reader)
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Failed to create io.ReaderCloser")
+	}
+	defer rcIPv4.Close()
+	ipv4, err := parser.CreateIPList(rcIPv4, idMap, "GeoLite2-City-Blocks-IPv4.csv")
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Failed to create ipv4")
+	}
+
+	ip, err = search.SearchBinary(ipv4, "1.0.120.0")
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Search failed")
+	}
+	n = parser.IPNode{
+		net.ParseIP("1.0.120.0"),
+		net.ParseIP("1.0.123.255"),
+		11622,
+		"690-0887",
+		35.4722,
+		133.0506,
+	}
+	err = parser.IsEqualIPNodes(n, ip)
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Found ", ip, " wanted", n)
+	}
+
+	ip, err = search.SearchBinary(ipv4, "80.231.5.200")
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Search failed")
