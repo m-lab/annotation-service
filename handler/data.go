@@ -2,9 +2,11 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"log"
 	"os"
 	"regexp"
+	"time"
 
 	"github.com/m-lab/annotation-service/loader"
 	"github.com/m-lab/annotation-service/parser"
@@ -15,7 +17,10 @@ import (
 )
 
 // This is the regex used to filter for which files we want to consider acceptable for using with Geolite2
-var GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
+var GeoLite2Regex = regexp.MustCompile(`Maxmind/(\d{4}/\d{2}/\d{2})/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
+
+// This is the regex used to filter for which files we want to consider acceptable for using with Geolite1
+var GeoLite1Regex = regexp.MustCompile(`Maxmind/(\d{4}/\d{2}/\d{2})/\d{8}T\d{6}Z-GeoLiteCity-latest\.zip`)
 
 var BucketName = "downloader-" + os.Getenv("GCLOUD_PROJECT") // This is the bucket containing maxmind files
 
@@ -75,4 +80,61 @@ func LoadLatestGeolite2File() (*parser.GeoDataset, error) {
 		return nil, err
 	}
 	return parser.LoadGeoLite2(zip)
+}
+
+func LoadGeoDataset(timestamp time.Time) (*parser.GeoDataset, error) {
+	filename, geoVersion, err := FindGeofileForTime(timestamp)
+	if err != nil {
+		return nil, err
+	}
+	zip, err := loader.CreateZipReader(context.Background(), BucketName, filename)
+	if err != nil {
+		return nil, err
+	}
+	if geoVersion == 2 {
+		return parser.LoadGeoLite2(zip)
+	} else if geoVersion == 1 {
+		return parser.LoadGeoLite1(zip)
+	}
+	return nil, errors.New("Unknown Geolite version!")
+}
+
+func FindGeofileForTime(timestamp time.Time) (string, int, error) {
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		return "", 0, err
+	}
+	prospectiveFiles := client.Bucket(BucketName).Objects(ctx, &storage.Query{Prefix: MaxmindPrefix})
+	timeStr := timestamp.Format("2006/01/02")
+	glite2Candidate := ""
+	glite1Candidate := ""
+	for file, err := prospectiveFiles.Next(); err != iterator.Done; file, err = prospectiveFiles.Next() {
+		if err != nil {
+			return "", 0, err
+		}
+		glite2Match := GeoLite2Regex.FindStringSubmatch(file.Name)
+		if glite2Candidate < file.Name && glite2Match != nil && glite2Match[1] > timeStr {
+			glite2Candidate = file.Name
+		}
+
+		glite1Match := GeoLite1Regex.FindStringSubmatch(file.Name)
+		if glite1Candidate < file.Name && glite1Match != nil && glite1Match[1] > timeStr {
+			glite1Candidate = file.Name
+		}
+
+	}
+	glite2Timestamp, err := time.Parse("2006/01/02", GeoLite2Regex.FindStringSubmatch(glite2Candidate)[1])
+	if err != nil {
+		return glite1Candidate, 1, nil
+	}
+
+	if glite2Timestamp.Sub(timestamp) < 24*time.Hour*40 {
+		return glite2Candidate, 2, nil
+	}
+	return glite1Candidate, 1, nil
+}
+
+func ChooseGeoDataset(timestamp time.Time) (*parser.GeoDataset, error) {
+	return nil, nil
 }
