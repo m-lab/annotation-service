@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"archive/zip"
 	"encoding/binary"
 	"encoding/csv"
 	"errors"
@@ -10,12 +11,16 @@ import (
 	"net"
 	"reflect"
 	"strconv"
+
+	"github.com/m-lab/annotation-service/loader"
 )
 
 const (
-	ipNumColumnsGlite1       = 3
-	locationNumColumnsGlite1 = 9
-	gLite1Prefix             = "GeoLiteCity"
+	ipNumColumnsGlite1        = 3
+	locationNumColumnsGlite1  = 9
+	gLite1Prefix              = "GeoLiteCity"
+	geoLite1BlocksFilenameIP4 = "GeoLiteCity-Blocks.csv"   // Filename of ipv4 blocks file
+	geoLite1LocationsFilename = "GeoLiteCity-Location.csv" // Filename of locations file
 )
 
 // Glite1HelpNode defines IPNode data defined inside
@@ -27,6 +32,26 @@ type gLite1HelpNode struct {
 }
 
 // TODO: Add equibalent of LoadGeoLite2
+func LoadGeoLite1(zip *zip.Reader) (*GeoDataset, error) {
+	locations, err := loader.FindFile(geoLite1LocationsFilename, zip)
+	if err != nil {
+		return nil, err
+	}
+	// geoidMap is just a temporary map that will be discarded once the blocks are parsed
+	locationNode, helper, geoidMap, err := LoadLocListGLite1(locations)
+	if err != nil {
+		return nil, err
+	}
+	blocks4, err := loader.FindFile(geoLite1BlocksFilenameIP4, zip)
+	if err != nil {
+		return nil, err
+	}
+	ipNodes4, err := LoadIPListGLite1(blocks4, geoidMap, helper)
+	if err != nil {
+		return nil, err
+	}
+	return &GeoDataset{IP4Nodes: ipNodes4, IP6Nodes: nil, LocationNodes: locationNode}, nil
+}
 
 // Create Location list, map, and Glite1HelpNode for GLite1 databases
 // GLiteHelpNode contains information to help populate fields in IPNode
