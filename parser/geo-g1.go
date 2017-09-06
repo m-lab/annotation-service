@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/csv"
 	"errors"
@@ -93,6 +94,7 @@ func LoadLocListGLite1(reader io.Reader) ([]LocationNode, []gLite1HelpNode, map[
 func LoadIPListGLite1(reader io.Reader, idMap map[int]int, glite1 []gLite1HelpNode) ([]IPNode, error) {
 	g1IP := []string{"startIpNum", "endIpNum", "locId"}
 	list := []IPNode{}
+	stack := []IPNode{}
 	r := csv.NewReader(reader)
 	// Skip first line
 	title, err := r.Read()
@@ -110,6 +112,8 @@ func LoadIPListGLite1(reader io.Reader, idMap map[int]int, glite1 []gLite1HelpNo
 		log.Println("Improper data format got: ", title, " wanted: ", g1IP)
 		return nil, errors.New("Improper data format")
 	}
+	var newNode IPNode
+
 	for {
 		// Example:
 		// GLite1 : record = [16777216,16777471,17]
@@ -121,7 +125,6 @@ func LoadIPListGLite1(reader io.Reader, idMap map[int]int, glite1 []gLite1HelpNo
 		if err != nil {
 			return nil, err
 		}
-		var newNode IPNode
 		newNode.IPAddressLow, err = intToIPv4(record[0])
 		if err != nil {
 			return nil, err
@@ -136,25 +139,120 @@ func LoadIPListGLite1(reader io.Reader, idMap map[int]int, glite1 []gLite1HelpNo
 			return nil, err
 		}
 		newNode.LocationIndex = index
-		log.Println(glite1)
 		newNode.Latitude = glite1[index].Latitude
 		newNode.Longitude = glite1[index].Longitude
 		newNode.PostalCode = glite1[index].PostalCode
+		// Stack is not empty aka we're in a nested IP
+		if len(stack) != 0 {
+			log.Println("here")
+			// newNode is no longer inside stack's nested IP's
+			if lessThan(stack[len(stack)-1].IPAddressHigh, newNode.IPAddressLow) {
+				// while closing nested IP's
+				log.Println("HE-------______--____RE")
+				for len(stack) > 0 {
+					var pop IPNode
+					//log.Println("forloop",stack)
+					pop, stack = stack[len(stack)-1], stack[:len(stack)-1]
+					if len(stack) == 0 {
+						break
+					}
+					peek := stack[len(stack)-1]
+					if lessThan(newNode.IPAddressLow, peek.IPAddressHigh) {
+						// if theres a gap inbetween imediately nested IP's
+						if len(stack) > 0 {
+							//log.Println("current stack: ",stack)
+							//complete the gap
+							log.Println("before: ", peek)
+							peek.IPAddressLow = addOne(pop.IPAddressHigh)
+							peek.IPAddressHigh = deleteOne(newNode.IPAddressLow)
+							log.Println("after: ", peek)
+							list = append(list, peek)
+						}
+						break
+					}
+					peek.IPAddressLow = addOne(pop.IPAddressHigh)
+					list = append(list, peek)
+				}
+			} else {
+				// if we're nesting IP's
+				// create begnning bounds
+				lastListNode := &list[len(list)-1]
+				log.Println("BEFORE: ", lastListNode.IPAddressLow, "-----", newNode.IPAddressLow)
+				lastListNode.IPAddressHigh = deleteOne(newNode.IPAddressLow)
+				log.Println("AFTER: ", lastListNode.IPAddressLow, "-----", lastListNode.IPAddressHigh)
+
+			}
+		}
+		stack = append(stack, newNode)
 		list = append(list, newNode)
+		log.Println("LIST: ", list)
+		newNode.IPAddressLow = newNode.IPAddressHigh 
+		newNode.IPAddressHigh = net.IPv4(255,255,255,255)
+
 	}
+	log.Println(stack)	
+	for len(stack) > 0 {
+		var pop IPNode
+		//log.Println("forloop",stack)
+		pop, stack = stack[len(stack)-1], stack[:len(stack)-1]
+		if len(stack) == 0 {
+			break
+		}
+		peek := stack[len(stack)-1]
+		if lessThan(newNode.IPAddressLow, peek.IPAddressHigh) {
+			// if theres a gap inbetween imediately nested IP's
+			if len(stack) > 0 {
+				//log.Println("current stack: ",stack)
+				//complete the gap
+				log.Println("before: ", peek, stack)
+				peek.IPAddressLow = addOne(pop.IPAddressHigh)
+				log.Println("after: ", peek)
+				list = append(list, peek)
+			}
+			break
+		}
+		peek.IPAddressLow = addOne(pop.IPAddressHigh)
+		list = append(list, peek)
+	}
+	log.Println("LIST: ", list)
 	return list, nil
+}
+
+func addOne(a net.IP) net.IP {
+	a = append([]byte(nil), a...)
+	var i int
+	for i := 15; a[i] == 255 && i > 10; i-- {
+		a[i] = 0
+	}
+	a[i]++
+	return a
+}
+func deleteOne(a net.IP) net.IP {
+	a = append([]byte(nil), a...)
+	var i int
+	for i = 15; a[i] == 0; i-- {
+		a[i] = 255
+	}
+	a[i]--
+	return a
+}
+func moreThan(a, b net.IP) bool {
+	return bytes.Compare(a, b) > 0
+}
+func lessThan(a, b net.IP) bool {
+	return bytes.Compare(a, b) < 0
 }
 
 // Converts integer to net.IPv4
 func intToIPv4(str string) (net.IP, error) {
-	num, err := strconv.Atoi(str)
+	num, err := strconv.ParseInt(str, 10, 0)
 	if err != nil {
 		log.Println("Provided IP should be a number")
 		return nil, errors.New("Inputed string cannot be converted to a number")
 	}
 	// TODO: get rid of floating point
 	ft := float64(num)
-	if ft > math.Pow(2, 32) || num < 1 {
+	if ft > math.Pow(2, 32) || num < 0 {
 		log.Println("Provided IP should be in the range of 0.0.0.1 and 255.255.255.255 ", str)
 	}
 	ip := make(net.IP, 4)

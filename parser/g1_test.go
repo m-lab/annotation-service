@@ -4,14 +4,75 @@ import (
 	"archive/zip"
 	"log"
 	"net"
-	"reflect"
+	//"reflect"
 	"testing"
 
 	"github.com/m-lab/annotation-service/loader"
 	"github.com/m-lab/annotation-service/parser"
 )
 
-func TestIPGLite1(t *testing.T) {
+func TestIPGLite1NESTED(t *testing.T) {
+	// TODO: move this test to g1_whitebox_test.go or remove
+	var ipv4 []parser.IPNode
+	var ipv4Expected = []parser.IPNode{
+		parser.IPNode{
+			net.ParseIP("0.0.0.1"),
+			net.ParseIP("255.255.255.255"),
+			1,
+			"",
+			35,
+			105,
+		},
+		parser.IPNode{
+			net.ParseIP("1.0.0.0"),
+			net.ParseIP("1.0.0.255"),
+			1,
+			"",
+			35,
+			105,
+		},
+		parser.IPNode{
+			net.ParseIP("1.0.0.4"),
+			net.ParseIP("1.0.0.214"),
+			1,
+			"",
+			35,
+			105,
+		},
+	}
+	locationIdMap := map[int]int{
+		17:     0,
+		609013: 1,
+		104084: 2,
+	}
+	reader, err := zip.OpenReader("testdata/GeoLiteLatestCP.zip")
+	if err != nil {
+		t.Errorf("Error opening zip file")
+	}
+	rcloc, err := loader.FindFile("GeoLiteCity-Location.csv", &reader.Reader)
+	log.Println(err)
+	_, glitehelp, _, err := parser.LoadLocListGLite1(rcloc)
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Failed to parse Glitehelp")
+	}
+	defer rcloc.Close()
+	rcIPv4, err := loader.FindFile("GeoLiteCity-Blocks.csv", &reader.Reader)
+	if err != nil {
+		t.Errorf("Failed to create io.ReaderCloser")
+	}
+	defer rcIPv4.Close()
+	ipv4, err = parser.LoadIPListGLite1(rcIPv4, locationIdMap, glitehelp)
+	if err != nil {
+		t.Errorf("Failed to create ipv4")
+	}
+	err = isEqualIPLists(ipv4Expected, ipv4)
+	if err != nil {
+		t.Errorf("Lists are not equal")
+	}
+}
+
+/*func TestIPGLite1(t *testing.T) {
 	// TODO: move this test to g1_whitebox_test.go or remove
 	var ipv4 []parser.IPNode
 	var ipv4Expected = []parser.IPNode{
@@ -133,4 +194,4 @@ func TestLocationListGLite1(t *testing.T) {
 	if !eq {
 		t.Errorf("Location maps are not equal")
 	}
-}
+}*/
