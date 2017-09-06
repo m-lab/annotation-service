@@ -31,6 +31,9 @@ type gLite1HelpNode struct {
 	PostalCode string
 }
 
+// LoadGeoLite1 takes a pointer to a zip reader and returns a pointer
+// to the GeoDataset generated from that zip reader, or an error if
+// there was a failure
 func LoadGeoLite1(zip *zip.Reader) (*GeoDataset, error) {
 	locations, err := loader.FindFile(geoLite1LocationsFilename, zip)
 	if err != nil {
