@@ -82,6 +82,9 @@ func LoadLatestGeolite2File() (*parser.GeoDataset, error) {
 	return parser.LoadGeoLite2(zip)
 }
 
+// LoadGeoDataset takes a timestamp and downloads and sets up the
+// appropriate GeoDataset before returning the pointer to it, or an
+// error if it encounters any
 func LoadGeoDataset(timestamp time.Time) (*parser.GeoDataset, error) {
 	filename, geoVersion, err := FindGeofileForTime(timestamp)
 	if err != nil {
@@ -99,6 +102,11 @@ func LoadGeoDataset(timestamp time.Time) (*parser.GeoDataset, error) {
 	return nil, errors.New("Unknown Geolite version!")
 }
 
+// FindGeofileForTime takes a timestamp and returns a string
+// specifying the file to load to create the appropriate GeoDataset
+// from that timestamp, as well as an int specifying the version of
+// the geolite database to load. If it encounters an error, it will
+// return that instead.
 func FindGeofileForTime(timestamp time.Time) (string, int, error) {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
@@ -135,6 +143,11 @@ func FindGeofileForTime(timestamp time.Time) (string, int, error) {
 	return glite1Candidate, 1, nil
 }
 
+// ChooseGeoDataset will attempt to select a GeoDataset from the
+// currently loaded sets, given a timestamp. If it finds a mattching
+// one, it will return a pointer to it. If it doesn't, then it will
+// return an error.
 func ChooseGeoDataset(timestamp time.Time) (*parser.GeoDataset, error) {
-	return nil, nil
+	// TODO: Make an actual implementation
+	return nil, errors.New("Function not yet implemented!")
 }
