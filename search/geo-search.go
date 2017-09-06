@@ -9,6 +9,7 @@ import (
 	"github.com/m-lab/annotation-service/parser"
 )
 
+// TODO: Add a prometheus metric for when we can't find the IP
 // Returns a parser.IPNode with the smallet range that includes the provided IP address
 func SearchList(list []parser.IPNode, ipLookUp string) (parser.IPNode, error) {
 	inRange := false

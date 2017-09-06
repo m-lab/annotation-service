@@ -164,6 +164,7 @@ func BatchValidateAndParse(source io.Reader) ([]schema.RequestData, error) {
 func GetMetadataForSingleIP(request *schema.RequestData) *schema.MetaData {
 	metrics.Metrics_totalLookups.Inc()
 	if CurrentGeoDataset == nil {
+		// TODO: Block until the value is not nil
 		return nil
 	}
 	// TODO: Figure out which table to use based on time
@@ -171,6 +172,7 @@ func GetMetadataForSingleIP(request *schema.RequestData) *schema.MetaData {
 	currentDataMutex.RLock()
 	defer currentDataMutex.RUnlock()
 	var node parser.IPNode
+	// TODO: Push this logic down to searchlist (after binary search is implemented)
 	if request.IPFormat == 4 {
 		node, err = search.SearchList(CurrentGeoDataset.IP4Nodes, request.IP)
 	} else if request.IPFormat == 6 {

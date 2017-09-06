@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	log.Print("Begining Setup\n")
+	log.Print("Beginning Setup\n")
 	handler.PopulateLatestData()
 	handler.SetupHandlers()
 	metrics.SetupPrometheus()
