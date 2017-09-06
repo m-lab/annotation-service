@@ -18,6 +18,14 @@ var (
 		Name: "annotator_Request_Response_Time_Summary",
 		Help: "The response time of each request, in nanoseconds.",
 	})
+	Metrics_totalRequests = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "annotator_Annotation_Requests_Total",
+		Help: "The total number of annotation service requests.",
+	})
+	Metrics_totalLookups = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "annotator_Annotation_Lookups_Total",
+		Help: "The total number of ip lookups.",
+	})
 )
 
 func SetupPrometheus() {
@@ -37,6 +45,8 @@ func SetupPrometheus() {
 
 	http.Handle("/metrics", promhttp.Handler())
 	prometheus.MustRegister(Metrics_activeRequests)
+	prometheus.MustRegister(Metrics_totalRequests)
+	prometheus.MustRegister(Metrics_totalLookups)
 	prometheus.MustRegister(Metrics_requestTimes)
 	go http.ListenAndServe(":9090", mux)
 }
