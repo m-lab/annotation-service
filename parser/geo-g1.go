@@ -26,7 +26,7 @@ type gLite1HelpNode struct {
 	PostalCode string
 }
 
-// TODO: Add equibalent of LoadGeoLite2
+// TODO: Add equivalent of LoadGeoLite2
 
 // Create Location list, map, and Glite1HelpNode for GLite1 databases
 // GLiteHelpNode contains information to help populate fields in IPNode
@@ -52,9 +52,9 @@ func LoadLocListGLite1(reader io.Reader) ([]LocationNode, []gLite1HelpNode, map[
 		if err != nil {
 			if err == io.EOF {
 				break
-			}
-			if len(record) != locationNumColumnsGlite1 {
-				log.Println("Incorrect number of columns in Location list\n\twanted: ", locationNumColumnsGlite1, " got: ", len(record), record)
+			} else if err != csv.ErrFieldCount {
+				log.Println(err)
+				log.Println("\twanted: ", locationNumColumnsGlite1, " got: ", len(record), record)
 				return nil, nil, nil, errors.New("Corrupted Data: wrong number of columns")
 			} else {
 				log.Println(err, ": ", record)
@@ -122,11 +122,11 @@ func LoadIPListGLite1(reader io.Reader, idMap map[int]int, glite1 []gLite1HelpNo
 			return nil, err
 		}
 		var newNode IPNode
-		newNode.IPAddressLow, err = int2ip(record[0])
+		newNode.IPAddressLow, err = intToIPv4(record[0])
 		if err != nil {
 			return nil, err
 		}
-		newNode.IPAddressHigh, err = int2ip(record[1])
+		newNode.IPAddressHigh, err = intToIPv4(record[1])
 		if err != nil {
 			return nil, err
 		}
@@ -146,7 +146,7 @@ func LoadIPListGLite1(reader io.Reader, idMap map[int]int, glite1 []gLite1HelpNo
 }
 
 // Converts integer to net.IPv4
-func int2ip(str string) (net.IP, error) {
+func intToIPv4(str string) (net.IP, error) {
 	num, err := strconv.Atoi(str)
 	if err != nil {
 		log.Println("Provided IP should be a number")
