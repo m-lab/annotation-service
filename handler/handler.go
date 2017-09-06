@@ -19,8 +19,8 @@ import (
 	"github.com/m-lab/etl/schema"
 )
 
-// A mutex to make sure that we are not reading from the dataset while
-// trying to update it
+// A mutex to make sure that we are not reading from the dataset
+// pointer while trying to update it
 var currentDataMutex = &sync.RWMutex{}
 
 // This is a pointer to a GeoDataset struct containing the absolute
