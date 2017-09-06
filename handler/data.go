@@ -115,6 +115,7 @@ func FindGeofileForTime(timestamp time.Time) (string, int, error) {
 	}
 	prospectiveFiles := client.Bucket(BucketName).Objects(ctx, &storage.Query{Prefix: MaxmindPrefix})
 	timeStr := timestamp.Format("2006/01/02")
+	// We need to search for glite1 and glite2 separately, since we don't know which we'll have
 	glite2Candidate := ""
 	glite1Candidate := ""
 	for file, err := prospectiveFiles.Next(); err != iterator.Done; file, err = prospectiveFiles.Next() {
@@ -122,25 +123,32 @@ func FindGeofileForTime(timestamp time.Time) (string, int, error) {
 			return "", 0, err
 		}
 		glite2Match := GeoLite2Regex.FindStringSubmatch(file.Name)
-		if glite2Candidate < file.Name && glite2Match != nil && glite2Match[1] > timeStr {
+		// Select the file if it is newer that the one we have, but not newer than the timestamp
+		if glite2Candidate < file.Name && glite2Match != nil && glite2Match[1] < timeStr {
 			glite2Candidate = file.Name
 		}
 
 		glite1Match := GeoLite1Regex.FindStringSubmatch(file.Name)
-		if glite1Candidate < file.Name && glite1Match != nil && glite1Match[1] > timeStr {
+		if glite1Candidate < file.Name && glite1Match != nil && glite1Match[1] < timeStr {
 			glite1Candidate = file.Name
 		}
 
 	}
-	glite2Timestamp, err := time.Parse("2006/01/02", GeoLite2Regex.FindStringSubmatch(glite2Candidate)[1])
+	// Attempt to get the timestamp from the glite2 file, if we can't, then use glite1
+	glite2Match := GeoLite2Regex.FindStringSubmatch(glite2Candidate)
+	if glite2Match == nil {
+		return glite1Candidate, 1, nil
+	}
+	glite2Timestamp, err := time.Parse("2006/01/02", glite2Match[1])
 	if err != nil {
 		return glite1Candidate, 1, nil
 	}
 
-	if glite2Timestamp.Sub(timestamp) < 24*time.Hour*40 {
-		return glite2Candidate, 2, nil
+	// If the glite2 file is off by 40 days or more, fallback to glite1, otherwise use glite2
+	if glite2Timestamp.Sub(timestamp) >= 24*time.Hour*40 {
+		return glite1Candidate, 1, nil
 	}
-	return glite1Candidate, 1, nil
+	return glite2Candidate, 2, nil
 }
 
 // ChooseGeoDataset will attempt to select a GeoDataset from the
