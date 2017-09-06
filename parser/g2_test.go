@@ -184,7 +184,7 @@ func TestCorruptData(t *testing.T) {
 		t.Errorf("Error finding file")
 	}
 	_, _, err = parser.LoadLocListGLite2(rc)
-	if err.Error() != "Corrupted Data: wrong number of columns" {
+	if err.Error() != "line 3, column 0: wrong number of fields in line" {
 		if err == nil {
 			t.Errorf("Error inconsistent:\ngot: nil\nwanted: Corrupted Data: wrong number of columns")
 		}

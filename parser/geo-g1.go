@@ -52,11 +52,7 @@ func LoadLocListGLite1(reader io.Reader) ([]LocationNode, []gLite1HelpNode, map[
 		if err != nil {
 			if err == io.EOF {
 				break
-			} else if err != csv.ErrFieldCount {
-				log.Println(err)
-				log.Println("\twanted: ", locationNumColumnsGlite1, " got: ", len(record), record)
-				return nil, nil, nil, errors.New("Corrupted Data: wrong number of columns")
-			} else {
+			}else{ 
 				log.Println(err, ": ", record)
 				return nil, nil, nil, errors.New("Error reading file")
 			}
