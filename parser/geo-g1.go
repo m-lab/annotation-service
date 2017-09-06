@@ -144,11 +144,11 @@ func LoadIPListGLite1(reader io.Reader, idMap map[int]int, glite1 []gLite1HelpNo
 		newNode.PostalCode = glite1[index].PostalCode
 		// Stack is not empty aka we're in a nested IP
 		if len(stack) != 0 {
-			log.Println("here")
+			//log.Println("here")
 			// newNode is no longer inside stack's nested IP's
 			if lessThan(stack[len(stack)-1].IPAddressHigh, newNode.IPAddressLow) {
 				// while closing nested IP's
-				log.Println("HE-------______--____RE")
+				//log.Println("HE-------______--____RE")
 				for len(stack) > 0 {
 					var pop IPNode
 					//log.Println("forloop",stack)
@@ -186,31 +186,18 @@ func LoadIPListGLite1(reader io.Reader, idMap map[int]int, glite1 []gLite1HelpNo
 		stack = append(stack, newNode)
 		list = append(list, newNode)
 		log.Println("LIST: ", list)
-		newNode.IPAddressLow = newNode.IPAddressHigh 
-		newNode.IPAddressHigh = net.IPv4(255,255,255,255)
+		newNode.IPAddressLow = newNode.IPAddressHigh
+		newNode.IPAddressHigh = net.IPv4(255, 255, 255, 255)
 
 	}
-	log.Println(stack)	
+	log.Println(stack)
 	for len(stack) > 0 {
 		var pop IPNode
-		//log.Println("forloop",stack)
 		pop, stack = stack[len(stack)-1], stack[:len(stack)-1]
 		if len(stack) == 0 {
 			break
 		}
 		peek := stack[len(stack)-1]
-		if lessThan(newNode.IPAddressLow, peek.IPAddressHigh) {
-			// if theres a gap inbetween imediately nested IP's
-			if len(stack) > 0 {
-				//log.Println("current stack: ",stack)
-				//complete the gap
-				log.Println("before: ", peek, stack)
-				peek.IPAddressLow = addOne(pop.IPAddressHigh)
-				log.Println("after: ", peek)
-				list = append(list, peek)
-			}
-			break
-		}
 		peek.IPAddressLow = addOne(pop.IPAddressHigh)
 		list = append(list, peek)
 	}
@@ -221,7 +208,7 @@ func LoadIPListGLite1(reader io.Reader, idMap map[int]int, glite1 []gLite1HelpNo
 func addOne(a net.IP) net.IP {
 	a = append([]byte(nil), a...)
 	var i int
-	for i := 15; a[i] == 255 && i > 10; i-- {
+	for i = 15; a[i] == 255; i-- {
 		a[i] = 0
 	}
 	a[i]++
