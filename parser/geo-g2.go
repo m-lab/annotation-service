@@ -86,7 +86,7 @@ func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		log.Println("Empty input data")
 		return nil, nil, errors.New("Empty input data")
 	}
-	// FieldsPerRecord is the expected column length 
+	// FieldsPerRecord is the expected column length
 	r.FieldsPerRecord = locationNumColumnsGlite2
 	for {
 		record, err := r.Read()
@@ -98,7 +98,7 @@ func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 				log.Println("Incorrect number of columns in IP list got: ", len(record), " wanted: ", r.FieldsPerRecord)
 				return nil, nil, errors.New("Corrupted Data: wrong number of columns")
 
-			}else{	
+			} else {
 				log.Println(err, ": ", record)
 				return nil, nil, err
 			}
