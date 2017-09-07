@@ -1,10 +1,10 @@
 package search_test
 
 import (
-	"log"
-	"testing"
-	"net"
 	"encoding/binary"
+	"log"
+	"net"
+	"testing"
 
 	"google.golang.org/appengine/aetest"
 
@@ -12,6 +12,7 @@ import (
 	"github.com/m-lab/annotation-service/parser"
 	"github.com/m-lab/annotation-service/search"
 )
+
 func TestGeoLite1(t *testing.T) {
 	ctx, done, err := aetest.NewContext()
 	if err != nil {
@@ -32,7 +33,7 @@ func TestGeoLite1(t *testing.T) {
 	}
 	defer rc.Close()
 
-	locationList, glite1help,idMap,  err := parser.LoadLocListGLite1(rc)
+	locationList, glite1help, idMap, err := parser.LoadLocListGLite1(rc)
 	if err != nil {
 		t.Errorf("Failed to LoadLocationList")
 	}
@@ -48,22 +49,22 @@ func TestGeoLite1(t *testing.T) {
 	}
 	defer rcIPv4.Close()
 	// TODO: update tests to use high level data loader functions instead of low level funcs
-	ipv4, err := parser.LoadIPListGLite1(rcIPv4, idMap,glite1help)
+	ipv4, err := parser.LoadIPListGLite1(rcIPv4, idMap, glite1help)
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Failed to create ipv4")
 	}
 	i := 0
 	for i < len(ipv4) {
-		ipMiddle := search.FindMiddle(ipv4[i].IPAddressLow,ipv4[i].IPAddressHigh)
-		ipBin, errBin := search.SearchBinary(ipv4,ipMiddle.String())
-		ipLin, errLin := search.SearchList(ipv4,ipMiddle.String())
+		ipMiddle := findMiddle(ipv4[i].IPAddressLow, ipv4[i].IPAddressHigh)
+		ipBin, errBin := search.SearchBinary(ipv4, ipMiddle.String())
+		ipLin, errLin := search.SearchList(ipv4, ipMiddle.String())
 		if errBin != nil && errLin != nil && errBin.Error() != errLin.Error() {
-			log.Println(errBin.Error(),"vs",errLin.Error())
+			log.Println(errBin.Error(), "vs", errLin.Error())
 			t.Errorf("Failed Error")
 		}
-		if parser.IsEqualIPNodes(ipBin,ipLin) != nil {
-			log.Println("bad ",ipBin, ipLin)
+		if parser.IsEqualIPNodes(ipBin, ipLin) != nil {
+			log.Println("bad ", ipBin, ipLin)
 			t.Errorf("Failed Binary vs Linear")
 		}
 		i += 1000
@@ -113,15 +114,15 @@ func TestGeoLite2(t *testing.T) {
 
 	i := 0
 	for i < len(ipv6) {
-		ipMiddle := findMiddle(ipv6[i].IPAddressLow,ipv6[i].IPAddressHigh)
-		ipBin, errBin := search.SearchBinary(ipv6,ipMiddle.String())
-		ipLin, errLin := search.SearchList(ipv6,ipMiddle.String())
-		if  errBin != nil && errLin != nil && errBin.Error() != errLin.Error() {
-			log.Println(errBin.Error(),"vs",errLin.Error())
+		ipMiddle := findMiddle(ipv6[i].IPAddressLow, ipv6[i].IPAddressHigh)
+		ipBin, errBin := search.SearchBinary(ipv6, ipMiddle.String())
+		ipLin, errLin := search.SearchList(ipv6, ipMiddle.String())
+		if errBin != nil && errLin != nil && errBin.Error() != errLin.Error() {
+			log.Println(errBin.Error(), "vs", errLin.Error())
 			t.Errorf("Failed Error")
 		}
-		if parser.IsEqualIPNodes(ipBin,ipLin) != nil {
-			log.Println("bad ",ipBin, ipLin)
+		if parser.IsEqualIPNodes(ipBin, ipLin) != nil {
+			log.Println("bad ", ipBin, ipLin)
 			t.Errorf("Failed Binary vs Linear")
 		}
 		i += 1000
@@ -141,30 +142,30 @@ func TestGeoLite2(t *testing.T) {
 	}
 	i = 0
 	for i < len(ipv4) {
-		ipMiddle := search.FindMiddle(ipv4[i].IPAddressLow,ipv4[i].IPAddressHigh)
-		ipBin, errBin := search.SearchBinary(ipv4,ipMiddle.String())
-		ipLin, errLin := search.SearchList(ipv4,ipMiddle.String())
-		if  errBin != nil && errLin != nil && errBin.Error() != errLin.Error() {
-			log.Println(errBin.Error(),"vs",errLin.Error())
+		ipMiddle := findMiddle(ipv4[i].IPAddressLow, ipv4[i].IPAddressHigh)
+		ipBin, errBin := search.SearchBinary(ipv4, ipMiddle.String())
+		ipLin, errLin := search.SearchList(ipv4, ipMiddle.String())
+		if errBin != nil && errLin != nil && errBin.Error() != errLin.Error() {
+			log.Println(errBin.Error(), "vs", errLin.Error())
 			t.Errorf("Failed Error")
 		}
-		if parser.IsEqualIPNodes(ipBin,ipLin) != nil {
-			log.Println("bad ",ipBin, ipLin)
+		if parser.IsEqualIPNodes(ipBin, ipLin) != nil {
+			log.Println("bad ", ipBin, ipLin)
 			t.Errorf("Failed Binary vs Linear")
 		}
 		i += 1000
 	}
 
 }
-func findMiddle(low,high net.IP) net.IP {
+func findMiddle(low, high net.IP) net.IP {
 	lowInt := binary.BigEndian.Uint32(low[12:16])
 	highInt := binary.BigEndian.Uint32(high[12:16])
-	middleInt := int((highInt - lowInt)/2)
+	middleInt := int((highInt - lowInt) / 2)
 	mid := low
 	i := 0
 	if middleInt < 100000 {
 		for i < middleInt/2 {
-			mid = parser.PlusOne(mid) 
+			mid = parser.PlusOne(mid)
 			i++
 		}
 	}

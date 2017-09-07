@@ -144,7 +144,7 @@ func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 	list := []IPNode{}
 	r := csv.NewReader(reader)
-	stack := []IPNode{}	
+	stack := []IPNode{}
 	// Skip first line
 	_, err := r.Read()
 	if err == io.EOF {
@@ -190,7 +190,7 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 		if err != nil {
 			return nil, err
 		}
-			// Stack is not empty aka we're in a nested IP
+		// Stack is not empty aka we're in a nested IP
 		if len(stack) != 0 {
 			// newNode is no longer inside stack's nested IP's
 			if lessThan(stack[len(stack)-1].IPAddressHigh, newNode.IPAddressLow) {
@@ -232,5 +232,3 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 	}
 	return list, nil
 }
-
-

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log"
 	"net"
-	"encoding/binary"
 
 	"github.com/m-lab/annotation-service/parser"
 )
@@ -32,20 +31,7 @@ func SearchList(list []parser.IPNode, ipLookUp string) (parser.IPNode, error) {
 	}
 	return lastNode, errors.New("Node not found\n")
 }
-func FindMiddle(low,high net.IP) net.IP {
-	lowInt := binary.BigEndian.Uint32(low[12:16])
-	highInt := binary.BigEndian.Uint32(high[12:16])
-	middleInt := int((highInt - lowInt)/2)
-	mid := low
-	i := 0
-	if middleInt < 100000 {
-		for i < middleInt/2 {
-			mid = parser.PlusOne(mid) 
-			i++
-		}
-	}
-	return mid
-}
+
 func SearchBinary(list []parser.IPNode, ipLookUp string) (p parser.IPNode, e error) {
 	start := 0
 	end := len(list) - 1
@@ -54,8 +40,7 @@ func SearchBinary(list []parser.IPNode, ipLookUp string) (p parser.IPNode, e err
 	for start <= end {
 		median := (start + end) / 2
 		if bytes.Compare(userIP, list[median].IPAddressLow) >= 0 && bytes.Compare(userIP, list[median].IPAddressHigh) <= 0 {
-			// When in the correct neighborhood of nested IP's call linear search
-			return list[median],nil; 
+			return list[median], nil
 		}
 		if bytes.Compare(userIP, list[median].IPAddressLow) > 0 {
 			start = median + 1

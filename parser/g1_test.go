@@ -4,7 +4,7 @@ import (
 	"archive/zip"
 	"log"
 	"net"
-	//"reflect"
+	"reflect"
 	"testing"
 
 	"github.com/m-lab/annotation-service/loader"
@@ -55,8 +55,6 @@ func TestIPGLite1NESTED(t *testing.T) {
 			35,
 			105,
 		},
-
-
 	}
 	locationIdMap := map[int]int{
 		17:     0,
@@ -212,4 +210,4 @@ func TestLocationListGLite1(t *testing.T) {
 	if !eq {
 		t.Errorf("Location maps are not equal")
 	}
-}*/
+}
