@@ -141,16 +141,16 @@ func TestGeoLite2(t *testing.T) {
 		t.Errorf("Failed to create zipReader")
 	}
 
-	// Create Location list
+	// Load Location list
 	rc, err := loader.FindFile("GeoLite2-City-Locations-en.csv", reader)
 	if err != nil {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
 	defer rc.Close()
 
-	locationList, idMap, err := parser.CreateLocationList(rc)
+	locationList, idMap, err := parser.LoadLocListGLite2(rc)
 	if err != nil {
-		t.Errorf("Failed to CreateLocationList")
+		t.Errorf("Failed to LoadLocationList")
 	}
 	if locationList == nil || idMap == nil {
 		t.Errorf("Failed to create LocationList and mapID")
@@ -163,8 +163,8 @@ func TestGeoLite2(t *testing.T) {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
 	defer rcIPv6.Close()
-
-	ipv6, err := parser.CreateIPList(rcIPv6, idMap, "GeoLite2-City-Blocks-IPv6.csv")
+	// TODO: update tests to use high level data loader functions instead of low level funcs
+	ipv6, err := parser.LoadIPListGLite2(rcIPv6, idMap)
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Failed to create ipv4")
@@ -214,7 +214,7 @@ func TestGeoLite2(t *testing.T) {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
 	defer rcIPv4.Close()
-	ipv4, err := parser.CreateIPList(rcIPv4, idMap, "GeoLite2-City-Blocks-IPv4.csv")
+	ipv4, err := parser.LoadIPListGLite2(rcIPv4, idMap)
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Failed to create ipv4")
