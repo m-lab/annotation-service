@@ -207,13 +207,13 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 						if len(stack) > 0 {
 							//log.Println("current stack: ",stack)
 							//complete the gap
-							peek.IPAddressLow = plusOne(pop.IPAddressHigh)
+							peek.IPAddressLow = PlusOne(pop.IPAddressHigh)
 							peek.IPAddressHigh = minusOne(newNode.IPAddressLow)
 							list = append(list, peek)
 						}
 						break
 					}
-					peek.IPAddressLow = plusOne(pop.IPAddressHigh)
+					peek.IPAddressLow = PlusOne(pop.IPAddressHigh)
 					list = append(list, peek)
 				}
 			} else {

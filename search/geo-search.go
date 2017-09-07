@@ -32,36 +32,19 @@ func SearchList(list []parser.IPNode, ipLookUp string) (parser.IPNode, error) {
 	}
 	return lastNode, errors.New("Node not found\n")
 }
-func plusOne(a net.IP) net.IP {
-	a = append([]byte(nil), a...)
-	var i int
-	for i = 15; a[i] == 255; i-- {
-		a[i] = 0
-	}
-	a[i]++
-	return a
-}
 func FindMiddle(low,high net.IP) net.IP {
-	lowInt := ip2int(low) 
-	highInt := ip2int(high)
+	lowInt := binary.BigEndian.Uint32(low[12:16])
+	highInt := binary.BigEndian.Uint32(high[12:16])
 	middleInt := int((highInt - lowInt)/2)
-	//return int2ip(middleInt)*/
-	log.Println(middleInt)
 	mid := low
 	i := 0
-	if middleInt < 500 {
+	if middleInt < 100000 {
 		for i < middleInt/2 {
-			mid = plusOne(mid) 
+			mid = parser.PlusOne(mid) 
 			i++
 		}
 	}
 	return mid
-}
-func ip2int(ip net.IP) uint32 {
-	if len(ip) == 16 {
-		return binary.BigEndian.Uint32(ip[12:16])
-	}
-	return binary.BigEndian.Uint32(ip)
 }
 func SearchBinary(list []parser.IPNode, ipLookUp string) (p parser.IPNode, e error) {
 	start := 0
@@ -72,7 +55,7 @@ func SearchBinary(list []parser.IPNode, ipLookUp string) (p parser.IPNode, e err
 		median := (start + end) / 2
 		if bytes.Compare(userIP, list[median].IPAddressLow) >= 0 && bytes.Compare(userIP, list[median].IPAddressHigh) <= 0 {
 			// When in the correct neighborhood of nested IP's call linear search
-			return searchLinear(list, ipLookUp, median)
+			return list[median],nil; 
 		}
 		if bytes.Compare(userIP, list[median].IPAddressLow) > 0 {
 			start = median + 1
@@ -82,27 +65,3 @@ func SearchBinary(list []parser.IPNode, ipLookUp string) (p parser.IPNode, e err
 	}
 	return p, errors.New("Node not found\n")
 }
-
-func searchLinear(list []parser.IPNode, ipLookUp string, index int) (parser.IPNode, error) {
-	inRange := false
-	var lastNode parser.IPNode
-	userIP := net.ParseIP(ipLookUp)
-	if userIP == nil {
-		log.Println("Inputed IP string could not be parsed to net.IP")
-		return lastNode, errors.New("Invalid search IP")
-	}
-	for index < len(list) {
-		if bytes.Compare(userIP, list[index].IPAddressLow) >= 0 && bytes.Compare(userIP, list[index].IPAddressHigh) <= 0 {
-			inRange = true
-			lastNode = list[index]
-		} else if inRange && bytes.Compare(userIP, list[index].IPAddressLow) < 0 {
-			return lastNode, nil
-		}
-		index++
-	}
-	if inRange {
-		return lastNode, nil
-	}
-	return lastNode, errors.New("Node not found\n")
-}
-

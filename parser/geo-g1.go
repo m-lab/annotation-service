@@ -159,13 +159,13 @@ func LoadIPListGLite1(reader io.Reader, idMap map[int]int, glite1 []gLite1HelpNo
 						// if theres a gap inbetween imediately nested IP's
 						if len(stack) > 0 {
 							//complete the gap
-							peek.IPAddressLow = plusOne(pop.IPAddressHigh)
+							peek.IPAddressLow = PlusOne(pop.IPAddressHigh)
 							peek.IPAddressHigh = minusOne(newNode.IPAddressLow)
 							list = append(list, peek)
 						}
 						break
 					}
-					peek.IPAddressLow = plusOne(pop.IPAddressHigh)
+					peek.IPAddressLow = PlusOne(pop.IPAddressHigh)
 					list = append(list, peek)
 				}
 			} else {
@@ -190,13 +190,13 @@ func LoadIPListGLite1(reader io.Reader, idMap map[int]int, glite1 []gLite1HelpNo
 			break
 		}
 		peek := stack[len(stack)-1]
-		peek.IPAddressLow = plusOne(pop.IPAddressHigh)
+		peek.IPAddressLow = PlusOne(pop.IPAddressHigh)
 		list = append(list, peek)
 	}
 	return list, nil
 }
 
-func plusOne(a net.IP) net.IP {
+func PlusOne(a net.IP) net.IP {
 	a = append([]byte(nil), a...)
 	var i int
 	for i = 15; a[i] == 255; i-- {

@@ -3,6 +3,8 @@ package search_test
 import (
 	"log"
 	"testing"
+	"net"
+	"encoding/binary"
 
 	"google.golang.org/appengine/aetest"
 
@@ -10,7 +12,7 @@ import (
 	"github.com/m-lab/annotation-service/parser"
 	"github.com/m-lab/annotation-service/search"
 )
-/*func TestGeoLite1(t *testing.T) {
+func TestGeoLite1(t *testing.T) {
 	ctx, done, err := aetest.NewContext()
 	if err != nil {
 		log.Println(err)
@@ -58,18 +60,15 @@ import (
 		ipLin, errLin := search.SearchList(ipv4,ipMiddle.String())
 		if errBin != nil && errLin != nil && errBin.Error() != errLin.Error() {
 			log.Println(errBin.Error(),"vs",errLin.Error())
-			t.Errorf("Failed1")
+			t.Errorf("Failed Error")
 		}
 		if parser.IsEqualIPNodes(ipBin,ipLin) != nil {
 			log.Println("bad ",ipBin, ipLin)
-			t.Errorf("Failed2")
-		}
-		if ipBin.IPAddressLow != nil && parser.IsEqualIPNodes(ipBin,ipv4[i]) != nil{
-			log.Println("FOUND NESTED: ",ipBin,ipv4[i])
+			t.Errorf("Failed Binary vs Linear")
 		}
 		i += 1000
 	}
-}*/
+}
 func TestGeoLite2(t *testing.T) {
 	ctx, done, err := aetest.NewContext()
 	if err != nil {
@@ -114,22 +113,18 @@ func TestGeoLite2(t *testing.T) {
 
 	i := 0
 	for i < len(ipv6) {
-		ipMiddle := search.FindMiddle(ipv6[i].IPAddressLow,ipv6[i].IPAddressHigh)
+		ipMiddle := findMiddle(ipv6[i].IPAddressLow,ipv6[i].IPAddressHigh)
 		ipBin, errBin := search.SearchBinary(ipv6,ipMiddle.String())
 		ipLin, errLin := search.SearchList(ipv6,ipMiddle.String())
 		if  errBin != nil && errLin != nil && errBin.Error() != errLin.Error() {
 			log.Println(errBin.Error(),"vs",errLin.Error())
-			t.Errorf("Failed1")
+			t.Errorf("Failed Error")
 		}
 		if parser.IsEqualIPNodes(ipBin,ipLin) != nil {
 			log.Println("bad ",ipBin, ipLin)
-			t.Errorf("Failed2")
+			t.Errorf("Failed Binary vs Linear")
 		}
-		if ipBin.IPAddressLow != nil && parser.IsEqualIPNodes(ipBin,ipv6[i]) != nil{
-			log.Println("FOUND NESTED: ",ipBin,ipv6[i])
-		}
-		log.Printf("LOOP ipv6 : ",i)
-		i += 10000
+		i += 1000
 	}
 
 	// Test IPv4
@@ -151,16 +146,27 @@ func TestGeoLite2(t *testing.T) {
 		ipLin, errLin := search.SearchList(ipv4,ipMiddle.String())
 		if  errBin != nil && errLin != nil && errBin.Error() != errLin.Error() {
 			log.Println(errBin.Error(),"vs",errLin.Error())
-			t.Errorf("Failed1")
+			t.Errorf("Failed Error")
 		}
 		if parser.IsEqualIPNodes(ipBin,ipLin) != nil {
 			log.Println("bad ",ipBin, ipLin)
-			t.Errorf("Failed2")
+			t.Errorf("Failed Binary vs Linear")
 		}
-		if ipBin.IPAddressLow != nil && parser.IsEqualIPNodes(ipBin,ipv4[i]) != nil{
-			log.Println("FOUND NESTED: ",ipBin,ipv4[i])
-		}
-		i += 10000
+		i += 1000
 	}
 
+}
+func findMiddle(low,high net.IP) net.IP {
+	lowInt := binary.BigEndian.Uint32(low[12:16])
+	highInt := binary.BigEndian.Uint32(high[12:16])
+	middleInt := int((highInt - lowInt)/2)
+	mid := low
+	i := 0
+	if middleInt < 100000 {
+		for i < middleInt/2 {
+			mid = parser.PlusOne(mid) 
+			i++
+		}
+	}
+	return mid
 }
