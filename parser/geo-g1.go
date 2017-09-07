@@ -221,7 +221,7 @@ func LoadIPListGLite1(reader io.Reader, idMap map[int]int, glite1 []gLite1HelpNo
 func addOne(a net.IP) net.IP {
 	a = append([]byte(nil), a...)
 	var i int
-	for i := 15; a[i] == 255 && i > 10; i-- {
+	for i = 15; a[i] == 255 && i > 10; i-- {
 		a[i] = 0
 	}
 	a[i]++
