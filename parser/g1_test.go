@@ -17,7 +17,7 @@ func TestIPGLite1NESTED(t *testing.T) {
 	var ipv4Expected = []parser.IPNode{
 		parser.IPNode{
 			net.ParseIP("0.0.0.1"),
-			net.ParseIP("255.255.255.255"),
+			net.ParseIP("0.255.255.255"),
 			1,
 			"",
 			35,
@@ -25,7 +25,7 @@ func TestIPGLite1NESTED(t *testing.T) {
 		},
 		parser.IPNode{
 			net.ParseIP("1.0.0.0"),
-			net.ParseIP("1.0.0.255"),
+			net.ParseIP("1.0.0.3"),
 			1,
 			"",
 			35,
@@ -39,6 +39,24 @@ func TestIPGLite1NESTED(t *testing.T) {
 			35,
 			105,
 		},
+		parser.IPNode{
+			net.ParseIP("1.0.0.215"),
+			net.ParseIP("1.0.0.255"),
+			1,
+			"",
+			35,
+			105,
+		},
+		parser.IPNode{
+			net.ParseIP("1.0.1.0"),
+			net.ParseIP("255.255.255.255"),
+			1,
+			"",
+			35,
+			105,
+		},
+
+
 	}
 	locationIdMap := map[int]int{
 		17:     0,
@@ -72,7 +90,7 @@ func TestIPGLite1NESTED(t *testing.T) {
 	}
 }
 
-/*func TestIPGLite1(t *testing.T) {
+func TestIPGLite1(t *testing.T) {
 	// TODO: move this test to g1_whitebox_test.go or remove
 	var ipv4 []parser.IPNode
 	var ipv4Expected = []parser.IPNode{
