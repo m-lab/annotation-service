@@ -46,6 +46,7 @@ func LoadLocListGLite1(reader io.Reader) ([]LocationNode, []gLite1HelpNode, map[
 		log.Println("Empty input data")
 		return nil, nil, nil, errors.New("Empty input data")
 	}
+	// Sets csv's internal column length check
 	r.FieldsPerRecord = locationNumColumnsGlite1
 	for {
 		record, err := r.Read()
