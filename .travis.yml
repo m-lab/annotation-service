@@ -6,3 +6,7 @@ before_install:
 - $TRAVIS_BUILD_DIR/annotator.sh
 go:
 - 1.8
+
+
+env:
+  - GCLOUD_PROJECT=mlab-sandbox
