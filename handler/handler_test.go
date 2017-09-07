@@ -27,7 +27,7 @@ func TestAnnotate(t *testing.T) {
 		{"1.4.128.0", "625600", `{"Geo":{"city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}}`},
 		{"This will be an error.", "1000", "Invalid request"},
 	}
-	handler.CurrentGeoDataset = &handler.GeoDataset{
+	handler.CurrentGeoDataset = &parser.GeoDataset{
 		IP4Nodes: []parser.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),
@@ -175,7 +175,7 @@ func TestBatchAnnotate(t *testing.T) {
 			res: `{"127.0.0.1ov94o0":{"Geo":{"city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}},"2620:0:1003:1008:5179:57e3:3c75:1886ov94o0":{"Geo":{"city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}}}`,
 		},
 	}
-	handler.CurrentGeoDataset = &handler.GeoDataset{
+	handler.CurrentGeoDataset = &parser.GeoDataset{
 		IP4Nodes: []parser.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),
@@ -223,7 +223,7 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 				ASN: &schema.IPASNData{}},
 		},
 	}
-	handler.CurrentGeoDataset = &handler.GeoDataset{
+	handler.CurrentGeoDataset = &parser.GeoDataset{
 		IP4Nodes: []parser.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),

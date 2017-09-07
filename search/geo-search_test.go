@@ -247,7 +247,7 @@ func TestGeoLite2(t *testing.T) {
 	n = parser.IPNode{
 		net.ParseIP("80.231.5.0"),
 		net.ParseIP("80.231.5.255"),
-		-1,
+		0,
 		"",
 		0,
 		0,
