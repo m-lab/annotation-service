@@ -112,9 +112,9 @@ func LoadIPListGLite1(reader io.Reader, idMap map[int]int, glite1 []gLite1HelpNo
 		log.Println("Improper data format got: ", title, " wanted: ", g1IP)
 		return nil, errors.New("Improper data format")
 	}
-	var newNode IPNode
 
 	for {
+		var newNode IPNode
 		// Example:
 		// GLite1 : record = [16777216,16777471,17]
 		record, err := r.Read()
@@ -147,22 +147,16 @@ func LoadIPListGLite1(reader io.Reader, idMap map[int]int, glite1 []gLite1HelpNo
 			// newNode is no longer inside stack's nested IP's
 			if lessThan(stack[len(stack)-1].IPAddressHigh, newNode.IPAddressLow) {
 				// while closing nested IP's
-				for len(stack) > 0 {
-					var pop IPNode
-					//log.Println("forloop",stack)
-					pop, stack = stack[len(stack)-1], stack[:len(stack)-1]
-					if len(stack) == 0 {
-						break
-					}
+				var pop IPNode
+				pop, stack = stack[len(stack)-1], stack[:len(stack)-1]
+				for ; len(stack) > 0; pop, stack = stack[len(stack)-1], stack[:len(stack)-1] {
 					peek := stack[len(stack)-1]
 					if lessThan(newNode.IPAddressLow, peek.IPAddressHigh) {
 						// if theres a gap inbetween imediately nested IP's
-						if len(stack) > 0 {
-							//complete the gap
-							peek.IPAddressLow = PlusOne(pop.IPAddressHigh)
-							peek.IPAddressHigh = minusOne(newNode.IPAddressLow)
-							list = append(list, peek)
-						}
+						// complete the gap
+						peek.IPAddressLow = PlusOne(pop.IPAddressHigh)
+						peek.IPAddressHigh = minusOne(newNode.IPAddressLow)
+						list = append(list, peek)
 						break
 					}
 					peek.IPAddressLow = PlusOne(pop.IPAddressHigh)
@@ -178,17 +172,10 @@ func LoadIPListGLite1(reader io.Reader, idMap map[int]int, glite1 []gLite1HelpNo
 		}
 		stack = append(stack, newNode)
 		list = append(list, newNode)
-		newNode.IPAddressLow = newNode.IPAddressHigh
-		newNode.IPAddressHigh = net.IPv4(255, 255, 255, 255)
-
 	}
-	log.Println(stack)
-	for len(stack) > 0 {
-		var pop IPNode
-		pop, stack = stack[len(stack)-1], stack[:len(stack)-1]
-		if len(stack) == 0 {
-			break
-		}
+	var pop IPNode
+	pop, stack = stack[len(stack)-1], stack[:len(stack)-1]
+	for ; len(stack) > 1; pop, stack = stack[len(stack)-1], stack[:len(stack)-1] {
 		peek := stack[len(stack)-1]
 		peek.IPAddressLow = PlusOne(pop.IPAddressHigh)
 		list = append(list, peek)

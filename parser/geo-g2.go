@@ -151,8 +151,8 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 		log.Println("Empty input data")
 		return nil, errors.New("Empty input data")
 	}
-	var newNode IPNode
 	for {
+		var newNode IPNode
 		// Example:
 		// GLite2 : record = [2a04:97c0::/29,2658434,2658434,0,0,47,8,100]
 		record, err := r.Read()
@@ -195,22 +195,16 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 			// newNode is no longer inside stack's nested IP's
 			if lessThan(stack[len(stack)-1].IPAddressHigh, newNode.IPAddressLow) {
 				// while closing nested IP's
-				for len(stack) > 0 {
-					var pop IPNode
-					pop, stack = stack[len(stack)-1], stack[:len(stack)-1]
-					if len(stack) == 0 {
-						break
-					}
+				var pop IPNode
+				pop, stack = stack[len(stack)-1], stack[:len(stack)-1]
+				for ; len(stack) > 0; pop, stack = stack[len(stack)-1], stack[:len(stack)-1] {
 					peek := stack[len(stack)-1]
 					if lessThan(newNode.IPAddressLow, peek.IPAddressHigh) {
 						// if theres a gap inbetween imediately nested IP's
-						if len(stack) > 0 {
-							//log.Println("current stack: ",stack)
-							//complete the gap
-							peek.IPAddressLow = PlusOne(pop.IPAddressHigh)
-							peek.IPAddressHigh = minusOne(newNode.IPAddressLow)
-							list = append(list, peek)
-						}
+						// complete the gap
+						peek.IPAddressLow = PlusOne(pop.IPAddressHigh)
+						peek.IPAddressHigh = minusOne(newNode.IPAddressLow)
+						list = append(list, peek)
 						break
 					}
 					peek.IPAddressLow = PlusOne(pop.IPAddressHigh)
@@ -226,9 +220,13 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 		}
 		stack = append(stack, newNode)
 		list = append(list, newNode)
-		newNode.IPAddressLow = newNode.IPAddressHigh
-		newNode.IPAddressHigh = net.IPv4(255, 255, 255, 255)
-
+	}
+	var pop IPNode
+	pop, stack = stack[len(stack)-1], stack[:len(stack)-1]
+	for ; len(stack) > 1; pop, stack = stack[len(stack)-1], stack[:len(stack)-1] {
+		peek := stack[len(stack)-1]
+		peek.IPAddressLow = PlusOne(pop.IPAddressHigh)
+		list = append(list, peek)
 	}
 	return list, nil
 }
