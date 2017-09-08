@@ -175,7 +175,7 @@ func LoadIPListGLite1(reader io.Reader, idMap map[int]int, glite1 []gLite1HelpNo
 	}
 	var pop IPNode
 	pop, stack = stack[len(stack)-1], stack[:len(stack)-1]
-	for ; len(stack) > 1; pop, stack = stack[len(stack)-1], stack[:len(stack)-1] {
+	for ; len(stack) > 0; pop, stack = stack[len(stack)-1], stack[:len(stack)-1] {
 		peek := stack[len(stack)-1]
 		peek.IPAddressLow = PlusOne(pop.IPAddressHigh)
 		list = append(list, peek)
