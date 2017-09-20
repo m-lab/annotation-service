@@ -1,6 +1,7 @@
 package search_test
 
 import (
+	"encoding/binary"
 	"log"
 	"net"
 	"testing"
@@ -12,122 +13,63 @@ import (
 	"github.com/m-lab/annotation-service/search"
 )
 
-func TestSearchSmallRange(t *testing.T) {
-	var ipv4 = []parser.IPNode{
-		parser.IPNode{
-			net.ParseIP("1.0.0.0"),
-			net.ParseIP("1.0.0.255"),
-			0,
-			"",
-			0,
-			0,
-		},
-		parser.IPNode{
-			net.ParseIP("1.0.0.2"),
-			net.ParseIP("1.0.0.200"),
-			4,
-			"",
-			0,
-			0,
-		},
-		parser.IPNode{
-			net.ParseIP("1.0.0.5"),
-			net.ParseIP("1.0.0.100"),
-			0,
-			"",
-			0,
-			0,
-		},
-		parser.IPNode{
-			net.ParseIP("1.0.0.120"),
-			net.ParseIP("1.0.0.140"),
-			0,
-			"",
-			0,
-			0,
-		},
-		parser.IPNode{
-			net.ParseIP("1.0.0.121"),
-			net.ParseIP("1.0.0.125"),
-			0,
-			"",
-			0,
-			0,
-		},
-		parser.IPNode{
-			net.ParseIP("1.0.0.129"),
-			net.ParseIP("1.0.0.130"),
-			0,
-			"",
-			0,
-			0,
-		},
-		parser.IPNode{
-			net.ParseIP("1.0.4.0"),
-			net.ParseIP("1.0.7.255"),
-			4,
-			"",
-			0,
-			0,
-		},
+func TestGeoLite1(t *testing.T) {
+	ctx, done, err := aetest.NewContext()
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Failed to create aecontext")
+	}
+	defer done()
+	reader, err := loader.CreateZipReader(ctx, "test-annotator-sandbox", "MaxMind/2017/09/07/Maxmind%2F2017%2F09%2F01%2F20170901T085044Z-GeoLiteCity-latest.zip")
+	if err != nil {
+		log.Println(err)
+		t.Errorf("Failed to create zipReader")
 	}
 
-	// Test IP node within several subsets
-	ip, err := search.SearchList(ipv4, "1.0.0.122")
+	// Load Location list
+	rc, err := loader.FindFile("GeoLiteCity-Location.csv", reader)
 	if err != nil {
-		log.Println(err)
-		t.Errorf("Search failed")
+		t.Errorf("Failed to create io.ReaderCloser")
 	}
-	err = parser.IsEqualIPNodes(ipv4[4], ip)
+	defer rc.Close()
+
+	locationList, glite1help, idMap, err := parser.LoadLocListGLite1(rc)
 	if err != nil {
-		log.Println(err)
-		t.Errorf("Found ", ip, " wanted", ipv4[4])
+		t.Errorf("Failed to LoadLocationList")
+	}
+	if locationList == nil || idMap == nil {
+		t.Errorf("Failed to create LocationList and mapID")
 	}
 
-	// Test IP node not in a subset
-	ip, err = search.SearchList(ipv4, "1.0.0.254")
+	// Test IPv4
+	rcIPv4, err := loader.FindFile("GeoLiteCity-Blocks.csv", reader)
 	if err != nil {
 		log.Println(err)
-		t.Errorf("Search failed")
+		t.Errorf("Failed to create io.ReaderCloser")
 	}
-	err = parser.IsEqualIPNodes(ipv4[0], ip)
+	defer rcIPv4.Close()
+	// TODO: update tests to use high level data loader functions instead of low level funcs
+	ipv4, err := parser.LoadIPListGLite1(rcIPv4, idMap, glite1help)
 	if err != nil {
 		log.Println(err)
-		t.Errorf("Found ", ip, " wanted", ipv4[0])
+		t.Errorf("Failed to create ipv4")
 	}
-
-	// Test first IP node
-	ip, err = search.SearchList(ipv4, "1.0.0.254")
-	if err != nil {
-		log.Println(err)
-		t.Errorf("Search failed")
-	}
-	err = parser.IsEqualIPNodes(ipv4[0], ip)
-	if err != nil {
-		log.Println(err)
-		t.Errorf("Found ", ip, " wanted", ipv4[0])
-	}
-
-	// Test last IP node in the list
-	ip, err = search.SearchList(ipv4, "1.0.6.0")
-	if err != nil {
-		log.Println(err)
-		t.Errorf("Search failed")
-	}
-	err = parser.IsEqualIPNodes(ipv4[6], ip)
-	if err != nil {
-		log.Println(err)
-		t.Errorf("Found ", ip, " wanted", ipv4[6])
-	}
-
-	// Test IP NOT in list
-	ip, err = search.SearchList(ipv4, "255.0.6.0")
-	if err == nil {
-		log.Println("Got ", ip, " wanted: Node not found")
-		t.Errorf("Search failed")
+	i := 0
+	for i < len(ipv4) {
+		ipMiddle := findMiddle(ipv4[i].IPAddressLow, ipv4[i].IPAddressHigh)
+		ipBin, errBin := search.SearchBinary(ipv4, ipMiddle.String())
+		ipLin, errLin := search.SearchList(ipv4, ipMiddle.String())
+		if errBin != nil && errLin != nil && errBin.Error() != errLin.Error() {
+			log.Println(errBin.Error(), "vs", errLin.Error())
+			t.Errorf("Failed Error")
+		}
+		if parser.IsEqualIPNodes(ipBin, ipLin) != nil {
+			log.Println("bad ", ipBin, ipLin)
+			t.Errorf("Failed Binary vs Linear")
+		}
+		i += 1000
 	}
 }
-
 func TestGeoLite2(t *testing.T) {
 	ctx, done, err := aetest.NewContext()
 	if err != nil {
@@ -135,7 +77,7 @@ func TestGeoLite2(t *testing.T) {
 		t.Errorf("Failed to create aecontext")
 	}
 	defer done()
-	reader, err := loader.CreateZipReader(ctx, "test-annotator-sandbox", "MaxMind/2017/08/08/GeoLite2.zip")
+	reader, err := loader.CreateZipReader(ctx, "test-annotator-sandbox", "MaxMind/2017/09/07/Maxmind%2F2017%2F09%2F07%2F20170907T023620Z-GeoLite2-City-CSV.zip")
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Failed to create zipReader")
@@ -167,44 +109,23 @@ func TestGeoLite2(t *testing.T) {
 	ipv6, err := parser.LoadIPListGLite2(rcIPv6, idMap)
 	if err != nil {
 		log.Println(err)
-		t.Errorf("Failed to create ipv4")
-	}
-	ip, err := search.SearchList(ipv6, "2A02:0C7D:5DB7:0000:0000:FFFF:0000:0000")
-	if err != nil {
-		log.Println(err)
-		t.Errorf("Search failed")
-	}
-	var n = parser.IPNode{
-		net.ParseIP("2A02:0C7D:5DB7:0000:0000:0000:0000:0000"),
-		net.ParseIP("2A02:0C7D:5DB7:FFFF:FFFF:FFFF:FFFF:FFFF"),
-		20548,
-		"IP1",
-		52.0713,
-		1.1444,
-	}
-	err = parser.IsEqualIPNodes(n, ip)
-	if err != nil {
-		log.Println(err)
-		t.Errorf("Found ", ip, " wanted", n)
+		t.Errorf("Failed to create ipv6")
 	}
 
-	ip, err = search.SearchList(ipv6, "2A04:AB87:FFFF:FFFF:FFFF:FFFF:FFFF:0000")
-	if err != nil {
-		log.Println(err)
-		t.Errorf("Search failed")
-	}
-	n = parser.IPNode{
-		net.ParseIP("2A04:AB80:0000:0000:0000:0000:0000:0000"),
-		net.ParseIP("2A04:AB87:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF"),
-		26082,
-		"",
-		52.5,
-		5.75,
-	}
-	err = parser.IsEqualIPNodes(n, ip)
-	if err != nil {
-		log.Println(err)
-		t.Errorf("Found ", ip, " wanted", n)
+	i := 0
+	for i < len(ipv6) {
+		ipMiddle := findMiddle(ipv6[i].IPAddressLow, ipv6[i].IPAddressHigh)
+		ipBin, errBin := search.SearchBinary(ipv6, ipMiddle.String())
+		ipLin, errLin := search.SearchList(ipv6, ipMiddle.String())
+		if errBin != nil && errLin != nil && errBin.Error() != errLin.Error() {
+			log.Println(errBin.Error(), "vs", errLin.Error())
+			t.Errorf("Failed Error")
+		}
+		if parser.IsEqualIPNodes(ipBin, ipLin) != nil {
+			log.Println("bad ", ipBin, ipLin)
+			t.Errorf("Failed Binary vs Linear")
+		}
+		i += 1000
 	}
 
 	// Test IPv4
@@ -219,43 +140,34 @@ func TestGeoLite2(t *testing.T) {
 		log.Println(err)
 		t.Errorf("Failed to create ipv4")
 	}
-
-	ip, err = search.SearchList(ipv4, "1.0.120.0")
-	if err != nil {
-		log.Println(err)
-		t.Errorf("Search failed")
-	}
-	n = parser.IPNode{
-		net.ParseIP("1.0.120.0"),
-		net.ParseIP("1.0.123.255"),
-		11622,
-		"690-0887",
-		35.4722,
-		133.0506,
-	}
-	err = parser.IsEqualIPNodes(n, ip)
-	if err != nil {
-		log.Println(err)
-		t.Errorf("Found ", ip, " wanted", n)
+	i = 0
+	for i < len(ipv4) {
+		ipMiddle := findMiddle(ipv4[i].IPAddressLow, ipv4[i].IPAddressHigh)
+		ipBin, errBin := search.SearchBinary(ipv4, ipMiddle.String())
+		ipLin, errLin := search.SearchList(ipv4, ipMiddle.String())
+		if errBin != nil && errLin != nil && errBin.Error() != errLin.Error() {
+			log.Println(errBin.Error(), "vs", errLin.Error())
+			t.Errorf("Failed Error")
+		}
+		if parser.IsEqualIPNodes(ipBin, ipLin) != nil {
+			log.Println("bad ", ipBin, ipLin)
+			t.Errorf("Failed Binary vs Linear")
+		}
+		i += 1000
 	}
 
-	ip, err = search.SearchList(ipv4, "80.231.5.200")
-	if err != nil {
-		log.Println(err)
-		t.Errorf("Search failed")
+}
+func findMiddle(low, high net.IP) net.IP {
+	lowInt := binary.BigEndian.Uint32(low[12:16])
+	highInt := binary.BigEndian.Uint32(high[12:16])
+	middleInt := int((highInt - lowInt) / 2)
+	mid := low
+	i := 0
+	if middleInt < 100000 {
+		for i < middleInt/2 {
+			mid = parser.PlusOne(mid)
+			i++
+		}
 	}
-	n = parser.IPNode{
-		net.ParseIP("80.231.5.0"),
-		net.ParseIP("80.231.5.255"),
-		0,
-		"",
-		0,
-		0,
-	}
-	err = parser.IsEqualIPNodes(n, ip)
-	if err != nil {
-		log.Println(err)
-		t.Errorf("Found ", ip, " wanted", n)
-	}
-
+	return mid
 }

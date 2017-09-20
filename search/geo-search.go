@@ -32,3 +32,22 @@ func SearchList(list []parser.IPNode, ipLookUp string) (parser.IPNode, error) {
 	}
 	return parser.IPNode{}, errors.New("Node not found\n")
 }
+
+func SearchBinary(list []parser.IPNode, ipLookUp string) (p parser.IPNode, e error) {
+	start := 0
+	end := len(list) - 1
+
+	userIP := net.ParseIP(ipLookUp)
+	for start <= end {
+		median := (start + end) / 2
+		if bytes.Compare(userIP, list[median].IPAddressLow) >= 0 && bytes.Compare(userIP, list[median].IPAddressHigh) <= 0 {
+			return list[median], nil
+		}
+		if bytes.Compare(userIP, list[median].IPAddressLow) > 0 {
+			start = median + 1
+		} else {
+			end = median - 1
+		}
+	}
+	return p, errors.New("Node not found\n")
+}
