@@ -136,6 +136,8 @@ func floatToString(num float64) string {
 	return strconv.FormatFloat(num, 'f', 6, 64)
 }
 
+// TODO(gfr) What are list and stack?
+// handleStack finds the proper place in the stack for the new node.
 func handleStack(stack, list []IPNode, newNode IPNode) ([]IPNode, []IPNode) {
 	// Stack is not empty aka we're in a nested IP
 	if len(stack) != 0 {
@@ -147,7 +149,7 @@ func handleStack(stack, list []IPNode, newNode IPNode) ([]IPNode, []IPNode) {
 			for ; len(stack) > 0; pop, stack = stack[len(stack)-1], stack[:len(stack)-1] {
 				peek := stack[len(stack)-1]
 				if lessThan(newNode.IPAddressLow, peek.IPAddressHigh) {
-					// if theres a gap inbetween imediately nested IP's
+					// if there's a gap in between adjacent nested IP's,
 					// complete the gap
 					peek.IPAddressLow = PlusOne(pop.IPAddressHigh)
 					peek.IPAddressHigh = minusOne(newNode.IPAddressLow)
