@@ -58,7 +58,8 @@ func TestGeoLite1(t *testing.T) {
 	for i < len(ipv4) {
 		ipMiddle := findMiddle(ipv4[i].IPAddressLow, ipv4[i].IPAddressHigh)
 		ipBin, errBin := search.SearchBinary(ipv4, ipMiddle.String())
-		ipLin, errLin := search.SearchList(ipv4, ipMiddle.String())
+		// Linear search, starting at current node, since it can't be earlier.
+		ipLin, errLin := search.SearchList(ipv4[i:], ipMiddle.String())
 		if errBin != nil && errLin != nil && errBin.Error() != errLin.Error() {
 			log.Println(errBin.Error(), "vs", errLin.Error())
 			t.Errorf("Failed Error")
@@ -116,7 +117,8 @@ func TestGeoLite2(t *testing.T) {
 	for i < len(ipv6) {
 		ipMiddle := findMiddle(ipv6[i].IPAddressLow, ipv6[i].IPAddressHigh)
 		ipBin, errBin := search.SearchBinary(ipv6, ipMiddle.String())
-		ipLin, errLin := search.SearchList(ipv6, ipMiddle.String())
+		// Linear search, starting at current node, since it can't be earlier.
+		ipLin, errLin := search.SearchList(ipv6[i:], ipMiddle.String())
 		if errBin != nil && errLin != nil && errBin.Error() != errLin.Error() {
 			log.Println(errBin.Error(), "vs", errLin.Error())
 			t.Errorf("Failed Error")
@@ -144,7 +146,8 @@ func TestGeoLite2(t *testing.T) {
 	for i < len(ipv4) {
 		ipMiddle := findMiddle(ipv4[i].IPAddressLow, ipv4[i].IPAddressHigh)
 		ipBin, errBin := search.SearchBinary(ipv4, ipMiddle.String())
-		ipLin, errLin := search.SearchList(ipv4, ipMiddle.String())
+		// Linear search, starting at current node, since it can't be earlier.
+		ipLin, errLin := search.SearchList(ipv4[i:], ipMiddle.String())
 		if errBin != nil && errLin != nil && errBin.Error() != errLin.Error() {
 			log.Println(errBin.Error(), "vs", errLin.Error())
 			t.Errorf("Failed Error")
