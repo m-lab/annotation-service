@@ -68,7 +68,7 @@ func TestGeoLite1(t *testing.T) {
 			log.Println("bad ", ipBin, ipLin)
 			t.Errorf("Failed Binary vs Linear")
 		}
-		i += 1000
+		i += 100
 	}
 }
 func TestGeoLite2(t *testing.T) {
@@ -127,7 +127,7 @@ func TestGeoLite2(t *testing.T) {
 			log.Println("bad ", ipBin, ipLin)
 			t.Errorf("Failed Binary vs Linear")
 		}
-		i += 1000
+		i += 100
 	}
 
 	// Test IPv4
@@ -156,7 +156,7 @@ func TestGeoLite2(t *testing.T) {
 			log.Println("bad ", ipBin, ipLin)
 			t.Errorf("Failed Binary vs Linear")
 		}
-		i += 1000
+		i += 100
 	}
 
 }
