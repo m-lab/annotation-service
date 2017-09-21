@@ -160,6 +160,8 @@ func TestGeoLite2(t *testing.T) {
 	}
 
 }
+
+// TODO(gfr) This needs good comment and validation?
 func findMiddle(low, high net.IP) net.IP {
 	lowInt := binary.BigEndian.Uint32(low[12:16])
 	highInt := binary.BigEndian.Uint32(high[12:16])

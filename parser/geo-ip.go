@@ -138,6 +138,8 @@ func floatToString(num float64) string {
 
 // TODO(gfr) What are list and stack?
 // handleStack finds the proper place in the stack for the new node.
+// `stack` holds a stack of nested IP ranges not yet resolved.
+// `list` is the complete list of flattened IPNodes.
 func handleStack(stack, list []IPNode, newNode IPNode) ([]IPNode, []IPNode) {
 	// Stack is not empty aka we're in a nested IP
 	if len(stack) != 0 {
