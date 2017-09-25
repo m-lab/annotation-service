@@ -1,7 +1,10 @@
 package parser
 
+// Notes:
+//   GeoLite1 is IPv4 only.
+//   GeoLite2 supports IPv4 and IPv6.
+
 import (
-	"bytes"
 	"encoding/binary"
 	"encoding/csv"
 	"errors"
@@ -91,7 +94,9 @@ func LoadLocListGLite1(reader io.Reader) ([]LocationNode, []gLite1HelpNode, map[
 	return list, glite, idMap, nil
 }
 
-// Creates a List of IPNodes
+// LoadIPListGLite1 creates a List of IPNodes from a GeoLite1 reader
+// Note that GeoLite1 is IPv4 only.
+// TODO(gfr) Update to use recursion instead of stack.
 func LoadIPListGLite1(reader io.Reader, idMap map[int]int, glite1 []gLite1HelpNode) ([]IPNode, error) {
 	g1IP := []string{"startIpNum", "endIpNum", "locId"}
 	list := []IPNode{}
@@ -143,36 +148,7 @@ func LoadIPListGLite1(reader io.Reader, idMap map[int]int, glite1 []gLite1HelpNo
 		newNode.Latitude = glite1[index].Latitude
 		newNode.Longitude = glite1[index].Longitude
 		newNode.PostalCode = glite1[index].PostalCode
-		// Stack is not empty aka we're in a nested IP
-		if len(stack) != 0 {
-			// newNode is no longer inside stack's nested IP's
-			if lessThan(stack[len(stack)-1].IPAddressHigh, newNode.IPAddressLow) {
-				// while closing nested IP's
-				var pop IPNode
-				pop, stack = stack[len(stack)-1], stack[:len(stack)-1]
-				for ; len(stack) > 0; pop, stack = stack[len(stack)-1], stack[:len(stack)-1] {
-					peek := stack[len(stack)-1]
-					if lessThan(newNode.IPAddressLow, peek.IPAddressHigh) {
-						// if theres a gap inbetween imediately nested IP's
-						// complete the gap
-						peek.IPAddressLow = PlusOne(pop.IPAddressHigh)
-						peek.IPAddressHigh = minusOne(newNode.IPAddressLow)
-						list = append(list, peek)
-						break
-					}
-					peek.IPAddressLow = PlusOne(pop.IPAddressHigh)
-					list = append(list, peek)
-				}
-			} else {
-				// if we're nesting IP's
-				// create begnning bounds
-				lastListNode := &list[len(list)-1]
-				lastListNode.IPAddressHigh = minusOne(newNode.IPAddressLow)
-
-			}
-		}
-		stack = append(stack, newNode)
-		list = append(list, newNode)
+		stack, list = handleStack(stack, list, newNode)
 	}
 	var pop IPNode
 	pop, stack = stack[len(stack)-1], stack[:len(stack)-1]
@@ -182,31 +158,6 @@ func LoadIPListGLite1(reader io.Reader, idMap map[int]int, glite1 []gLite1HelpNo
 		list = append(list, peek)
 	}
 	return list, nil
-}
-
-func PlusOne(a net.IP) net.IP {
-	a = append([]byte(nil), a...)
-	var i int
-	for i = 15; a[i] == 255; i-- {
-		a[i] = 0
-	}
-	a[i]++
-	return a
-}
-func minusOne(a net.IP) net.IP {
-	a = append([]byte(nil), a...)
-	var i int
-	for i = 15; a[i] == 0; i-- {
-		a[i] = 255
-	}
-	a[i]--
-	return a
-}
-func moreThan(a, b net.IP) bool {
-	return bytes.Compare(a, b) > 0
-}
-func lessThan(a, b net.IP) bool {
-	return bytes.Compare(a, b) < 0
 }
 
 // Converts integer to net.IPv4

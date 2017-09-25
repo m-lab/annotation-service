@@ -3,6 +3,7 @@
 package parser
 
 import (
+	"bytes"
 	"errors"
 	"log"
 	"net"
@@ -133,4 +134,69 @@ func IsEqualIPNodes(expected, node IPNode) error {
 
 func floatToString(num float64) string {
 	return strconv.FormatFloat(num, 'f', 6, 64)
+}
+
+// TODO(gfr) What are list and stack?
+// handleStack finds the proper place in the stack for the new node.
+// `stack` holds a stack of nested IP ranges not yet resolved.
+// `list` is the complete list of flattened IPNodes.
+func handleStack(stack, list []IPNode, newNode IPNode) ([]IPNode, []IPNode) {
+	// Stack is not empty aka we're in a nested IP
+	if len(stack) != 0 {
+		// newNode is no longer inside stack's nested IP's
+		if lessThan(stack[len(stack)-1].IPAddressHigh, newNode.IPAddressLow) {
+			// while closing nested IP's
+			var pop IPNode
+			pop, stack = stack[len(stack)-1], stack[:len(stack)-1]
+			for ; len(stack) > 0; pop, stack = stack[len(stack)-1], stack[:len(stack)-1] {
+				peek := stack[len(stack)-1]
+				if lessThan(newNode.IPAddressLow, peek.IPAddressHigh) {
+					// if there's a gap in between adjacent nested IP's,
+					// complete the gap
+					peek.IPAddressLow = PlusOne(pop.IPAddressHigh)
+					peek.IPAddressHigh = minusOne(newNode.IPAddressLow)
+					list = append(list, peek)
+					break
+				}
+				peek.IPAddressLow = PlusOne(pop.IPAddressHigh)
+				list = append(list, peek)
+			}
+		} else {
+			// if we're nesting IP's
+			// create begnning bounds
+			lastListNode := &list[len(list)-1]
+			lastListNode.IPAddressHigh = minusOne(newNode.IPAddressLow)
+
+		}
+	}
+	stack = append(stack, newNode)
+	list = append(list, newNode)
+	return stack, list
+}
+
+func moreThan(a, b net.IP) bool {
+	return bytes.Compare(a, b) > 0
+}
+
+func lessThan(a, b net.IP) bool {
+	return bytes.Compare(a, b) < 0
+}
+
+func PlusOne(a net.IP) net.IP {
+	a = append([]byte(nil), a...)
+	var i int
+	for i = 15; a[i] == 255; i-- {
+		a[i] = 0
+	}
+	a[i]++
+	return a
+}
+func minusOne(a net.IP) net.IP {
+	a = append([]byte(nil), a...)
+	var i int
+	for i = 15; a[i] == 0; i-- {
+		a[i] = 255
+	}
+	a[i]--
+	return a
 }
