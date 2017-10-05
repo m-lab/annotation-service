@@ -16,7 +16,7 @@ import (
 	"github.com/m-lab/annotation-service/metrics"
 	"github.com/m-lab/annotation-service/parser"
 	"github.com/m-lab/annotation-service/search"
-	"github.com/m-lab/etl/schema"
+	"github.com/m-lab/etl/annotation"
 )
 
 // A mutex to make sure that we are not reading from the dataset
@@ -69,7 +69,7 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 // ValidateAndParse takes a request and validates the URL parameters,
 // verifying that it has a valid ip address and time. Then, it uses
 // that to construct a RequestData struct and returns the pointer.
-func ValidateAndParse(r *http.Request) (*schema.RequestData, error) {
+func ValidateAndParse(r *http.Request) (*annotation.RequestData, error) {
 	query := r.URL.Query()
 
 	time_milli, err := strconv.ParseInt(query.Get("since_epoch"), 10, 64)
@@ -84,13 +84,13 @@ func ValidateAndParse(r *http.Request) (*schema.RequestData, error) {
 		return nil, errors.New("Invalid IP address")
 	}
 	if newIP.To4() != nil {
-		return &schema.RequestData{ip, 4, time.Unix(time_milli, 0)}, nil
+		return &annotation.RequestData{ip, 4, time.Unix(time_milli, 0)}, nil
 	}
-	return &schema.RequestData{ip, 6, time.Unix(time_milli, 0)}, nil
+	return &annotation.RequestData{ip, 6, time.Unix(time_milli, 0)}, nil
 }
 
 // BatchAnnotate is a URL handler that expects the body of the request
-// to contain a JSON encoded slice of schema.RequestDatas. It will
+// to contain a JSON encoded slice of annotation.RequestDatas. It will
 // look up all the ip addresses and bundle them into a map of metadata
 // structs (with the keys being the ip concatenated with the base 36
 // encoded timestamp) and send them back, again JSON encoded.
@@ -113,7 +113,7 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responseMap := make(map[string]*schema.MetaData)
+	responseMap := make(map[string]*annotation.GeoData)
 	for _, data := range dataSlice {
 		responseMap[data.IP+strconv.FormatInt(data.Timestamp.Unix(), encodingBase)] = GetMetadataForSingleIP(&data)
 	}
@@ -128,16 +128,16 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 
 // BatchValidateAndParse will take a reader (likely the body of a
 // request) containing the JSON encoded array of
-// schema.RequestDatas. It will then validate that json and use it to
-// construct a slice of schema.RequestDatas, which it will return. If
+// annotation.RequestDatas. It will then validate that json and use it to
+// construct a slice of annotation.RequestDatas, which it will return. If
 // it encounters an error, then it will return nil and that error.
-func BatchValidateAndParse(source io.Reader) ([]schema.RequestData, error) {
+func BatchValidateAndParse(source io.Reader) ([]annotation.RequestData, error) {
 	jsonBuffer, err := ioutil.ReadAll(source)
-	validatedData := []schema.RequestData{}
+	validatedData := []annotation.RequestData{}
 	if err != nil {
 		return nil, err
 	}
-	uncheckedData := []schema.RequestData{}
+	uncheckedData := []annotation.RequestData{}
 
 	err = json.Unmarshal(jsonBuffer, &uncheckedData)
 	if err != nil {
@@ -152,16 +152,16 @@ func BatchValidateAndParse(source io.Reader) ([]schema.RequestData, error) {
 		if newIP.To4() != nil {
 			ipType = 4
 		}
-		validatedData = append(validatedData, schema.RequestData{data.IP, ipType, data.Timestamp})
+		validatedData = append(validatedData, annotation.RequestData{data.IP, ipType, data.Timestamp})
 	}
 	return validatedData, nil
 }
 
-// GetMetadataForSingleIP takes a pointer to a schema.RequestData
+// GetMetadataForSingleIP takes a pointer to a annotation.RequestData
 // struct and will use it to fetch the appropriate associated
 // metadata, returning a pointer. It is gaurenteed to return a non-nil
 // pointer, even if it cannot find the appropriate metadata.
-func GetMetadataForSingleIP(request *schema.RequestData) *schema.MetaData {
+func GetMetadataForSingleIP(request *annotation.RequestData) *annotation.GeoData {
 	metrics.Metrics_totalLookups.Inc()
 	if CurrentGeoDataset == nil {
 		// TODO: Block until the value is not nil
@@ -185,19 +185,19 @@ func GetMetadataForSingleIP(request *schema.RequestData) *schema.MetaData {
 		return nil
 	}
 
-	return ConvertIPNodeToMetaData(node, CurrentGeoDataset.LocationNodes)
+	return ConvertIPNodeToGeoData(node, CurrentGeoDataset.LocationNodes)
 }
 
-// ConvertIPNodeToMetaData takes a parser.IPNode, plus a list of
-// locationNodes. It will then use that data to fill in a MetaData
+// ConvertIPNodeToGeoData takes a parser.IPNode, plus a list of
+// locationNodes. It will then use that data to fill in a GeoData
 // struct and return its pointer.
-func ConvertIPNodeToMetaData(ipNode parser.IPNode, locationNodes []parser.LocationNode) *schema.MetaData {
+func ConvertIPNodeToGeoData(ipNode parser.IPNode, locationNodes []parser.LocationNode) *annotation.GeoData {
 	locNode := parser.LocationNode{}
 	if ipNode.LocationIndex >= 0 {
 		locNode = locationNodes[ipNode.LocationIndex]
 	}
-	return &schema.MetaData{
-		Geo: &schema.GeolocationIP{
+	return &annotation.GeoData{
+		Geo: &annotation.GeolocationIP{
 			Continent_code: locNode.ContinentCode,
 			Country_code:   locNode.CountryCode,
 			Country_name:   locNode.CountryName,
@@ -207,7 +207,7 @@ func ConvertIPNodeToMetaData(ipNode parser.IPNode, locationNodes []parser.Locati
 			Latitude:       ipNode.Latitude,
 			Longitude:      ipNode.Longitude,
 		},
-		ASN: &schema.IPASNData{},
+		ASN: &annotation.IPASNData{},
 	}
 
 }

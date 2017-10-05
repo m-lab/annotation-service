@@ -15,7 +15,7 @@ import (
 
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/parser"
-	"github.com/m-lab/etl/schema"
+	"github.com/m-lab/etl/annotation"
 )
 
 func TestAnnotate(t *testing.T) {
@@ -65,7 +65,7 @@ func TestAnnotate(t *testing.T) {
 func TestValidateAndParse(t *testing.T) {
 	tests := []struct {
 		req *http.Request
-		res *schema.RequestData
+		res *annotation.RequestData
 		err error
 	}{
 		{
@@ -83,13 +83,13 @@ func TestValidateAndParse(t *testing.T) {
 		{
 			req: httptest.NewRequest("GET",
 				"http://example.com/annotate?ip_addr=127.0.0.1&since_epoch=10", nil),
-			res: &schema.RequestData{"127.0.0.1", 4, time.Unix(10, 0)},
+			res: &annotation.RequestData{"127.0.0.1", 4, time.Unix(10, 0)},
 			err: nil,
 		},
 		{
 			req: httptest.NewRequest("GET",
 				"http://example.com/annotate?ip_addr=2620:0:1003:1008:5179:57e3:3c75:1886&since_epoch=10", nil),
-			res: &schema.RequestData{"2620:0:1003:1008:5179:57e3:3c75:1886", 6, time.Unix(10, 0)},
+			res: &annotation.RequestData{"2620:0:1003:1008:5179:57e3:3c75:1886", 6, time.Unix(10, 0)},
 			err: nil,
 		},
 	}
@@ -115,7 +115,7 @@ func TestBatchValidateAndParse(t *testing.T) {
 	timeCon, _ := time.Parse(time.RFC3339, "2002-10-02T15:00:00Z")
 	tests := []struct {
 		source io.Reader
-		res    []schema.RequestData
+		res    []annotation.RequestData
 		err    error
 	}{
 		{
@@ -130,7 +130,7 @@ func TestBatchValidateAndParse(t *testing.T) {
 		},
 		{
 			source: bytes.NewBufferString(`[]`),
-			res:    []schema.RequestData{},
+			res:    []annotation.RequestData{},
 			err:    nil,
 		},
 		{
@@ -141,7 +141,7 @@ func TestBatchValidateAndParse(t *testing.T) {
 		{
 			source: bytes.NewBufferString(`[{"ip": "127.0.0.1", "timestamp": "2002-10-02T15:00:00Z"},` +
 				`{"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "timestamp": "2002-10-02T15:00:00Z"}]`),
-			res: []schema.RequestData{
+			res: []annotation.RequestData{
 				{"127.0.0.1", 4, timeCon},
 				{"2620:0:1003:1008:5179:57e3:3c75:1886", 6, timeCon},
 			},
@@ -213,14 +213,14 @@ func TestBatchAnnotate(t *testing.T) {
 // returning a canned response
 func TestGetMetadataForSingleIP(t *testing.T) {
 	tests := []struct {
-		req *schema.RequestData
-		res *schema.MetaData
+		req *annotation.RequestData
+		res *annotation.GeoData
 	}{
 		{
-			req: &schema.RequestData{"127.0.0.1", 4, time.Unix(0, 0)},
-			res: &schema.MetaData{
-				Geo: &schema.GeolocationIP{City: "Not A Real City", Postal_code: "10583"},
-				ASN: &schema.IPASNData{}},
+			req: &annotation.RequestData{"127.0.0.1", 4, time.Unix(0, 0)},
+			res: &annotation.GeoData{
+				Geo: &annotation.GeolocationIP{City: "Not A Real City", Postal_code: "10583"},
+				ASN: &annotation.IPASNData{}},
 		},
 	}
 	handler.CurrentGeoDataset = &parser.GeoDataset{
@@ -254,29 +254,29 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 	}
 }
 
-func TestConvertIPNodeToMetaData(t *testing.T) {
+func TestConvertIPNodeToGeoData(t *testing.T) {
 	tests := []struct {
 		node parser.IPNode
 		locs []parser.LocationNode
-		res  *schema.MetaData
+		res  *annotation.GeoData
 	}{
 		{
 			node: parser.IPNode{LocationIndex: 0, PostalCode: "10583"},
 			locs: []parser.LocationNode{{CityName: "Not A Real City"}},
-			res: &schema.MetaData{
-				Geo: &schema.GeolocationIP{City: "Not A Real City", Postal_code: "10583"},
-				ASN: &schema.IPASNData{}},
+			res: &annotation.GeoData{
+				Geo: &annotation.GeolocationIP{City: "Not A Real City", Postal_code: "10583"},
+				ASN: &annotation.IPASNData{}},
 		},
 		{
 			node: parser.IPNode{LocationIndex: -1, PostalCode: "10583"},
 			locs: nil,
-			res: &schema.MetaData{
-				Geo: &schema.GeolocationIP{Postal_code: "10583"},
-				ASN: &schema.IPASNData{}},
+			res: &annotation.GeoData{
+				Geo: &annotation.GeolocationIP{Postal_code: "10583"},
+				ASN: &annotation.IPASNData{}},
 		},
 	}
 	for _, test := range tests {
-		res := handler.ConvertIPNodeToMetaData(test.node, test.locs)
+		res := handler.ConvertIPNodeToGeoData(test.node, test.locs)
 		if !reflect.DeepEqual(res, test.res) {
 			t.Errorf("Expected %s, got %s", test.res, res)
 		}
