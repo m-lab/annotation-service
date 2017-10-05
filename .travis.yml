@@ -70,6 +70,7 @@ deploy:
 
 # STAGING: Should be used AFTER code review and commit to integration branch.  Triggers
 # when *ANY* branch is tagged with staging-*'
+# TODO(gfr) Update to be consistent across projects.  See https://github.com/m-lab/etl/issues/260
 - provider: script
   script: $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-staging /tmp/mlab-staging.json
     $TRAVIS_BUILD_DIR/main annotator.yaml
