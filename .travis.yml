@@ -15,8 +15,6 @@ go:
 - 1.8
 
 before_install:
-- openssl aes-256-cbc -K $encrypted_1e0e01f6e047_key -iv $encrypted_1e0e01f6e047_iv
-  -in service-accounts.tar.enc -out keys/service-accounts.tar -d
 - go get github.com/mattn/goveralls
 - go get github.com/wadey/gocovmerge
 
@@ -28,7 +26,7 @@ before_install:
 # gcloud deploy operations.
 #
 # Reusing the etl-travis-deploy keys, since we need identical capabilities.
-- travis/decrypt.sh "$encrypted_361547783275_key" "$encrypted_361547783275_iv" keys/service-accounts.tar.enc
+- travis/decrypt.sh "$$encrypted_1e0e01f6e047_key" "$encrypted_1e0e01f6e047_iv" keys/service-accounts.tar.enc
   /tmp/service-accounts.tar /tmp
 - tar tvf /tmp/service-accounts.tar
 - echo Branch is ${TRAVIS_BRANCH} and Tag is $TRAVIS_TAG
