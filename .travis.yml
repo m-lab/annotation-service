@@ -69,7 +69,7 @@ deploy:
 # deployment to "standard" mlab-sandbox.
 - provider: script
   script: $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-sandbox /tmp/mlab-sandbox.json
-    $TRAVIS_BUILD_DIR/main annotator.yaml
+    $TRAVIS_BUILD_DIR annotator.yaml
   skip_cleanup: true
   on:
     repo: m-lab/annotation-service
@@ -80,7 +80,7 @@ deploy:
 # TODO(gfr) Update to be consistent across projects.  See https://github.com/m-lab/etl/issues/260
 - provider: script
   script: $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-staging /tmp/mlab-staging.json
-    $TRAVIS_BUILD_DIR/main annotator.yaml
+    $TRAVIS_BUILD_DIR annotator.yaml
   skip_cleanup: true
   on:
     repo: m-lab/annotation-service
@@ -91,8 +91,8 @@ deploy:
 # PROD: Should be used AFTER code review and commit to master branch.  Triggers
 # when *ANY* branch is tagged with prod-*'
 - provider: script
-  script: $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-oti /tmp/mlab-oti.json $TRAVIS_BUILD_DIR/main
-    annotator.yaml
+  script: $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-oti /tmp/mlab-oti.json
+    $TRAVIS_BUILD_DIR annotator.yaml
   skip_cleanup: true
   on:
     repo: m-lab/annotation-service
