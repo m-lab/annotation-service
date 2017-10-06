@@ -30,7 +30,7 @@ before_install:
 # gcloud deploy operations.
 #
 # Reusing the etl-travis-deploy keys, since we need identical capabilities.
-- travis/decrypt.sh "$encrypted_1e0e01f6e047_key" "$encrypted_1e0e01f6e047_iv" keys/service-accounts.tar.enc
+- travis/decrypt.sh "$encrypted_ca29bb0d9214_key" "$encrypted_ca29bb0d9214_iv" keys/service-accounts.tar.enc
   /tmp/service-accounts.tar /tmp
 - tar tvf /tmp/service-accounts.tar
 - echo Branch is ${TRAVIS_BRANCH} and Tag is $TRAVIS_TAG
@@ -45,7 +45,6 @@ script:
 - export GOOGLE_APPLICATION_CREDENTIALS="${HOME}/gcloud-service-key.json"
 - export APPENGINE_DEV_APPSERVER="${HOME}/google-cloud-sdk/bin/dev_appserver.py"
 - source "${HOME}/google-cloud-sdk/path.bash.inc"
-#- go test -v ./... 
 
 - go test -covermode=count -coverprofile=handler.cov -v github.com/m-lab/annotation-service/handler
 - go test -covermode=count -coverprofile=loader.cov -v github.com/m-lab/annotation-service/loader
