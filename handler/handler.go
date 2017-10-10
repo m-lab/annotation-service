@@ -19,6 +19,11 @@ import (
 	"github.com/m-lab/etl/annotation"
 )
 
+func init() {
+	// Always prepend the filename and line number.
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+}
+
 // A mutex to make sure that we are not reading from the dataset
 // pointer while trying to update it
 var currentDataMutex = &sync.RWMutex{}

@@ -1,3 +1,8 @@
+# etl
+| branch | travis-ci | coveralls |
+|--------|-----------|-----------|
+| master | [![Travis Build Status](https://travis-ci.org/m-lab/annotation-service.svg?branch=master)](https://travis-ci.org/m-lab/annotation-service) | [![Coverage Status](https://coveralls.io/repos/m-lab/annotation-service/badge.svg?branch=master)](https://coveralls.io/github/m-lab/annotation-service?branch=master) |
+
 Annotation integration service provides geolocation for IPv4 and IPv6 MaxMind databases from Google Cloud Storage.
 
 If an annotation request is dated prior to August 2017, location data will be derived from
