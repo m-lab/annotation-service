@@ -179,9 +179,11 @@ func GetMetadataForSingleIP(request *annotation.RequestData) *annotation.GeoData
 	var node parser.IPNode
 	// TODO: Push this logic down to searchlist (after binary search is implemented)
 	if request.IPFormat == 4 {
-		node, err = search.SearchList(CurrentGeoDataset.IP4Nodes, request.IP)
+		node, err = search.SearchBinary(
+			CurrentGeoDataset.IP4Nodes, request.IP)
 	} else if request.IPFormat == 6 {
-		node, err = search.SearchList(CurrentGeoDataset.IP6Nodes, request.IP)
+		node, err = search.SearchBinary(
+			CurrentGeoDataset.IP6Nodes, request.IP)
 	}
 
 	if err != nil {
