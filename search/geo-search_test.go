@@ -2,6 +2,7 @@ package search_test
 
 import (
 	"encoding/binary"
+	"errors"
 	"log"
 	"math/rand"
 	"net"
@@ -15,8 +16,8 @@ import (
 )
 
 var (
-	preloadComplete = false
-	preloadStatus   = nil
+	preloadComplete       = false
+	preloadStatus   error = nil
 	// Preloaded by preload()
 	gl2ipv4 []parser.IPNode
 	gl2ipv6 []parser.IPNode
@@ -84,7 +85,7 @@ func TestGeoLite1(t *testing.T) {
 func TestGeoLite2(t *testing.T) {
 	err := preload()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	i := 0
@@ -143,7 +144,7 @@ func findMiddle(low, high net.IP) net.IP {
 func BenchmarkGeoLite2ipv4(b *testing.B) {
 	err := preload()
 	if err != nil {
-		t.Error(err)
+		b.Fatal(err)
 	}
 
 	b.ResetTimer()
@@ -209,7 +210,7 @@ func preload() error {
 	// Test IPv6
 	rcIPv6, err := loader.FindFile("GeoLite2-City-Blocks-IPv6.csv", reader)
 	if err != nil {
-		preloadStatus = errors.new("Failed to create io.ReaderCloser")
+		preloadStatus = errors.New("Failed to create io.ReaderCloser")
 		return preloadStatus
 	}
 	defer rcIPv6.Close()
