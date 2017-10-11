@@ -15,8 +15,9 @@ import (
 )
 
 var (
-	// Preloaded by init()
-	//gl2locationList []parser.LocationNode
+	preloadComplete = false
+	preloadStatus   = nil
+	// Preloaded by preload()
 	gl2ipv4 []parser.IPNode
 	gl2ipv6 []parser.IPNode
 )
@@ -81,6 +82,10 @@ func TestGeoLite1(t *testing.T) {
 }
 
 func TestGeoLite2(t *testing.T) {
+	err := preload()
+	if err != nil {
+		t.Error(err)
+	}
 
 	i := 0
 	for i < len(gl2ipv6) {
@@ -136,6 +141,11 @@ func findMiddle(low, high net.IP) net.IP {
 }
 
 func BenchmarkGeoLite2ipv4(b *testing.B) {
+	err := preload()
+	if err != nil {
+		t.Error(err)
+	}
+
 	b.ResetTimer()
 
 	for n := 0; n < b.N; n++ {
@@ -145,54 +155,71 @@ func BenchmarkGeoLite2ipv4(b *testing.B) {
 	}
 }
 
-func init() {
+func preload() error {
+	if preloadComplete {
+		return preloadStatus
+	}
+	preloadComplete = true
+
 	ctx, done, err := aetest.NewContext()
 	if err != nil {
-		log.Println(err)
+		preloadStatus = err
+		return preloadStatus
 	}
 	defer done()
 	reader, err := loader.CreateZipReader(ctx, "test-annotator-sandbox", "MaxMind/2017/09/07/Maxmind%2F2017%2F09%2F07%2F20170907T023620Z-GeoLite2-City-CSV.zip")
 	if err != nil {
-		log.Println(err)
+		preloadStatus = err
+		return preloadStatus
 	}
 
 	// Load Location list
 	rc, err := loader.FindFile("GeoLite2-City-Locations-en.csv", reader)
 	if err != nil {
+		preloadStatus = err
+		return preloadStatus
 	}
 	defer rc.Close()
 
 	gl2locationList, idMap, err := parser.LoadLocListGLite2(rc)
 	if err != nil {
 		log.Println("Failed to LoadLocationList")
+		preloadStatus = err
+		return preloadStatus
 	}
 	if gl2locationList == nil || idMap == nil {
-		log.Println("Failed to create LocationList and mapID")
+		preloadStatus = errors.New("Failed to create LocationList and mapID")
+		return preloadStatus
 	}
 
 	// Benchmark IPv4
 	rcIPv4, err := loader.FindFile("GeoLite2-City-Blocks-IPv4.csv", reader)
 	if err != nil {
-		log.Println(err)
+		preloadStatus = err
+		return preloadStatus
 	}
 	defer rcIPv4.Close()
 
 	gl2ipv4, err = parser.LoadIPListGLite2(rcIPv4, idMap)
 	if err != nil {
-		log.Println(err)
+		preloadStatus = err
+		return preloadStatus
 	}
 
 	// Test IPv6
 	rcIPv6, err := loader.FindFile("GeoLite2-City-Blocks-IPv6.csv", reader)
 	if err != nil {
-		log.Println(err)
-		log.Println("Failed to create io.ReaderCloser")
+		preloadStatus = errors.new("Failed to create io.ReaderCloser")
+		return preloadStatus
 	}
 	defer rcIPv6.Close()
 	// TODO: update tests to use high level data loader functions instead of low level funcs
 	gl2ipv6, err = parser.LoadIPListGLite2(rcIPv6, idMap)
 	if err != nil {
-		log.Println(err)
-		log.Println("Failed to create ipv6")
+		preloadStatus = err
+		return preloadStatus
 	}
+	preloadComplete = true
+	preloadStatus = nil
+	return preloadStatus
 }
