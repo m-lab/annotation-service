@@ -3,6 +3,7 @@ package search_test
 import (
 	"encoding/binary"
 	"log"
+	"math/rand"
 	"net"
 	"testing"
 
@@ -11,6 +12,11 @@ import (
 	"github.com/m-lab/annotation-service/loader"
 	"github.com/m-lab/annotation-service/parser"
 	"github.com/m-lab/annotation-service/search"
+)
+
+var (
+	// Preloaded by init()
+	ipv4gl2 []parser.IPNode
 )
 
 func TestGeoLite1(t *testing.T) {
@@ -71,6 +77,7 @@ func TestGeoLite1(t *testing.T) {
 		i += 100
 	}
 }
+
 func TestGeoLite2(t *testing.T) {
 	ctx, done, err := aetest.NewContext()
 	if err != nil {
@@ -131,23 +138,12 @@ func TestGeoLite2(t *testing.T) {
 	}
 
 	// Test IPv4
-	rcIPv4, err := loader.FindFile("GeoLite2-City-Blocks-IPv4.csv", reader)
-	if err != nil {
-		log.Println(err)
-		t.Errorf("Failed to create io.ReaderCloser")
-	}
-	defer rcIPv4.Close()
-	ipv4, err := parser.LoadIPListGLite2(rcIPv4, idMap)
-	if err != nil {
-		log.Println(err)
-		t.Errorf("Failed to create ipv4")
-	}
 	i = 0
-	for i < len(ipv4) {
-		ipMiddle := findMiddle(ipv4[i].IPAddressLow, ipv4[i].IPAddressHigh)
-		ipBin, errBin := search.SearchBinary(ipv4, ipMiddle.String())
+	for i < len(ipv4gl2) {
+		ipMiddle := findMiddle(ipv4gl2[i].IPAddressLow, ipv4gl2[i].IPAddressHigh)
+		ipBin, errBin := search.SearchBinary(ipv4gl2, ipMiddle.String())
 		// Linear search, starting at current node, since it can't be earlier.
-		ipLin, errLin := search.SearchList(ipv4[i:], ipMiddle.String())
+		ipLin, errLin := search.SearchList(ipv4gl2[i:], ipMiddle.String())
 		if errBin != nil && errLin != nil && errBin.Error() != errLin.Error() {
 			log.Println(errBin.Error(), "vs", errLin.Error())
 			t.Errorf("Failed Error")
@@ -175,4 +171,52 @@ func findMiddle(low, high net.IP) net.IP {
 		}
 	}
 	return mid
+}
+
+func BenchmarkGeoLite2ipv4(b *testing.B) {
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+		i := rand.Intn(len(ipv4gl2))
+		ipMiddle := findMiddle(ipv4gl2[i].IPAddressLow, ipv4gl2[i].IPAddressHigh)
+		_, _ = search.SearchBinary(ipv4gl2, ipMiddle.String())
+	}
+}
+
+func init() {
+	ctx, done, err := aetest.NewContext()
+	if err != nil {
+		log.Println(err)
+	}
+	defer done()
+	reader, err := loader.CreateZipReader(ctx, "test-annotator-sandbox", "MaxMind/2017/09/07/Maxmind%2F2017%2F09%2F07%2F20170907T023620Z-GeoLite2-City-CSV.zip")
+	if err != nil {
+		log.Println(err)
+	}
+
+	// Load Location list
+	rc, err := loader.FindFile("GeoLite2-City-Locations-en.csv", reader)
+	if err != nil {
+	}
+	defer rc.Close()
+
+	locationList, idMap, err := parser.LoadLocListGLite2(rc)
+	if err != nil {
+		log.Println("Failed to LoadLocationList")
+	}
+	if locationList == nil || idMap == nil {
+		log.Println("Failed to create LocationList and mapID")
+	}
+
+	// Benchmark IPv4
+	rcIPv4, err := loader.FindFile("GeoLite2-City-Blocks-IPv4.csv", reader)
+	if err != nil {
+		log.Println(err)
+	}
+	defer rcIPv4.Close()
+
+	ipv4gl2, err = parser.LoadIPListGLite2(rcIPv4, idMap)
+	if err != nil {
+		log.Println(err)
+	}
 }

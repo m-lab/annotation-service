@@ -52,6 +52,8 @@ script:
 # First run all tests, to ensure that we don't miss any new tests not included in
 # the coverage collection.
 - go test ./...
+# Also run benchmarks
+- go test --bench=. ./search/...
 
 # Run all tests, collecting coverage data.
 - go test -covermode=count -coverprofile=handler.cov -v github.com/m-lab/annotation-service/handler
