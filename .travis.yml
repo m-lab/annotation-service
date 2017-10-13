@@ -75,18 +75,32 @@ script:
 deploy:
 ######################################################################
 ## Service: annotation-service -- AppEngine Flexible Environment.
-# INTEGRATION: Reviewed code, merged to integration branch, will trigger
-# deployment to "standard" mlab-sandbox.
+# SANDBOX: Reviewed code, merged to master branch.
+# Triggers when any code is merged (or pushed) to master.
 - provider: script
   script: $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-sandbox /tmp/mlab-sandbox.json
     $TRAVIS_BUILD_DIR annotator.yaml
   skip_cleanup: true
   on:
     repo: m-lab/annotation-service
-    branch: integration
+    branch: master
 
-# STAGING: Should be used AFTER code review and commit to integration branch.  Triggers
-# when *ANY* branch is tagged with staging-*'
+# SANDBOX tag:  Allows tagging any branch with sandbox-*, to trigger deploying that
+# branch to sandbox for pre-merge testing.
+# Triggers when *ANY* branch is tagged with sandbox-*'
+- provider: script
+  script: $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-sandbox /tmp/mlab-sandbox.json
+    $TRAVIS_BUILD_DIR annotator.yaml
+  skip_cleanup: true
+  on:
+    repo: m-lab/annotation-service
+    all_branches: true
+    tag: true
+    condition: $TRAVIS_TAG == sandbox-*
+
+
+# STAGING: Should be used AFTER code review and commit to integration branch.
+# Triggers when *ANY* branch is tagged with staging-*'
 # TODO(gfr) Update to be consistent across projects.  See https://github.com/m-lab/etl/issues/260
 - provider: script
   script: $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-staging /tmp/mlab-staging.json
