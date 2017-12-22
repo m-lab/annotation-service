@@ -153,18 +153,17 @@ func TestLocationListGLite1(t *testing.T) {
 	var idMap map[int]int
 	var LocList = []parser.LocationNode{
 		parser.LocationNode{
-			1,
-			"",
-			"O1",
-			"",
-			0,
-			"",
+			1, "",
+			"O1", "",
+			"", "",
+			0, "",
 		},
 		parser.LocationNode{
 			2,
 			"",
 			"AP",
 			"",
+			"", "",
 			0,
 			"",
 		},
@@ -173,6 +172,7 @@ func TestLocationListGLite1(t *testing.T) {
 			"",
 			"EU",
 			"",
+			"", "",
 			0,
 			"",
 		},
