@@ -2,6 +2,7 @@ package parser_test
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -23,6 +24,11 @@ func isEqualIPLists(listComp, list []parser.IPNode) error {
 // Returns nil if two Location lists are equal
 func isEqualLocLists(list, listComp []parser.LocationNode) error {
 	for index, element := range list {
+		if index >= len(listComp) {
+			output := fmt.Sprint("Out of range:", index)
+			log.Println(output)
+			return errors.New(output)
+		}
 		if element.GeonameID != listComp[index].GeonameID {
 			output := strings.Join([]string{"GeonameID inconsistent\ngot:", strconv.Itoa(element.GeonameID), " \nwanted:", strconv.Itoa(listComp[index].GeonameID)}, "")
 			log.Println(output)

@@ -4,13 +4,19 @@ import (
 	"archive/zip"
 	"log"
 	"net"
-	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/go-test/deep"
 
 	"github.com/m-lab/annotation-service/loader"
 	"github.com/m-lab/annotation-service/parser"
 )
+
+func init() {
+	// Always prepend the filename and line number.
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+}
 
 func TestIPLisGLite2(t *testing.T) {
 	var ipv4, ipv6 []parser.IPNode
@@ -76,12 +82,12 @@ func TestIPLisGLite2(t *testing.T) {
 	}
 	reader, err := zip.OpenReader("testdata/GeoLite2City.zip")
 	if err != nil {
-		t.Errorf("Error opening zip file")
+		t.Fatalf("Error opening zip file")
 	}
 
 	rcIPv4, err := loader.FindFile("GeoLite2-City-Blocks-IPv4.csv", &reader.Reader)
 	if err != nil {
-		t.Errorf("Failed to create io.ReaderCloser")
+		t.Fatalf("Failed to create io.ReaderCloser")
 	}
 	defer rcIPv4.Close()
 	ipv4, err = parser.LoadIPListGLite2(rcIPv4, locationIdMap)
@@ -112,49 +118,47 @@ func TestIPLisGLite2(t *testing.T) {
 func TestLocationListGLite2(t *testing.T) {
 	var locationList []parser.LocationNode
 	var idMap map[int]int
-	var LocList = []parser.LocationNode{
+	var locList = []parser.LocationNode{
 		parser.LocationNode{
 			32909,
-			"AS",
-			"IR",
-			"Iran",
-			"", "",
-			0,
-			"Shahre Jadide Andisheh",
+			"AS", "IR", "Iran",
+			"07", "Ostan-e Tehran",
+			0, "Shahre Jadide Andisheh",
 		},
 		parser.LocationNode{
 			49518,
-			"AF",
-			"RW",
-			"Rwanda",
+			"AF", "RW", "Rwanda",
 			"", "",
-			0,
-			"",
+			0, "",
 		},
 		parser.LocationNode{
 			51537,
-			"AF",
-			"SO",
-			"Somalia",
+			"AF", "SO", "Somalia",
 			"", "",
-			0,
-			"",
+			0, "",
+		},
+		parser.LocationNode{
+			5127766,
+			"NA", "US", "UnitedStates",
+			"NY", "NewYork",
+			538, "MountMorris",
 		},
 	}
-	LocIdMap := map[int]int{
-		51537: 2,
-		49518: 1,
-		32909: 0,
+	locIdMap := map[int]int{
+		5127766: 3,
+		51537:   2,
+		49518:   1,
+		32909:   0,
 	}
 
 	reader, err := zip.OpenReader("testdata/GeoLite2City.zip")
 	if err != nil {
-		t.Errorf("Error opening zip file")
+		t.Fatalf("Error opening zip file")
 	}
 
 	rc, err := loader.FindFile("GeoLite2-City-Locations-en.csv", &reader.Reader)
 	if err != nil {
-		t.Errorf("Failed to create io.ReaderCloser")
+		t.Fatalf("Failed to create io.ReaderCloser")
 	}
 	defer rc.Close()
 	locationList, idMap, err = parser.LoadLocListGLite2(rc)
@@ -166,14 +170,18 @@ func TestLocationListGLite2(t *testing.T) {
 		t.Errorf("Failed to create LocationList and mapID")
 	}
 
-	err = isEqualLocLists(locationList, LocList)
+	if diff := deep.Equal(locationList, locList); diff != nil {
+		log.Printf("%+v\n", locationList)
+		log.Printf("%+v\n", locList)
+		t.Error(diff)
+	}
+	err = isEqualLocLists(locationList, locList)
 	if err != nil {
 		t.Errorf("Location lists are not equal")
 	}
 
-	eq := reflect.DeepEqual(LocIdMap, idMap)
-	if !eq {
-		t.Errorf("Location maps are not equal")
+	if diff := deep.Equal(locIdMap, idMap); diff != nil {
+		t.Error(diff)
 	}
 }
 
