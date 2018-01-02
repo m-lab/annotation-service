@@ -98,6 +98,7 @@ func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 			}
 			if len(record) != r.FieldsPerRecord {
 				log.Println("Incorrect number of columns in IP list got: ", len(record), " wanted: ", r.FieldsPerRecord)
+				log.Println(record)
 				return nil, nil, errors.New("Corrupted Data: wrong number of columns")
 
 			} else {

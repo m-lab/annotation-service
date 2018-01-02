@@ -59,6 +59,11 @@ func isEqualLocLists(list, listComp []parser.LocationNode) error {
 			log.Println(output)
 			return errors.New(output)
 		}
+		if element.RegionName != listComp[index].RegionName {
+			output := strings.Join([]string{"RegionName inconsistent\ngot:", element.RegionName, " \nwanted:", listComp[index].RegionName}, "")
+			log.Println(output)
+			return errors.New(output)
+		}
 	}
 	return nil
 }
