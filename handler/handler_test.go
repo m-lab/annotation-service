@@ -24,7 +24,7 @@ func TestAnnotate(t *testing.T) {
 		time string
 		res  string
 	}{
-		{"1.4.128.0", "625600", `{"Geo":{"city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}}`},
+		{"1.4.128.0", "625600", `{"Geo":{"region":"Maine","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}}`},
 		{"This will be an error.", "1000", "Invalid request"},
 	}
 	handler.CurrentGeoDataset = &parser.GeoDataset{
@@ -46,7 +46,7 @@ func TestAnnotate(t *testing.T) {
 		},
 		LocationNodes: []parser.LocationNode{
 			{
-				CityName: "Not A Real City",
+				CityName: "Not A Real City", RegionName: "Maine",
 			},
 		},
 	}
@@ -172,7 +172,7 @@ func TestBatchAnnotate(t *testing.T) {
 		{
 			body: `[{"ip": "127.0.0.1", "timestamp": "2017-08-25T13:31:12.149678161-04:00"},
                                {"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "timestamp": "2017-08-25T13:31:12.149678161-04:00"}]`,
-			res: `{"127.0.0.1ov94o0":{"Geo":{"city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}},"2620:0:1003:1008:5179:57e3:3c75:1886ov94o0":{"Geo":{"city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}}}`,
+			res: `{"127.0.0.1ov94o0":{"Geo":{"region":"Maine","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}},"2620:0:1003:1008:5179:57e3:3c75:1886ov94o0":{"Geo":{"region":"Maine","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}}}`,
 		},
 	}
 	handler.CurrentGeoDataset = &parser.GeoDataset{
@@ -194,7 +194,7 @@ func TestBatchAnnotate(t *testing.T) {
 		},
 		LocationNodes: []parser.LocationNode{
 			{
-				CityName: "Not A Real City",
+				CityName: "Not A Real City", RegionName: "Maine",
 			},
 		},
 	}
@@ -262,9 +262,9 @@ func TestConvertIPNodeToGeoData(t *testing.T) {
 	}{
 		{
 			node: parser.IPNode{LocationIndex: 0, PostalCode: "10583"},
-			locs: []parser.LocationNode{{CityName: "Not A Real City"}},
+			locs: []parser.LocationNode{{CityName: "Not A Real City", RegionName: "Maine"}},
 			res: &annotation.GeoData{
-				Geo: &annotation.GeolocationIP{City: "Not A Real City", Postal_code: "10583"},
+				Geo: &annotation.GeolocationIP{City: "Not A Real City", Postal_code: "10583", Region: "Maine"},
 				ASN: &annotation.IPASNData{}},
 		},
 		{
