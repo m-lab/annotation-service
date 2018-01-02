@@ -73,7 +73,7 @@ func TestIPLisGLite2(t *testing.T) {
 		},
 	}
 
-	locationIdMap := map[int]int{
+	locationIDMap := map[int]int{
 		2151718: 0,
 		1810821: 4,
 		5363990: 4,
@@ -90,7 +90,7 @@ func TestIPLisGLite2(t *testing.T) {
 		t.Fatalf("Failed to create io.ReaderCloser")
 	}
 	defer rcIPv4.Close()
-	ipv4, err = parser.LoadIPListGLite2(rcIPv4, locationIdMap)
+	ipv4, err = parser.LoadIPListGLite2(rcIPv4, locationIDMap)
 	if err != nil {
 		t.Errorf("Failed to create ipv4")
 	}
@@ -104,7 +104,7 @@ func TestIPLisGLite2(t *testing.T) {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
 	defer rcIPv6.Close()
-	ipv6, err = parser.LoadIPListGLite2(rcIPv6, locationIdMap)
+	ipv6, err = parser.LoadIPListGLite2(rcIPv6, locationIDMap)
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Failed to create ipv6")
@@ -116,9 +116,9 @@ func TestIPLisGLite2(t *testing.T) {
 }
 
 func TestLocationListGLite2(t *testing.T) {
-	var locationList []parser.LocationNode
-	var idMap map[int]int
-	var locList = []parser.LocationNode{
+	var actualLocList []parser.LocationNode
+	var actualIDMap map[int]int
+	var expectedLocList = []parser.LocationNode{
 		parser.LocationNode{
 			32909,
 			"AS", "IR", "Iran",
@@ -144,7 +144,7 @@ func TestLocationListGLite2(t *testing.T) {
 			538, "Mount Morris",
 		},
 	}
-	locIdMap := map[int]int{
+	expectedIDMap := map[int]int{
 		5127766: 3,
 		51537:   2,
 		49518:   1,
@@ -161,26 +161,26 @@ func TestLocationListGLite2(t *testing.T) {
 		t.Fatalf("Failed to create io.ReaderCloser")
 	}
 	defer rc.Close()
-	locationList, idMap, err = parser.LoadLocListGLite2(rc)
+	actualLocList, actualIDMap, err = parser.LoadLocListGLite2(rc)
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Failed to LoadLocationList")
 	}
-	if locationList == nil || idMap == nil {
+	if actualLocList == nil || actualIDMap == nil {
 		t.Errorf("Failed to create LocationList and mapID")
 	}
 
-	if diff := deep.Equal(locationList, locList); diff != nil {
-		log.Printf("%+v\n", locationList)
-		log.Printf("%+v\n", locList)
+	if diff := deep.Equal(actualLocList, expectedLocList); diff != nil {
+		log.Printf("%+v\n", actualLocList)
+		log.Printf("%+v\n", expectedLocList)
 		t.Error(diff)
 	}
-	err = isEqualLocLists(locationList, locList)
+	err = isEqualLocLists(actualLocList, expectedLocList)
 	if err != nil {
 		t.Errorf("Location lists are not equal")
 	}
 
-	if diff := deep.Equal(locIdMap, idMap); diff != nil {
+	if diff := deep.Equal(expectedIDMap, actualIDMap); diff != nil {
 		t.Error(diff)
 	}
 }
