@@ -139,9 +139,9 @@ func TestLocationListGLite2(t *testing.T) {
 		},
 		parser.LocationNode{
 			5127766,
-			"NA", "US", "UnitedStates",
-			"NY", "NewYork",
-			538, "MountMorris",
+			"NA", "US", "United States",
+			"NY", "New York",
+			538, "Mount Morris",
 		},
 	}
 	locIdMap := map[int]int{
@@ -188,11 +188,11 @@ func TestLocationListGLite2(t *testing.T) {
 func TestCorruptData(t *testing.T) {
 	reader, err := zip.OpenReader("testdata/GeoLite2CityCORRUPT.zip")
 	if err != nil {
-		t.Errorf("Error opening zip file")
+		t.Fatalf("Error opening zip file")
 	}
 	rc, err := loader.FindFile("GeoLite2-City-Locations-en.csv", &reader.Reader)
 	if err != nil {
-		t.Errorf("Error finding file")
+		t.Fatalf("Error finding file")
 	}
 	_, _, err = parser.LoadLocListGLite2(rc)
 	if err.Error() != "Corrupted Data: wrong number of columns" {
