@@ -76,6 +76,8 @@ func rangeCIDR(cidr string) (net.IP, net.IP, error) {
 }
 
 // Create Location list for GLite2 databases
+// TODO This code is a bit fragile.  Should probably parse the header and
+// use that to guide the parsing of the rows.
 func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 	idMap := make(map[int]int, mapMax)
 	list := []LocationNode{}
@@ -96,6 +98,7 @@ func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 			}
 			if len(record) != r.FieldsPerRecord {
 				log.Println("Incorrect number of columns in IP list got: ", len(record), " wanted: ", r.FieldsPerRecord)
+				log.Println(record)
 				return nil, nil, errors.New("Corrupted Data: wrong number of columns")
 
 			} else {
@@ -126,6 +129,9 @@ func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 			log.Println("Country name should be letters only : ", record[5])
 			return nil, nil, errors.New("Corrupted Data: country name should be letters")
 		}
+		// TODO - should probably do some validation.
+		lNode.RegionCode = record[6]
+		lNode.RegionName = record[7]
 		lNode.MetroCode, err = strconv.ParseInt(record[11], 10, 64)
 		if err != nil {
 			if len(record[11]) > 0 {

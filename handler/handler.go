@@ -175,6 +175,7 @@ func GetMetadataForSingleIP(request *annotation.RequestData) *annotation.GeoData
 	// TODO: Figure out which table to use based on time
 	err := errors.New("Unknown IP Format!")
 	currentDataMutex.RLock()
+	// TODO(gfr) release lock sooner?
 	defer currentDataMutex.RUnlock()
 	var node parser.IPNode
 	// TODO: Push this logic down to searchlist (after binary search is implemented)
@@ -207,10 +208,13 @@ func ConvertIPNodeToGeoData(ipNode parser.IPNode, locationNodes []parser.Locatio
 		Geo: &annotation.GeolocationIP{
 			Continent_code: locNode.ContinentCode,
 			Country_code:   locNode.CountryCode,
+			Country_code3:  "",
 			Country_name:   locNode.CountryName,
-			Postal_code:    ipNode.PostalCode,
+			Region:         locNode.RegionName,
 			Metro_code:     locNode.MetroCode,
 			City:           locNode.CityName,
+			Area_code:      0, //locNode.AreaCode,
+			Postal_code:    ipNode.PostalCode,
 			Latitude:       ipNode.Latitude,
 			Longitude:      ipNode.Longitude,
 		},

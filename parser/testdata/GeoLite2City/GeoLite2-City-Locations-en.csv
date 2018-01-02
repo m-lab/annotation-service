@@ -2,3 +2,4 @@ geoname_id,locale_code,continent_code,continent_name,country_iso_code,country_na
 32909,en,AS,Asia,IR,Iran,07,"Ostan-e Tehran",,,"Shahre Jadide Andisheh",,Asia/Tehran
 49518,en,AF,Africa,RW,Rwanda,,,,,,,Africa/Kigali
 51537,en,AF,Africa,SO,Somalia,,,,,,,Africa/Mogadishu
+5127766,en,NA,"North America",US,"United States",NY,"New York",,,"Mount Morris",538,America/New_York

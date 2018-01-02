@@ -30,6 +30,8 @@ type LocationNode struct {
 	ContinentCode string
 	CountryCode   string
 	CountryName   string
+	RegionCode    string
+	RegionName    string
 	MetroCode     int64
 	CityName      string
 }
