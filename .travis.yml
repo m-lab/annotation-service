@@ -75,51 +75,35 @@ script:
 deploy:
 ######################################################################
 ## Service: annotation-service -- AppEngine Flexible Environment.
-# SANDBOX: Reviewed code, merged to master branch.
-# Triggers when any code is merged (or pushed) to master.
+
+# SANDBOX:  Allows any branch with sandbox-*, to trigger deploying that
+# branch to sandbox for pre-review testing.
 - provider: script
   script: $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-sandbox /tmp/mlab-sandbox.json
     $TRAVIS_BUILD_DIR annotator.yaml
   skip_cleanup: true
   on:
     repo: m-lab/annotation-service
-    branch: master
-
-# SANDBOX tag:  Allows tagging any branch with sandbox-*, to trigger deploying that
-# branch to sandbox for pre-merge testing.
-# Triggers when *ANY* branch is tagged with sandbox-*'
-- provider: script
-  script: $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-sandbox /tmp/mlab-sandbox.json
-    $TRAVIS_BUILD_DIR annotator.yaml
-  skip_cleanup: true
-  on:
-    repo: m-lab/annotation-service
-    all_branches: true
-    tag: true
-    condition: $TRAVIS_TAG == sandbox-*
+    branch: sandbox-*
+    condition: "$TRAVIS_EVENT_TYPE == push"
 
 
-# STAGING: Should be used AFTER code review and commit to integration branch.
-# Triggers when *ANY* branch is tagged with staging-*'
-# TODO(gfr) Update to be consistent across projects.  See https://github.com/m-lab/etl/issues/260
+# STAGING: Should trigger AFTER code review and commit to master branch.
 - provider: script
   script: $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-staging /tmp/mlab-staging.json
     $TRAVIS_BUILD_DIR annotator.yaml
   skip_cleanup: true
   on:
     repo: m-lab/annotation-service
-    all_branches: true
-    tag: true
-    condition: $TRAVIS_TAG == staging-*
+    branch: master
 
-# PROD: Should be used AFTER code review and commit to master branch.  Triggers
-# when *ANY* branch is tagged with prod-*'
+# PROD: Should trigger AFTER code review and commit to master branch. Triggers
+# when tagged with prod-*.
 - provider: script
   script: $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-oti /tmp/mlab-oti.json
     $TRAVIS_BUILD_DIR annotator.yaml
   skip_cleanup: true
   on:
     repo: m-lab/annotation-service
-    all_branches: true
     tag: true
-    condition: $TRAVIS_TAG == prod-*
+    condition: "$TRAVIS_TAG == prod-*"
