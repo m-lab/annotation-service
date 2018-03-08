@@ -33,6 +33,8 @@ func SearchList(list []parser.IPNode, ipLookUp string) (parser.IPNode, error) {
 	return parser.IPNode{}, errors.New("Node not found\n")
 }
 
+var ErrNodeNotFound = errors.New("node not found")
+
 func SearchBinary(list []parser.IPNode, ipLookUp string) (p parser.IPNode, e error) {
 	start := 0
 	end := len(list) - 1
@@ -49,5 +51,5 @@ func SearchBinary(list []parser.IPNode, ipLookUp string) (p parser.IPNode, e err
 			end = median - 1
 		}
 	}
-	return p, errors.New("Node not found\n")
+	return p, ErrNodeNotFound
 }

@@ -173,7 +173,7 @@ func GetMetadataForSingleIP(request *annotation.RequestData) *annotation.GeoData
 		return nil
 	}
 	// TODO: Figure out which table to use based on time
-	err := errors.New("Unknown IP Format!")
+	err := errors.New("unknown IP format")
 	currentDataMutex.RLock()
 	// TODO(gfr) release lock sooner?
 	defer currentDataMutex.RUnlock()
@@ -188,7 +188,10 @@ func GetMetadataForSingleIP(request *annotation.RequestData) *annotation.GeoData
 	}
 
 	if err != nil {
-		log.Println(err)
+		// ErrNodeNotFound is super spammy - 10% of requests, so suppress those.
+		if err != search.ErrNodeNotFound {
+			log.Println(err, request.IP)
+		}
 		//TODO metric here
 		return nil
 	}
