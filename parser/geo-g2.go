@@ -83,13 +83,25 @@ func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 	list := []LocationNode{}
 	r := csv.NewReader(reader)
 	// Skip the first line
-	_, err := r.Read()
+	// TODO - we should parse the first line, instead of skipping it!!
+	// This should set r.FieldsPerRecord.
+	first, err := r.Read()
 	if err == io.EOF {
 		log.Println("Empty input data")
 		return nil, nil, errors.New("Empty input data")
 	}
+	// TODO - this is a bit hacky.  May want to improve it.
+	// Older geoLite2 have 13 columns, but since 2018/03, they have 14 columns.
+	// This will print a log every time it loads a newer location file.
+	if len(first) != locationNumColumnsGlite2 {
+		log.Println("Incorrect number of columns in header, got: ", len(first), " wanted: ", locationNumColumnsGlite2)
+		log.Println(first)
+		if len(first) < locationNumColumnsGlite2 {
+			return nil, nil, errors.New("Corrupted Data: wrong number of columns")
+		}
+	}
 	// FieldsPerRecord is the expected column length
-	r.FieldsPerRecord = locationNumColumnsGlite2
+	// r.FieldsPerRecord = locationNumColumnsGlite2
 	for {
 		record, err := r.Read()
 		if err != nil {
