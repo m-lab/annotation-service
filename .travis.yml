@@ -76,7 +76,7 @@ deploy:
 ######################################################################
 ## Service: annotation-service -- AppEngine Flexible Environment.
 
-# SANDBOX tag:  Allows any branch with sandbox-*, to trigger deploying that
+# SANDBOX:  Allows any branch with sandbox-*, to trigger deploying that
 # branch to sandbox for pre-review testing.
 - provider: script
   script: $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-sandbox /tmp/mlab-sandbox.json
@@ -88,7 +88,7 @@ deploy:
     condition: "$TRAVIS_EVENT_TYPE == push"
 
 
-# STAGING: Should be used AFTER code review and commit to master branch.
+# STAGING: Should trigger AFTER code review and commit to master branch.
 - provider: script
   script: $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-staging /tmp/mlab-staging.json
     $TRAVIS_BUILD_DIR annotator.yaml
@@ -97,7 +97,7 @@ deploy:
     repo: m-lab/annotation-service
     branch: master
 
-# PROD: Should be used AFTER code review and commit to master branch.  Triggers
+# PROD: Should trigger AFTER code review and commit to master branch. Triggers
 # when tagged with prod-*.
 - provider: script
   script: $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-oti /tmp/mlab-oti.json
