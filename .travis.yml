@@ -105,5 +105,5 @@ deploy:
   skip_cleanup: true
   on:
     repo: m-lab/annotation-service
-    tag: true
+    all_branches: true
     condition: "$TRAVIS_TAG == prod-*"
