@@ -211,12 +211,12 @@ func ConvertIPNodeToGeoData(ipNode parser.IPNode, locationNodes []parser.Locatio
 		Geo: &annotation.GeolocationIP{
 			Continent_code: locNode.ContinentCode,
 			Country_code:   locNode.CountryCode,
-			Country_code3:  "",
+			Country_code3:  "", // missing from geoLite2 ?
 			Country_name:   locNode.CountryName,
-			Region:         locNode.RegionName,
+			Region:         locNode.RegionCode,
 			Metro_code:     locNode.MetroCode,
 			City:           locNode.CityName,
-			Area_code:      0, //locNode.AreaCode,
+			Area_code:      0, // new geoLite2 does not have area code.
 			Postal_code:    ipNode.PostalCode,
 			Latitude:       ipNode.Latitude,
 			Longitude:      ipNode.Longitude,
