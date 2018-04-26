@@ -168,15 +168,19 @@ func TestBatchAnnotate(t *testing.T) {
 	tests := []struct {
 		body string
 		res  string
+		alt  string // Alternate valid result
 	}{
 		{
 			body: "{",
 			res:  "Invalid Request!",
+			alt:  "",
 		},
 		{
 			body: `[{"ip": "127.0.0.1", "timestamp": "2017-08-25T13:31:12.149678161-04:00"},
                                {"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "timestamp": "2017-08-25T13:31:12.149678161-04:00"}]`,
 			res: `{"127.0.0.1ov94o0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583"},"ASN":{}},"2620:0:1003:1008:5179:57e3:3c75:1886ov94o0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583"},"ASN":{}}}`,
+			// TODO - remove alt after updating json annotations to omitempty.
+			alt: `{"127.0.0.1ov94o0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}},"2620:0:1003:1008:5179:57e3:3c75:1886ov94o0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}}}`,
 		},
 	}
 	handler.CurrentGeoDataset = &parser.GeoDataset{
@@ -207,7 +211,7 @@ func TestBatchAnnotate(t *testing.T) {
 		r := httptest.NewRequest("POST", "/batch_annotate", strings.NewReader(test.body))
 		handler.BatchAnnotate(w, r)
 		body := w.Body.String()
-		if string(body) != test.res {
+		if string(body) != test.res && string(body) != test.alt {
 			t.Errorf("\nGot\n__%s__\nexpected\n__%s__\n", body, test.res)
 		}
 	}
