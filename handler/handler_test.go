@@ -72,13 +72,13 @@ func TestValidateAndParse(t *testing.T) {
 			req: httptest.NewRequest("GET",
 				"http://example.com/annotate?ip_addr=127.0.0.1&since_epoch=fail", nil),
 			res: nil,
-			err: errors.New("Invalid time"),
+			err: errors.New("invalid time"),
 		},
 		{
 			req: httptest.NewRequest("GET",
 				"http://example.com/annotate?ip_addr=fail&since_epoch=10", nil),
 			res: nil,
-			err: errors.New("Invalid IP address"),
+			err: errors.New("invalid IP address"),
 		},
 		{
 			req: httptest.NewRequest("GET",

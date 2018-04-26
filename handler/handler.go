@@ -24,17 +24,21 @@ func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 }
 
-// A mutex to make sure that we are not reading from the dataset
-// pointer while trying to update it
-var currentDataMutex = &sync.RWMutex{}
+var (
+	// A mutex to make sure that we are not reading from the dataset
+	// pointer while trying to update it
+	currentDataMutex = &sync.RWMutex{}
 
-// This is a pointer to a GeoDataset struct containing the absolute
-// latest data for the annotator to search and reply with
-var CurrentGeoDataset *parser.GeoDataset = nil
+	// This is a pointer to a GeoDataset struct containing the absolute
+	// latest data for the annotator to search and reply with
+	CurrentGeoDataset *parser.GeoDataset = nil
+)
 
-// This is the base in which we should encode the timestamp when we
-// are creating the keys for the mapt to return for batch requests
-const encodingBase = 36
+const (
+	// This is the base in which we should encode the timestamp when we
+	// are creating the keys for the mapt to return for batch requests
+	encodingBase = 36
+)
 
 // A function to set up any handlers that are needed, including url
 // handlers and pubsub handlers
@@ -79,19 +83,35 @@ func ValidateAndParse(r *http.Request) (*annotation.RequestData, error) {
 
 	time_milli, err := strconv.ParseInt(query.Get("since_epoch"), 10, 64)
 	if err != nil {
-		return nil, errors.New("Invalid time")
+		return nil, errors.New("invalid time")
 	}
 
 	ip := query.Get("ip_addr")
 
 	newIP := net.ParseIP(ip)
 	if newIP == nil {
-		return nil, errors.New("Invalid IP address")
+		return nil, errors.New("invalid IP address")
 	}
 	if newIP.To4() != nil {
 		return &annotation.RequestData{ip, 4, time.Unix(time_milli, 0)}, nil
 	}
 	return &annotation.RequestData{ip, 6, time.Unix(time_milli, 0)}, nil
+}
+
+// BatchResponse is the response type for batch requests.  It is converted to
+// json for HTTP requests.
+type BatchResponse struct {
+	Version string
+	Date    time.Time
+	Results map[string]*annotation.GeoData
+}
+
+// NewBatchResponse returns a new response struct.
+// Caller must properly initialize the version and date strings.
+// TODO - pass in the data source and use to populate the version/date.
+func NewBatchResponse(size int) *BatchResponse {
+	responseMap := make(map[string]*annotation.GeoData, size)
+	return &BatchResponse{"", time.Time{}, responseMap}
 }
 
 // BatchAnnotate is a URL handler that expects the body of the request
@@ -151,7 +171,7 @@ func BatchValidateAndParse(source io.Reader) ([]annotation.RequestData, error) {
 	for _, data := range uncheckedData {
 		newIP := net.ParseIP(data.IP)
 		if newIP == nil {
-			return nil, errors.New("Invalid IP address.")
+			return nil, errors.New("invalid IP address")
 		}
 		ipType := 6
 		if newIP.To4() != nil {
