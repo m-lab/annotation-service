@@ -24,7 +24,7 @@ func TestAnnotate(t *testing.T) {
 		time string
 		res  string
 	}{
-		{"1.4.128.0", "625600", `{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}}`},
+		{"1.4.128.0", "625600", `{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":42.1,"longitude":-73.1},"ASN":{}}`},
 		{"This will be an error.", "1000", "Invalid request"},
 	}
 	handler.CurrentGeoDataset = &parser.GeoDataset{
@@ -34,6 +34,8 @@ func TestAnnotate(t *testing.T) {
 				IPAddressHigh: net.IPv4(255, 255, 255, 255),
 				LocationIndex: 0,
 				PostalCode:    "10583",
+				Latitude:      42.1,
+				Longitude:     -73.1,
 			},
 		},
 		IP6Nodes: []parser.IPNode{
@@ -42,6 +44,8 @@ func TestAnnotate(t *testing.T) {
 				IPAddressHigh: net.IP{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 				LocationIndex: 0,
 				PostalCode:    "10583",
+				Latitude:      42.1,
+				Longitude:     -73.1,
 			},
 		},
 		LocationNodes: []parser.LocationNode{
@@ -172,7 +176,7 @@ func TestBatchAnnotate(t *testing.T) {
 		{
 			body: `[{"ip": "127.0.0.1", "timestamp": "2017-08-25T13:31:12.149678161-04:00"},
                                {"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "timestamp": "2017-08-25T13:31:12.149678161-04:00"}]`,
-			res: `{"127.0.0.1ov94o0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}},"2620:0:1003:1008:5179:57e3:3c75:1886ov94o0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}}}`,
+			res: `{"127.0.0.1ov94o0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583"},"ASN":{}},"2620:0:1003:1008:5179:57e3:3c75:1886ov94o0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583"},"ASN":{}}}`,
 		},
 	}
 	handler.CurrentGeoDataset = &parser.GeoDataset{
