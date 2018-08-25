@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"trie"
 )
 
 const mapMax = 200000
@@ -36,12 +37,21 @@ type LocationNode struct {
 	CityName      string
 }
 
+
+// ASN data
+type ASNNode struct {
+	ASN           string
+	ASN_org       string
+}
+
 // The GeoDataset struct bundles all the data needed to search and
 // find data into one common structure
 type GeoDataset struct {
 	IP4Nodes      []IPNode       // The IPNode list containing IP4Nodes
 	IP6Nodes      []IPNode       // The IPNode list containing IP6Nodes
 	LocationNodes []LocationNode // The location nodes corresponding to the IPNodes
+	ASN4Nodes     trie.Trie
+	// Add the asnNodes here
 }
 
 // Verify column length

@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"archive/zip"
 	"encoding/csv"
 	"errors"
@@ -9,7 +10,7 @@ import (
 	"net"
 	"regexp"
 	"strconv"
-
+	"trie"
 	"github.com/m-lab/annotation-service/loader"
 )
 
@@ -35,7 +36,7 @@ func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
 	if err != nil {
 		return nil, err
 	}
-        # NEED TO UPDATE geoidMap with the ASN info
+        // NEED TO UPDATE geoidMap with the ASN info
 	blocks4, err := loader.FindFile(geoLite2BlocksFilenameIP4, zip)
 	if err != nil {
 		return nil, err
@@ -52,6 +53,16 @@ func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
 	if err != nil {
 		return nil, err
 	}
+	asns4, err := loader.FindFile(geoLite2ASNFilenameIP4, zip)
+	if err != nil {
+		return nil, err
+	}
+	asnNodes4, err := LoadASN4ListGLite2(asns4)
+	fmt.Println("%d", asnNodes4.Len())
+	if err != nil {
+		return nil, err
+	}
+	// TODO: Add asnNodes4 to the return
 	return &GeoDataset{IP4Nodes: ipNodes4, IP6Nodes: ipNodes6, LocationNodes: locationNode}, nil
 }
 
@@ -223,4 +234,41 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 		list = append(list, peek)
 	}
 	return list, nil
+}
+
+
+func LoadASN4ListGLite2(reader io.Reader) (trie.Trie, error) {
+	//
+	var trieNode trie.Trie
+	trie.New()
+	trieNode.Init()
+	r := csv.NewReader(reader)
+
+	// Skip first line
+	_, err := r.Read()
+	if err == io.EOF {
+		log.Println("Empty input data")
+		return nil, errors.New("Empty input data")
+	}
+	for {
+		var entry ASNNode
+		// Example GLite2 record: [1.0.0.0/24,13335,"Cloudflare Inc"]
+		record, err := r.Read()
+		if err == io.EOF {
+			break
+		}
+		err = checkNumColumns(record, asnNumColumnsGlite2)
+		if err != nil {
+			return nil, err
+		}
+		entry.ASN = record[1]
+		entry.ASN_org = record[2]
+		trieNode.Insert(record[0], entry)
+	}
+	return trieNode, nil
+}
+
+
+func main(){
+	
 }
