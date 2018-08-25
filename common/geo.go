@@ -24,7 +24,11 @@ type GeolocationIP struct {
 
 // The struct that will hold the IP/ASN data when it gets added to the
 // schema. Currently empty and unused.
-type IPASNData struct{}
+type IPASNData struct{
+        ASN            int32   `json:"asn,,omitempty"`            // Autonomous System Number                 
+        Prefix         int     `json:"prefix,,omitempty"`         // The prefix that the IP matched           
+        ASN_org        string  `json:"asn_org,,omitempty"`        // Owning organization of the ASN  
+}
 
 // The main struct for the geo metadata, which holds pointers to the
 // Geolocation data and the IP/ASN data. This is what we parse the JSON

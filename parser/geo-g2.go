@@ -16,10 +16,13 @@ import (
 const (
 	ipNumColumnsGlite2        = 10
 	locationNumColumnsGlite2  = 13
+        asnNumColumnsGlite2       = 3
 	gLite2Prefix              = "GeoLite2-City"
 	geoLite2BlocksFilenameIP4 = "GeoLite2-City-Blocks-IPv4.csv"  // Filename of ipv4 blocks file
 	geoLite2BlocksFilenameIP6 = "GeoLite2-City-Blocks-IPv6.csv"  // Filename of ipv6 blocks file
 	geoLite2LocationsFilename = "GeoLite2-City-Locations-en.csv" // Filename of locations file
+        geoLite2ASNFilenameIP4    = "GeoLite2-ASN-Blocks-IPv4.csv"   // Filename of ipv4 asn file
+        geoLite2ASNFilenameIP6    = "GeoLite2-ASN-Blocks-IPv6.csv"   // Filename of ipv4 asn file
 )
 
 func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
@@ -32,6 +35,7 @@ func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
 	if err != nil {
 		return nil, err
 	}
+        # NEED TO UPDATE geoidMap with the ASN info
 	blocks4, err := loader.FindFile(geoLite2BlocksFilenameIP4, zip)
 	if err != nil {
 		return nil, err

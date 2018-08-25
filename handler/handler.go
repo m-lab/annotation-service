@@ -241,7 +241,11 @@ func ConvertIPNodeToGeoData(ipNode parser.IPNode, locationNodes []parser.Locatio
 			Latitude:       ipNode.Latitude,
 			Longitude:      ipNode.Longitude,
 		},
-		ASN: &common.IPASNData{},
+		ASN: &common.IPASNData{
+                        ASN:            locNode.ASN,
+                        Prefix:         locNode.Prefix,
+                        ASN_org:        locNode.ASN_org,
+                },
 	}
 
 }
