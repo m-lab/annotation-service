@@ -85,13 +85,15 @@ gs://downloader-mlab-oti/Maxmind/2018/02/08/20180208T013555Z-GeoLite2-City-CSV.z
 import (
 	"context"
 	"errors"
-	"os"
+	"fmt"
 	"regexp"
 	"strconv"
 
-	"google.golang.org/api/iterator"
-
 	"cloud.google.com/go/storage"
+	"github.com/m-lab/annotation-service/handler/geoip"
+	"github.com/m-lab/annotation-service/loader"
+	"github.com/m-lab/annotation-service/parser"
+	"google.golang.org/api/iterator"
 )
 
 // This is the regex used to filter for which files we want to consider acceptable for using with Geolite2
@@ -99,7 +101,9 @@ var GeoLegacyRegex = regexp.MustCompile(`.*-GeoLiteCity.dat.*`)
 var GeoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
 var GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
 
-var BucketName = "downloader-" + os.Getenv("GCLOUD_PROJECT") // This is the bucket containing maxmind files
+//var BucketName = "downloader-" + os.Getenv("GCLOUD_PROJECT") // This is the bucket containing maxmind files
+
+var BucketName = "downloader-mlab-oti"
 
 const (
 	MaxmindPrefix = "Maxmind/" // Folder containing the maxmind files
@@ -132,7 +136,6 @@ func SelectGeoLegacyFile(requestDate int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	BucketName := "downloader-mlab-oti"
 	prospectiveFiles := client.Bucket(BucketName).Objects(ctx, &storage.Query{Prefix: MaxmindPrefix})
 	filename := ""
 	lastest_filename := ""
@@ -172,4 +175,51 @@ func SelectGeoLegacyFile(requestDate int) (string, error) {
 		filename = lastest_filename
 	}
 	return filename, nil
+}
+
+// LoadGeoliteDataset will check GCS for the matching dataset, download
+// it, process it, and load it into memory so that it can be easily
+// searched, then it will return a pointer to that GeoDataset or an error.
+func LoadLegacyGeoliteDataset(requestDate int) (*geoip.GeoIP, error) {
+	if requestDate <= GeoLite2CutOffDate {
+		filename, err := SelectGeoLegacyFile(requestDate)
+		if err != nil {
+			return nil, err
+		}
+		// load the legacy binary dataset
+		dataFileName := "GeoLiteCity.dat"
+		err = loader.UncompressGzFile(context.Background(), BucketName, filename, dataFileName)
+		if err != nil {
+			return nil, err
+		}
+		gi, err := geoip.Open(dataFileName)
+		if err != nil {
+			return nil, errors.New("could not open GeoIP database")
+		}
+		return gi, nil
+	}
+	return nil, errors.New("should call LoadGeoLite2Dataset with input date")
+}
+
+func LoadGeoLite2Dataset(requestDate int) (*parser.GeoDataset, error) {
+	if requestDate > GeoLite2CutOffDate {
+		filename, err := SelectGeoLegacyFile(requestDate)
+		if err != nil {
+			return nil, err
+		}
+		// load GeoLite2 dataset
+		zip, err := loader.CreateZipReader(context.Background(), BucketName, filename)
+		if err != nil {
+			return nil, err
+		}
+		return parser.LoadGeoLite2(zip)
+	}
+	return nil, errors.New("should call LoadLegacyGeoliteDataset with input date")
+}
+
+func GetRecordFromLegacyDataset(gi *geoip.GeoIP, ip string) {
+	if gi != nil {
+		record := gi.GetRecord("207.171.7.51")
+		fmt.Printf("%v\n", record)
+	}
 }

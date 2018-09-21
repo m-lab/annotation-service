@@ -1,10 +1,10 @@
-/* Go (cgo) interface to libgeoip 
+/* Go (cgo) interface to libgeoip
    originally forked from github.com/abh/geoip
 */
 package geoip
 
 /*
-#cgo pkg-config: geoip  
+#cgo pkg-config: geoip
 #include <stdio.h>
 #include <errno.h>
 #include <GeoIP.h>

@@ -1,6 +1,7 @@
 package dataset_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/m-lab/annotation-service/handler/dataset"
@@ -19,5 +20,30 @@ func TestExtractDateFromFilename(t *testing.T) {
 }
 
 func TestSelectGeoLegacyFile(t *testing.T) {
-        
+	filename, err := dataset.SelectGeoLegacyFile(20110203)
+	if filename != "Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz" || err != nil {
+		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
+			"Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz", filename, err)
+	}
+
+	filename2, err := dataset.SelectGeoLegacyFile(20140203)
+	if filename2 != "Maxmind/2014/02/07/20140207T160000Z-GeoLiteCity.dat.gz" || err != nil {
+		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
+			"Maxmind/2014/02/07/20140207T160000Z-GeoLiteCity.dat.gz", filename2, err)
+	}
+
+	filename3, err := dataset.SelectGeoLegacyFile(20170809)
+	if filename3 != "Maxmind/2017/08/15/20170815T200728Z-GeoLite2-City-CSV.zip" || err != nil {
+		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
+			"Maxmind/2017/08/15/20170815T200728Z-GeoLite2-City-CSV.zip", filename3, err)
+	}
+}
+
+func TestLoadLegacyGeoliteDataset(t *testing.T) {
+	gi, err := dataset.LoadLegacyGeoliteDataset(20140203)
+	fmt.Printf("%v", err)
+	if gi != nil {
+		record := gi.GetRecord("207.171.7.51")
+		fmt.Printf("%v\n", record)
+	}
 }
