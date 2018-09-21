@@ -219,7 +219,7 @@ func LoadGeoLite2Dataset(requestDate int) (*parser.GeoDataset, error) {
 
 func GetRecordFromLegacyDataset(gi *geoip.GeoIP, ip string) {
 	if gi != nil {
-		record := gi.GetRecord("207.171.7.51")
+		record := gi.GetRecord(ip)
 		fmt.Printf("%v\n", record)
 	}
 }

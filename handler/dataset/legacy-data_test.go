@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/m-lab/annotation-service/handler/dataset"
+	"github.com/m-lab/annotation-service/handler/geoip"
+	. "gopkg.in/check.v1"
 )
 
 func TestExtractDateFromFilename(t *testing.T) {
@@ -39,11 +41,37 @@ func TestSelectGeoLegacyFile(t *testing.T) {
 	}
 }
 
-func TestLoadLegacyGeoliteDataset(t *testing.T) {
+// Hook up gocheck into the gotest runner.
+func Test(t *testing.T) { TestingT(t) }
+
+type GeoIPSuite struct {
+}
+
+var _ = Suite(&GeoIPSuite{})
+
+func (s *GeoIPSuite) TestLoadLegacyGeoliteDataset(c *C) {
 	gi, err := dataset.LoadLegacyGeoliteDataset(20140203)
 	fmt.Printf("%v", err)
 	if gi != nil {
 		record := gi.GetRecord("207.171.7.51")
-		fmt.Printf("%v\n", record)
+		c.Assert(record, NotNil)
+		c.Check(
+			*record,
+			Equals,
+			geoip.GeoIPRecord{
+				CountryCode:   "US",
+				CountryCode3:  "USA",
+				CountryName:   "United States",
+				Region:        "CA",
+				City:          "El Segundo",
+				PostalCode:    "90245",
+				Latitude:      33.9164,
+				Longitude:     -118.4041,
+				AreaCode:      310,
+				MetroCode:     803,
+				CharSet:       1,
+				ContinentCode: "NA",
+			},
+		)
 	}
 }
