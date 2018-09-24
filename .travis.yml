@@ -18,6 +18,8 @@ go:
 before_install:
 - go get github.com/mattn/goveralls
 - go get github.com/wadey/gocovmerge
+- sudo apt-get install libgeoip-dev bzr
+- go get gopkg.in/check.v1
 
 # This installs gcloud, sets up devappserver.
 - $TRAVIS_BUILD_DIR/annotator.sh
@@ -37,6 +39,11 @@ before_install:
 
 - echo Branch is ${TRAVIS_BRANCH} and Tag is $TRAVIS_TAG
 
+- if [[ -n "$SERVICE_ACCOUNT_mlab_testing" ]] ; then
+  echo "$SERVICE_ACCOUNT_mlab_testing" > $TRAVIS_BUILD_DIR/creds.json ;
+  export GOOGLE_APPLICATION_CREDENTIALS=$TRAVIS_BUILD_DIR/creds.json ;
+  fi
+
 # These directories will be cached on successful "script" builds, and restored,
 # if available, to save time on future builds.
 cache:
@@ -51,19 +58,20 @@ script:
 
 # First run all tests, to ensure that we don't miss any new tests not included in
 # the coverage collection.
-- go test ./...
+- GCLOUD_PROJECT=mlab-testing go test ./...
 # Also run benchmarks
 - go test -bench . ./search/...
 
 # Run all tests, collecting coverage data.
 - go test -covermode=count -coverprofile=handler.cov -v github.com/m-lab/annotation-service/handler
+- go test -covermode=count -coverprofile=dataset.cov -v github.com/m-lab/annotation-service/handler/dataset
 - go test -covermode=count -coverprofile=loader.cov -v github.com/m-lab/annotation-service/loader
 - go test -covermode=count -coverprofile=metrics.cov -v github.com/m-lab/annotation-service/metrics
 - go test -covermode=count -coverprofile=parser.cov -v github.com/m-lab/annotation-service/parser
 - go test -covermode=count -coverprofile=search.cov -v github.com/m-lab/annotation-service/search
 
 # Coveralls
-- $HOME/gopath/bin/gocovmerge handler.cov loader.cov parser.cov search.cov > merge.cov
+- $HOME/gopath/bin/gocovmerge handler.cov dataset.cov loader.cov parser.cov search.cov > merge.cov
 - $HOME/gopath/bin/goveralls -coverprofile=merge.cov -service=travis-ci
 
 # Build and prepare for deployment
