@@ -43,7 +43,7 @@ before_install:
 # if available, to save time on future builds.
 cache:
   directories:
-  - $HOME/google-cloud-sdk/ 
+  - $HOME/google-cloud-sdk/
 
 script:
 # This sets up the dev appserver for the aetest support used by unit tests.
