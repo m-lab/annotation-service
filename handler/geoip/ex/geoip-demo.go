@@ -8,24 +8,24 @@ import (
 
 func main() {
 
-	file6 := "../db/GeoIPv6.dat"
+	file6 := "./GeoIPv6.dat"
 
 	gi6, err := geoip.Open(file6)
 	if err != nil {
 		fmt.Printf("Could not open GeoIPv6 database: %s\n", err)
 	}
 
-	gi, err := geoip.Open("../db/GeoLiteCity.dat")
+	gi, err := geoip.Open("./GeoLiteCity.dat")
 	if err != nil {
 		fmt.Printf("Could not open GeoIP database: %s\n", err)
 	}
 
-	giasn, err := geoip.Open("../db/GeoIPASNum.dat")
+	giasn, err := geoip.Open("./GeoIPASNum.dat")
 	if err != nil {
 		fmt.Printf("Could not open GeoIPASN database: %s\n", err)
 	}
 
-	giasn6, err := geoip.Open("../db/GeoIPASNumv6.dat")
+	giasn6, err := geoip.Open("./GeoIPASNumv6.dat")
 	if err != nil {
 		fmt.Printf("Could not open GeoIPASN database: %s\n", err)
 	}
