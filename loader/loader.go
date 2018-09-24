@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"cloud.google.com/go/storage"
+	"compress/gzip"
 	"errors"
 	"golang.org/x/net/context"
 	"io"
@@ -59,4 +60,37 @@ func FindFile(fn string, zrdr *zip.Reader) (io.ReadCloser, error) {
 	}
 	log.Println("File not found")
 	return nil, errors.New("File not found")
+}
+
+// UncompressGzFile reads a .gz file from GCS and write it to a local file.
+func UncompressGzFile(ctx context.Context, bucketName string, fileName string, outputFile string) error {
+	ctx = context.Background()
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		log.Println(err)
+		return errors.New("Failed creating new client")
+	}
+
+	// Creates a Bucket instance.
+	bucket := client.Bucket(bucketName)
+	obj := bucket.Object(fileName).ReadCompressed(true)
+
+	rdr, err := obj.NewReader(ctx)
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+
+	gzr, err := gzip.NewReader(rdr)
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	data, err := ioutil.ReadAll(gzr)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(outputFile, data, 0644)
+	return err
 }
