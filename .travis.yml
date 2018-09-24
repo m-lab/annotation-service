@@ -19,6 +19,7 @@ before_install:
 - go get github.com/mattn/goveralls
 - go get github.com/wadey/gocovmerge
 - sudo apt-get install libgeoip-dev bzr
+- go get gopkg.in/check.v1
 
 # This installs gcloud, sets up devappserver.
 - $TRAVIS_BUILD_DIR/annotator.sh
@@ -43,9 +44,6 @@ before_install:
 cache:
   directories:
   - $HOME/google-cloud-sdk/
-
-install:
-- go get gopkg.in/check.v1
 
 script:
 # This sets up the dev appserver for the aetest support used by unit tests.
