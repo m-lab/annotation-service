@@ -64,13 +64,14 @@ script:
 
 # Run all tests, collecting coverage data.
 - go test -covermode=count -coverprofile=handler.cov -v github.com/m-lab/annotation-service/handler
+- go test -covermode=count -coverprofile=dataset.cov -v github.com/m-lab/annotation-service/handler/dataset
 - go test -covermode=count -coverprofile=loader.cov -v github.com/m-lab/annotation-service/loader
 - go test -covermode=count -coverprofile=metrics.cov -v github.com/m-lab/annotation-service/metrics
 - go test -covermode=count -coverprofile=parser.cov -v github.com/m-lab/annotation-service/parser
 - go test -covermode=count -coverprofile=search.cov -v github.com/m-lab/annotation-service/search
 
 # Coveralls
-- $HOME/gopath/bin/gocovmerge handler.cov loader.cov parser.cov search.cov > merge.cov
+- $HOME/gopath/bin/gocovmerge handler.cov dataset.cov loader.cov parser.cov search.cov > merge.cov
 - $HOME/gopath/bin/goveralls -coverprofile=merge.cov -service=travis-ci
 
 # Build and prepare for deployment
