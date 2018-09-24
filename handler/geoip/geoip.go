@@ -16,7 +16,6 @@ import "C"
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"runtime"
 	"sync"
@@ -48,55 +47,34 @@ func (gi *GeoIP) free() {
 }
 
 // Default convenience wrapper around OpenDb
-func Open(files ...string) (*GeoIP, error) {
-	return OpenDb(files, GEOIP_MEMORY_CACHE)
+func Open(filename string) (*GeoIP, error) {
+	return OpenDb(filename, GEOIP_MEMORY_CACHE)
 }
 
 // Opens a GeoIP database by filename with specified GeoIPOptions flag.
 // All formats supported by libgeoip are supported though there are only
 // functions to access some of the databases in this API.
-// If you don't pass a filename, it will try opening the database from
-// a list of common paths.
-func OpenDb(files []string, flag int) (*GeoIP, error) {
-	if len(files) == 0 {
-		files = []string{
-			"/usr/share/GeoIP/GeoIP.dat",       // Linux default
-			"/usr/share/local/GeoIP/GeoIP.dat", // source install?
-			"/usr/local/share/GeoIP/GeoIP.dat", // FreeBSD
-			"/opt/local/share/GeoIP/GeoIP.dat", // MacPorts
-			"/usr/share/GeoIP/GeoIP.dat",       // ArchLinux
-		}
-	}
-
+func OpenDb(file string, flag int) (*GeoIP, error) {
 	g := &GeoIP{}
 	runtime.SetFinalizer(g, (*GeoIP).free)
 
 	var err error
 
-	for _, file := range files {
-
-		// libgeoip prints errors if it can't open the file, so check first
-		if _, err := os.Stat(file); err != nil {
-			if os.IsExist(err) {
-				log.Println(err)
-			}
-			continue
-		}
-
-		cbase := C.CString(file)
-		defer C.free(unsafe.Pointer(cbase))
-
-		g.db, err = C.GeoIP_open(cbase, C.int(flag))
-		if g.db != nil && err != nil {
-			break
-		}
+	if _, err := os.Stat(file); err != nil {
+		return nil, fmt.Errorf("Error get Fileinfo of GeoIP database (%s): %s", file, err)
 	}
+
+	cbase := C.CString(file)
+	defer C.free(unsafe.Pointer(cbase))
+
+	g.db, err = C.GeoIP_open(cbase, C.int(flag))
+
 	if err != nil {
-		return nil, fmt.Errorf("Error opening GeoIP database (%s): %s", files, err)
+		return nil, fmt.Errorf("Error opening GeoIP database (%s): %s", file, err)
 	}
 
 	if g.db == nil {
-		return nil, fmt.Errorf("Didn't open GeoIP database (%s)", files)
+		return nil, fmt.Errorf("Didn't open GeoIP database (%s)", file)
 	}
 
 	C.GeoIP_set_charset(g.db, C.GEOIP_CHARSET_UTF8)

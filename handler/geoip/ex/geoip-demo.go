@@ -39,7 +39,7 @@ func main() {
 
 	if gi != nil {
 		record := gi.GetRecord("207.171.7.51")
-                fmt.Printf("%v\n", record)
+		fmt.Printf("%v\n", record)
 	}
 	if gi6 != nil {
 		ip := "2607:f238:2::5"
