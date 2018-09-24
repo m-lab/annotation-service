@@ -85,7 +85,6 @@ gs://downloader-mlab-oti/Maxmind/2018/02/08/20180208T013555Z-GeoLite2-City-CSV.z
 import (
 	"context"
 	"errors"
-	"fmt"
 	"regexp"
 	"strconv"
 
@@ -217,9 +216,9 @@ func LoadGeoLite2Dataset(requestDate int, bucketName string) (*parser.GeoDataset
 	return nil, errors.New("should call LoadLegacyGeoliteDataset with input date")
 }
 
-func GetRecordFromLegacyDataset(gi *geoip.GeoIP, ip string) {
+func GetRecordFromLegacyDataset(gi *geoip.GeoIP, ip string) *geoip.GeoIPRecord {
 	if gi != nil {
-		record := gi.GetRecord(ip)
-		fmt.Printf("%v\n", record)
+		return gi.GetRecord(ip)
 	}
+	return nil
 }
