@@ -39,6 +39,11 @@ before_install:
 
 - echo Branch is ${TRAVIS_BRANCH} and Tag is $TRAVIS_TAG
 
+- if [[ -n "$SERVICE_ACCOUNT_mlab_testing" ]] ; then
+  echo "$SERVICE_ACCOUNT_mlab_testing" > $TRAVIS_BUILD_DIR/creds.json ;
+  export GOOGLE_APPLICATION_CREDENTIALS=$TRAVIS_BUILD_DIR/creds.json ;
+  fi
+
 # These directories will be cached on successful "script" builds, and restored,
 # if available, to save time on future builds.
 cache:
