@@ -103,8 +103,6 @@ var GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-G
 
 //var BucketName = "downloader-" + os.Getenv("GCLOUD_PROJECT") // This is the bucket containing maxmind files
 
-var BucketName = "downloader-mlab-oti"
-
 const (
 	MaxmindPrefix = "Maxmind/" // Folder containing the maxmind files
 	// Any request earlier than this date using legacy binary dataset
@@ -130,13 +128,13 @@ func ExtractDateFromFilename(filename string) (int, error) {
 // For any input date earlier than 2013/08/28, we will return 2013/08/28 dataset.
 // For any input date later than latest available dataset, we will return the latest dataset
 // Otherwise, we return the first dataset after the input date.
-func SelectGeoLegacyFile(requestDate int) (string, error) {
+func SelectGeoLegacyFile(requestDate int, bucketName string) (string, error) {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	if err != nil {
 		return "", err
 	}
-	prospectiveFiles := client.Bucket(BucketName).Objects(ctx, &storage.Query{Prefix: MaxmindPrefix})
+	prospectiveFiles := client.Bucket(bucketName).Objects(ctx, &storage.Query{Prefix: MaxmindPrefix})
 	filename := ""
 	lastest_filename := ""
 	for file, err := prospectiveFiles.Next(); err != iterator.Done; file, err = prospectiveFiles.Next() {
@@ -180,15 +178,15 @@ func SelectGeoLegacyFile(requestDate int) (string, error) {
 // LoadGeoliteDataset will check GCS for the matching dataset, download
 // it, process it, and load it into memory so that it can be easily
 // searched, then it will return a pointer to that GeoDataset or an error.
-func LoadLegacyGeoliteDataset(requestDate int) (*geoip.GeoIP, error) {
+func LoadLegacyGeoliteDataset(requestDate int, bucketName string) (*geoip.GeoIP, error) {
 	if requestDate <= GeoLite2CutOffDate {
-		filename, err := SelectGeoLegacyFile(requestDate)
+		filename, err := SelectGeoLegacyFile(requestDate, bucketName)
 		if err != nil {
 			return nil, err
 		}
 		// load the legacy binary dataset
 		dataFileName := "GeoLiteCity.dat"
-		err = loader.UncompressGzFile(context.Background(), BucketName, filename, dataFileName)
+		err = loader.UncompressGzFile(context.Background(), bucketName, filename, dataFileName)
 		if err != nil {
 			return nil, err
 		}
@@ -201,14 +199,14 @@ func LoadLegacyGeoliteDataset(requestDate int) (*geoip.GeoIP, error) {
 	return nil, errors.New("should call LoadGeoLite2Dataset with input date")
 }
 
-func LoadGeoLite2Dataset(requestDate int) (*parser.GeoDataset, error) {
+func LoadGeoLite2Dataset(requestDate int, bucketName string) (*parser.GeoDataset, error) {
 	if requestDate > GeoLite2CutOffDate {
-		filename, err := SelectGeoLegacyFile(requestDate)
+		filename, err := SelectGeoLegacyFile(requestDate, bucketName)
 		if err != nil {
 			return nil, err
 		}
 		// load GeoLite2 dataset
-		zip, err := loader.CreateZipReader(context.Background(), BucketName, filename)
+		zip, err := loader.CreateZipReader(context.Background(), bucketName, filename)
 		if err != nil {
 			return nil, err
 		}
