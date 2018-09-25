@@ -53,7 +53,8 @@ gs://downloader-mlab-oti/Maxmind/2017/06/08/20170608T080000Z-GeoLiteCity.dat.gz
 gs://downloader-mlab-oti/Maxmind/2017/07/05/20170705T153500Z-GeoLiteCity.dat.gz
 gs://downloader-mlab-oti/Maxmind/2017/08/08/20170808T080000Z-GeoLiteCity.dat.gz
 
-   Each data set cover the time range between the last available dataset and its own time stamp.
+   The first dataset (2013/08/28) cover all requests earlier than this date.
+   Each data set cover the time range from its stamp to next availalbe dataset.
    There are IP v6 datasets as well.
 
    From 2017/08/15 - present, Maxmind provides both legacy format and GeoLite2
@@ -105,8 +106,9 @@ var GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-G
 
 const (
 	MaxmindPrefix = "Maxmind/" // Folder containing the maxmind files
-	// Any request earlier than this date using legacy binary dataset
-	// later than this date using GeoLite2 dataset
+	// This is the date we have the first GeoLite2 dataset.
+	// Any request earlier than this date using legacy binary datasets
+	// later than this date using GeoLite2 datasets
 	GeoLite2CutOffDate = 20170815
 )
 
@@ -141,7 +143,7 @@ func SelectGeoLegacyFile(requestDate int, bucketName string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		if requestDate > GeoLite2CutOffDate && GeoLite2Regex.MatchString(file.Name) {
+		if requestDate >= GeoLite2CutOffDate && GeoLite2Regex.MatchString(file.Name) {
 			// Search GeoLite2 dataset
 			filedateInt, err := ExtractDateFromFilename(file.Name)
 			if err != nil {
@@ -155,7 +157,7 @@ func SelectGeoLegacyFile(requestDate int, bucketName string) (string, error) {
 			if file.Name > lastest_filename {
 				lastest_filename = file.Name
 			}
-		} else if requestDate <= GeoLite2CutOffDate && GeoLegacyRegex.MatchString(file.Name) {
+		} else if requestDate < GeoLite2CutOffDate && GeoLegacyRegex.MatchString(file.Name) {
 			// search legacy dataset
 			filedateInt, err := ExtractDateFromFilename(file.Name)
 			if err != nil {
@@ -182,7 +184,7 @@ func SelectGeoLegacyFile(requestDate int, bucketName string) (string, error) {
 // it, process it, and load it into memory so that it can be easily
 // searched, then it will return a pointer to that GeoDataset or an error.
 func LoadLegacyGeoliteDataset(requestDate int, bucketName string) (*geoip.GeoIP, error) {
-	if requestDate <= GeoLite2CutOffDate {
+	if requestDate < GeoLite2CutOffDate {
 		filename, err := SelectGeoLegacyFile(requestDate, bucketName)
 		if err != nil {
 			return nil, err
@@ -203,7 +205,7 @@ func LoadLegacyGeoliteDataset(requestDate int, bucketName string) (*geoip.GeoIP,
 }
 
 func LoadGeoLite2Dataset(requestDate int, bucketName string) (*parser.GeoDataset, error) {
-	if requestDate > GeoLite2CutOffDate {
+	if requestDate >= GeoLite2CutOffDate {
 		filename, err := SelectGeoLegacyFile(requestDate, bucketName)
 		if err != nil {
 			return nil, err

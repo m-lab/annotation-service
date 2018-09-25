@@ -35,14 +35,14 @@ func TestSelectGeoLegacyFile(t *testing.T) {
 	}
 
 	// before the cutoff date.
-	filename3, err := dataset.SelectGeoLegacyFile(20170809, "downloader-mlab-testing")
+	filename3, err := dataset.SelectGeoLegacyFile(20170814, "downloader-mlab-testing")
 	if filename3 != "Maxmind/2017/08/08/20170808T080000Z-GeoLiteCity.dat.gz" || err != nil {
 		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
 			"Maxmind/2017/08/08/20170808T080000Z-GeoLiteCity.dat.gz", filename3, err)
 	}
 
 	// after the cutoff date.
-	filename4, err := dataset.SelectGeoLegacyFile(20170820, "downloader-mlab-testing")
+	filename4, err := dataset.SelectGeoLegacyFile(20170815, "downloader-mlab-testing")
 	if filename4 != "Maxmind/2017/08/15/20170815T200946Z-GeoLite2-City-CSV.zip" || err != nil {
 		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
 			"Maxmind/2017/08/15/20170815T200946Z-GeoLite2-City-CSV.zip", filename4, err)
