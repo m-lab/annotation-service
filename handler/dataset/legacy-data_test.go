@@ -28,16 +28,31 @@ func TestSelectGeoLegacyFile(t *testing.T) {
 			"Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz", filename, err)
 	}
 
-	filename2, err := dataset.SelectGeoLegacyFile(20140203, "downloader-mlab-testing")
-	if filename2 != "Maxmind/2014/02/07/20140207T160000Z-GeoLiteCity.dat.gz" || err != nil {
+	filename2, err := dataset.SelectGeoLegacyFile(20140307, "downloader-mlab-testing")
+	if filename2 != "Maxmind/2014/03/07/20140307T160000Z-GeoLiteCity.dat.gz" || err != nil {
 		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
-			"Maxmind/2014/02/07/20140207T160000Z-GeoLiteCity.dat.gz", filename2, err)
+			"Maxmind/2014/03/07/20140307T160000Z-GeoLiteCity.dat.gz", filename2, err)
 	}
 
+	// before the cutoff date.
 	filename3, err := dataset.SelectGeoLegacyFile(20170809, "downloader-mlab-testing")
-	if filename3 != "Maxmind/2017/08/15/20170815T200728Z-GeoLite2-City-CSV.zip" || err != nil {
+	if filename3 != "Maxmind/2017/08/08/20170808T080000Z-GeoLiteCity.dat.gz" || err != nil {
 		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
-			"Maxmind/2017/08/15/20170815T200728Z-GeoLite2-City-CSV.zip", filename3, err)
+			"Maxmind/2017/08/08/20170808T080000Z-GeoLiteCity.dat.gz", filename3, err)
+	}
+
+	// after the cutoff date.
+	filename4, err := dataset.SelectGeoLegacyFile(20170820, "downloader-mlab-testing")
+	if filename4 != "Maxmind/2017/08/15/20170815T200946Z-GeoLite2-City-CSV.zip" || err != nil {
+		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
+			"Maxmind/2017/08/15/20170815T200946Z-GeoLite2-City-CSV.zip", filename4, err)
+	}
+
+	// return the latest available dataset.
+	filename5, err := dataset.SelectGeoLegacyFile(20370820, "downloader-mlab-testing")
+	if filename5 != "Maxmind/2018/09/12/20180912T054119Z-GeoLite2-City-CSV.zip" || err != nil {
+		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
+			"Maxmind/2018/09/12/20180912T054119Z-GeoLite2-City-CSV.zip", filename5, err)
 	}
 }
 

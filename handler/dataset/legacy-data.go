@@ -107,11 +107,8 @@ const (
 	MaxmindPrefix = "Maxmind/" // Folder containing the maxmind files
 	// Any request earlier than this date using legacy binary dataset
 	// later than this date using GeoLite2 dataset
-	GeoLite2CutOffDate = 20170808
+	GeoLite2CutOffDate = 20170815
 )
-
-// This is the list of dataset loaded in memory. The latest one is in memory by default.
-// var []InMemoryDataset string = []
 
 // ExtractDateFromFilename return the date in format yyyymmdd for a filename like
 // gs://downloader-mlab-oti/Maxmind/2017/05/08/20170508T080000Z-GeoLiteCity.dat.gz
@@ -127,12 +124,15 @@ func ExtractDateFromFilename(filename string) (int, error) {
 // SelectGeoLegacyFile return the legacy GelLiteCity.data filename given a date in format yyyymmdd.
 // For any input date earlier than 2013/08/28, we will return 2013/08/28 dataset.
 // For any input date later than latest available dataset, we will return the latest dataset
-// Otherwise, we return the first dataset after the input date.
+// Otherwise, we return the last dataset before the input date.
 func SelectGeoLegacyFile(requestDate int, bucketName string) (string, error) {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	if err != nil {
 		return "", err
+	}
+	if requestDate <= 20130828 {
+		return "Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz", nil
 	}
 	prospectiveFiles := client.Bucket(bucketName).Objects(ctx, &storage.Query{Prefix: MaxmindPrefix})
 	filename := ""
@@ -147,9 +147,9 @@ func SelectGeoLegacyFile(requestDate int, bucketName string) (string, error) {
 			if err != nil {
 				return "", err
 			}
-			// return the first dataset that is later than requestDate
-			if filedateInt >= requestDate {
-				filename = file.Name
+			// return the last dataset that is earlier than requestDate
+			if filedateInt > requestDate {
+				filename = lastest_filename
 				break
 			}
 			if file.Name > lastest_filename {
@@ -161,10 +161,13 @@ func SelectGeoLegacyFile(requestDate int, bucketName string) (string, error) {
 			if err != nil {
 				return "", err
 			}
-			// return the first dataset that is later than requestDate
-			if filedateInt >= requestDate {
-				filename = file.Name
+			// return the last dataset that is earlier than requestDate
+			if filedateInt > requestDate {
+				filename = lastest_filename
 				break
+			}
+			if file.Name > lastest_filename {
+				lastest_filename = file.Name
 			}
 		}
 	}
