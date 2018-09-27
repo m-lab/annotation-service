@@ -22,6 +22,10 @@ func TestExtractDateFromFilename(t *testing.T) {
 }
 
 func TestSelectGeoLegacyFile(t *testing.T) {
+	err := dataset.UpdateFilenamelist("downloader-mlab-testing")
+	if err != nil {
+		t.Errorf("cannot load test datasets")
+	}
 	filename, err := dataset.SelectGeoLegacyFile(20110203, "downloader-mlab-testing")
 	if filename != "Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz" || err != nil {
 		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",

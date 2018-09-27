@@ -102,7 +102,7 @@ var GeoLegacyRegex = regexp.MustCompile(`.*-GeoLiteCity.dat.*`)
 var GeoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
 var GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
 
-//var BucketName = "downloader-" + os.Getenv("GCLOUD_PROJECT") // This is the bucket containing maxmind files
+var DatasetNames []string
 
 const (
 	MaxmindPrefix = "Maxmind/" // Folder containing the maxmind files
@@ -123,61 +123,68 @@ func ExtractDateFromFilename(filename string) (int, error) {
 	return strconv.Atoi(filedate[0][0:8])
 }
 
+// UpdateFilenamelist extract the filenames from downloader bucket
+func UpdateFilenamelist(bucketName string) error {
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		return err
+	}
+	prospectiveFiles := client.Bucket(bucketName).Objects(ctx, &storage.Query{Prefix: MaxmindPrefix})
+	DatasetNames = make([]string, 0)
+
+	for file, err := prospectiveFiles.Next(); err != iterator.Done; file, err = prospectiveFiles.Next() {
+		if err != nil {
+			return err
+		}
+		DatasetNames = append(DatasetNames, file.Name)
+	}
+	return nil
+}
+
 // SelectGeoLegacyFile return the legacy GelLiteCity.data filename given a date in format yyyymmdd.
 // For any input date earlier than 2013/08/28, we will return 2013/08/28 dataset.
 // For any input date later than latest available dataset, we will return the latest dataset
 // Otherwise, we return the last dataset before the input date.
 func SelectGeoLegacyFile(requestDate int, bucketName string) (string, error) {
-	ctx := context.Background()
-	client, err := storage.NewClient(ctx)
-	if err != nil {
-		return "", err
-	}
 	if requestDate <= 20130828 {
 		return "Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz", nil
 	}
-	prospectiveFiles := client.Bucket(bucketName).Objects(ctx, &storage.Query{Prefix: MaxmindPrefix})
-	filename := ""
 	lastest_filename := ""
-	for file, err := prospectiveFiles.Next(); err != iterator.Done; file, err = prospectiveFiles.Next() {
-		if err != nil {
-			return "", err
-		}
-		if requestDate >= GeoLite2CutOffDate && GeoLite2Regex.MatchString(file.Name) {
+	for _, fileName := range DatasetNames {
+		if requestDate >= GeoLite2CutOffDate && GeoLite2Regex.MatchString(fileName) {
 			// Search GeoLite2 dataset
-			filedateInt, err := ExtractDateFromFilename(file.Name)
+			filedateInt, err := ExtractDateFromFilename(fileName)
 			if err != nil {
 				return "", err
 			}
 			// return the last dataset that is earlier than requestDate
 			if filedateInt > requestDate {
-				filename = lastest_filename
-				break
+				return lastest_filename, nil
 			}
-			if file.Name > lastest_filename {
-				lastest_filename = file.Name
+			if fileName > lastest_filename {
+				lastest_filename = fileName
 			}
-		} else if requestDate < GeoLite2CutOffDate && GeoLegacyRegex.MatchString(file.Name) {
+		} else if requestDate < GeoLite2CutOffDate && GeoLegacyRegex.MatchString(fileName) {
 			// search legacy dataset
-			filedateInt, err := ExtractDateFromFilename(file.Name)
+			filedateInt, err := ExtractDateFromFilename(fileName)
 			if err != nil {
 				return "", err
 			}
 			// return the last dataset that is earlier than requestDate
 			if filedateInt > requestDate {
-				filename = lastest_filename
-				break
+				return lastest_filename, nil
 			}
-			if file.Name > lastest_filename {
-				lastest_filename = file.Name
+			if fileName > lastest_filename {
+				lastest_filename = fileName
 			}
 		}
 	}
-	// If there there is no filename, return the latest dataset.
-	if filename == "" && requestDate > GeoLite2CutOffDate {
-		filename = lastest_filename
+	// If there is no filename selected, return the latest dataset.
+	if requestDate > GeoLite2CutOffDate && lastest_filename != "" {
+		return lastest_filename, nil
 	}
-	return filename, nil
+	return "", errors.New("cannot find proper dataset")
 }
 
 // LoadGeoliteDataset will check GCS for the matching dataset, download
