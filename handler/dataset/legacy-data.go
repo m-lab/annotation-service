@@ -91,6 +91,7 @@ import (
 	"strconv"
 
 	"cloud.google.com/go/storage"
+	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/handler/geoip"
 	"github.com/m-lab/annotation-service/loader"
 	"github.com/m-lab/annotation-service/parser"
@@ -152,11 +153,11 @@ func SelectGeoLegacyFile(requestDate int, bucketName string) (string, error) {
 	}
 	lastest_filename := ""
 	for _, fileName := range DatasetNames {
-		if requestDate >= GeoLite2CutOffDate && GeoLite2Regex.MatchString(fileName) {
-			// Search GeoLite2 dataset
+		if requestDate < GeoLite2CutOffDate && GeoLegacyRegex.MatchString(fileName) {
+			// search legacy dataset
 			filedateInt, err := ExtractDateFromFilename(fileName)
 			if err != nil {
-				return "", err
+				continue
 			}
 			// return the last dataset that is earlier than requestDate
 			if filedateInt > requestDate {
@@ -165,11 +166,11 @@ func SelectGeoLegacyFile(requestDate int, bucketName string) (string, error) {
 			if fileName > lastest_filename {
 				lastest_filename = fileName
 			}
-		} else if requestDate < GeoLite2CutOffDate && GeoLegacyRegex.MatchString(fileName) {
-			// search legacy dataset
+		} else if requestDate >= GeoLite2CutOffDate && handler.GeoLite2Regex.MatchString(fileName) {
+			// Search GeoLite2 dataset
 			filedateInt, err := ExtractDateFromFilename(fileName)
 			if err != nil {
-				return "", err
+				continue
 			}
 			// return the last dataset that is earlier than requestDate
 			if filedateInt > requestDate {
