@@ -22,38 +22,39 @@ func TestExtractDateFromFilename(t *testing.T) {
 }
 
 func TestSelectGeoLegacyFile(t *testing.T) {
-	err := dataset.UpdateFilenamelist("downloader-mlab-testing")
+	testBucket := "downloader-mlab-testing"
+	err := dataset.UpdateFilenamelist(testBucket)
 	if err != nil {
 		t.Errorf("cannot load test datasets")
 	}
-	filename, err := dataset.SelectGeoLegacyFile(20110203, "downloader-mlab-testing")
+	filename, err := dataset.SelectGeoLegacyFile(time.Parse("January 2, 2006", "January 3, 2011"), testBucket)
 	if filename != "Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz" || err != nil {
 		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
 			"Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz", filename, err)
 	}
 
-	filename2, err := dataset.SelectGeoLegacyFile(20140307, "downloader-mlab-testing")
+	filename2, err := dataset.SelectGeoLegacyFile(time.Parse("January 2, 2006", "March 7, 2014"), testBucket)
 	if filename2 != "Maxmind/2014/03/07/20140307T160000Z-GeoLiteCity.dat.gz" || err != nil {
 		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
 			"Maxmind/2014/03/07/20140307T160000Z-GeoLiteCity.dat.gz", filename2, err)
 	}
 
 	// before the cutoff date.
-	filename3, err := dataset.SelectGeoLegacyFile(20170814, "downloader-mlab-testing")
+	filename3, err := dataset.SelectGeoLegacyFile(time.Parse("January 2, 2006", "August 14, 2017"), testBucket)
 	if filename3 != "Maxmind/2017/08/08/20170808T080000Z-GeoLiteCity.dat.gz" || err != nil {
 		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
 			"Maxmind/2017/08/08/20170808T080000Z-GeoLiteCity.dat.gz", filename3, err)
 	}
 
 	// after the cutoff date.
-	filename4, err := dataset.SelectGeoLegacyFile(20170815, "downloader-mlab-testing")
+	filename4, err := dataset.SelectGeoLegacyFile(time.Parse("January 2, 2006", "August 15, 2017"), testBucket)
 	if filename4 != "Maxmind/2017/08/15/20170815T200946Z-GeoLite2-City-CSV.zip" || err != nil {
 		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
 			"Maxmind/2017/08/15/20170815T200946Z-GeoLite2-City-CSV.zip", filename4, err)
 	}
 
 	// return the latest available dataset.
-	filename5, err := dataset.SelectGeoLegacyFile(20370820, "downloader-mlab-testing")
+	filename5, err := dataset.SelectGeoLegacyFile(time.Parse("January 2, 2006", "August 15, 2037"), testBucket)
 	if filename5 != "Maxmind/2018/09/12/20180912T054119Z-GeoLite2-City-CSV.zip" || err != nil {
 		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
 			"Maxmind/2018/09/12/20180912T054119Z-GeoLite2-City-CSV.zip", filename5, err)
@@ -69,7 +70,7 @@ type GeoIPSuite struct {
 var _ = Suite(&GeoIPSuite{})
 
 func (s *GeoIPSuite) TestLoadLegacyGeoliteDataset(c *C) {
-	gi, err := dataset.LoadLegacyGeoliteDataset(20140203, "downloader-mlab-testing")
+	gi, err := dataset.LoadLegacyGeoliteDataset(time.Parse("January 2, 2006", "February 3, 2014"), "downloader-mlab-testing")
 	fmt.Printf("%v", err)
 	if gi != nil {
 		record := gi.GetRecord("207.171.7.51")

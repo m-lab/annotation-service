@@ -89,6 +89,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"time"
 
 	"cloud.google.com/go/storage"
 	"github.com/m-lab/annotation-service/handler"
@@ -110,7 +111,7 @@ const (
 	// This is the date we have the first GeoLite2 dataset.
 	// Any request earlier than this date using legacy binary datasets
 	// later than this date using GeoLite2 datasets
-	GeoLite2CutOffDate = 20170815
+	GeoLite2CutOffDate = time.Parse("January 2, 2006", "August 15, 2017")
 )
 
 // ExtractDateFromFilename return the date in format yyyymmdd for a filename like
@@ -147,13 +148,13 @@ func UpdateFilenamelist(bucketName string) error {
 // For any input date earlier than 2013/08/28, we will return 2013/08/28 dataset.
 // For any input date later than latest available dataset, we will return the latest dataset
 // Otherwise, we return the last dataset before the input date.
-func SelectGeoLegacyFile(requestDate int, bucketName string) (string, error) {
-	if requestDate <= 20130828 {
+func SelectGeoLegacyFile(requestDate time.Time, bucketName string) (string, error) {
+	if requestDate.Before(time.Parse("January 2, 2006", "August 28, 2013")) {
 		return "Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz", nil
 	}
 	lastest_filename := ""
 	for _, fileName := range DatasetNames {
-		if requestDate < GeoLite2CutOffDate && GeoLegacyRegex.MatchString(fileName) {
+		if requestDate.Before(GeoLite2CutOffDate) && GeoLegacyRegex.MatchString(fileName) {
 			// search legacy dataset
 			filedateInt, err := ExtractDateFromFilename(fileName)
 			if err != nil {
@@ -166,7 +167,7 @@ func SelectGeoLegacyFile(requestDate int, bucketName string) (string, error) {
 			if fileName > lastest_filename {
 				lastest_filename = fileName
 			}
-		} else if requestDate >= GeoLite2CutOffDate && handler.GeoLite2Regex.MatchString(fileName) {
+		} else if !requestDate.Before(GeoLite2CutOffDate) && handler.GeoLite2Regex.MatchString(fileName) {
 			// Search GeoLite2 dataset
 			filedateInt, err := ExtractDateFromFilename(fileName)
 			if err != nil {
