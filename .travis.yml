@@ -18,7 +18,8 @@ go:
 before_install:
 - go get github.com/mattn/goveralls
 - go get github.com/wadey/gocovmerge
-- sudo apt-get install libgeoip-dev bzr pkg-config lxc-dev
+- sudo apt-get update -q
+- sudo apt-get install -y libgeoip-dev bzr pkg-config lxc-dev
 - go get gopkg.in/check.v1
 - go get github.com/abh/geoip
 
