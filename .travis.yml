@@ -20,6 +20,7 @@ before_install:
 - go get github.com/wadey/gocovmerge
 - sudo apt-get install libgeoip-dev bzr
 - go get gopkg.in/check.v1
+- go get github.com/abh/geoip
 
 # This installs gcloud, sets up devappserver.
 - $TRAVIS_BUILD_DIR/annotator.sh
