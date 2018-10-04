@@ -91,6 +91,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
+	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/handler/geoip"
 	"github.com/m-lab/annotation-service/loader"
 	"github.com/m-lab/annotation-service/parser"
@@ -100,7 +101,6 @@ import (
 // This is the regex used to filter for which files we want to consider acceptable for using with Geolite2
 var GeoLegacyRegex = regexp.MustCompile(`.*-GeoLiteCity.dat.*`)
 var GeoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
-var GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
 
 var DatasetNames []string
 
@@ -164,10 +164,8 @@ func SelectGeoLegacyFile(requestDate time.Time, bucketName string) (string, erro
 			if fileDate.After(requestDate) {
 				return lastest_filename, nil
 			}
-			if fileName > lastest_filename {
-				lastest_filename = fileName
-			}
-		} else if !requestDate.Before(CutOffDate) && GeoLite2Regex.MatchString(fileName) {
+			lastest_filename = fileName
+		} else if !requestDate.Before(CutOffDate) && handler.GeoLite2Regex.MatchString(fileName) {
 			// Search GeoLite2 dataset
 			fileDate, err := ExtractDateFromFilename(fileName)
 			if err != nil {
@@ -177,9 +175,7 @@ func SelectGeoLegacyFile(requestDate time.Time, bucketName string) (string, erro
 			if fileDate.After(requestDate) {
 				return lastest_filename, nil
 			}
-			if fileName > lastest_filename {
-				lastest_filename = fileName
-			}
+			lastest_filename = fileName
 		}
 	}
 	// If there is no filename selected, return the latest dataset.
