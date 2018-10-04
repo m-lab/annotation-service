@@ -1,8 +1,13 @@
-# The standard google cloud-sdk container that "just works" within GCE.
-FROM google/cloud-sdk
+FROM golang:alpine
 
-RUN apt-get update && apt-get install -y libgeoip-dev bzr pkg-config lxc-dev
-# Add the server to respond to HTTP requests at port 8080.
+RUN apk update && apk add bash git
+
+WORKDIR /go/src/github.com/m-lab/annotation-service
+COPY . .
+
+RUN go install -v ./...
+
+RUN go build
 
 COPY annotation-service /annotation-service
 RUN chmod -R a+rx /annotation-service
