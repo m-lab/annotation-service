@@ -7,7 +7,7 @@ import (
 
 	"github.com/m-lab/annotation-service/handler/dataset"
 	"github.com/m-lab/annotation-service/handler/geoip"
-	"gopkg.in/check.v1"
+	check "gopkg.in/check.v1"
 )
 
 func TestExtractDateFromFilename(t *testing.T) {
@@ -75,7 +75,7 @@ type GeoIPSuite struct {
 
 var _ = Suite(&GeoIPSuite{})
 
-func (s *GeoIPSuite) TestLoadLegacyGeoliteDataset(c *C) {
+func (s *GeoIPSuite) TestLoadLegacyGeoliteDataset(c *check.C) {
 	date1, _ := time.Parse("January 2, 2006", "February 3, 2014")
 	gi, err := dataset.LoadLegacyGeoliteDataset(date1, "downloader-mlab-testing")
 	fmt.Printf("%v", err)
