@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"fmt"
 	"archive/zip"
 	"encoding/csv"
 	"errors"
@@ -57,7 +56,6 @@ func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
 		return nil, err
 	}
 	asnNodes4, err := LoadASN4ListGLite2(asns4)
-	fmt.Println("%d", asnNodes4.Len())
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +262,7 @@ func LoadASN4ListGLite2(reader io.Reader) ([]ASNNode, error) {
 		}
 		newNode.IPAddressLow = lowIp
 		newNode.IPAddressHigh = highIp
-		newNode.ASN, err = Atoi(record[1])
+		newNode.ASN, err = strconv.Atoi(record[1])
 		if err != nil {
 			return nil, err
 		}
@@ -281,7 +279,7 @@ func LoadASN4ListGLite2(reader io.Reader) ([]ASNNode, error) {
 	}
 	
 	
-	return trieNode, nil
+	return list, nil
 }
 
 

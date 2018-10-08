@@ -52,7 +52,6 @@ type GeoDataset struct {
 	IP6Nodes      []IPNode       // The IPNode list containing IP6Nodes
 	LocationNodes []LocationNode // The location nodes corresponding to the IPNodes
 	ASN4Nodes     []ASNNode      // The ASNNode list containing all IPv4 ASN data
-	// Add the asnNodes here
 }
 
 // Verify column length
@@ -189,13 +188,13 @@ func handleStack(stack, list []IPNode, newNode IPNode) ([]IPNode, []IPNode) {
 
 // To avoid changing the entire process, binary search, etc., this
 // function had to be replicated in order to support 
-func handleStackASN(stack, list []interface{}, newNode interface{}) ([]interface{}, []interface{}) {
+func handleStackASN(stack, list []ASNNode, newNode ASNNode) ([]ASNNode, []ASNNode) {
 	// Stack is not empty aka we're in a nested IP
 	if len(stack) != 0 {
 		// newNode is no longer inside stack's nested IP's
 		if lessThan(stack[len(stack)-1].IPAddressHigh, newNode.IPAddressLow) {
 			// while closing nested IP's
-			var pop IPNode
+			var pop ASNNode
 			pop, stack = stack[len(stack)-1], stack[:len(stack)-1]
 			for ; len(stack) > 0; pop, stack = stack[len(stack)-1], stack[:len(stack)-1] {
 				peek := stack[len(stack)-1]

@@ -15,7 +15,7 @@ import (
 
 	"github.com/m-lab/annotation-service/common"
 	"github.com/m-lab/annotation-service/metrics"
-	"github.com/m-lab/annotation-service/parser"
+	"github.com/twabulldogg/annotation-service/parser"
 	"github.com/m-lab/annotation-service/search"
 )
 
@@ -198,12 +198,12 @@ func GetMetadataForSingleIP(request *common.RequestData) *common.GeoData {
 	// TODO(gfr) release lock sooner?
 	defer currentDataMutex.RUnlock()
 	var node parser.IPNode
-	var asnNode parser.ASNNode
+	var asNode parser.ASNNode
 	// TODO: Push this logic down to searchlist (after binary search is implemented)
 	if request.IPFormat == 4 {
 		node, err = search.SearchBinary(
 			CurrentGeoDataset.IP4Nodes, request.IP)
-		asnNode, err = search.SearchBinary(
+		asNode, err = search.SearchBinary(
 			CurrentGeoDataset.ASN4Nodes, request.IP)
 	} else if request.IPFormat == 6 {
 		node, err = search.SearchBinary(
@@ -218,8 +218,8 @@ func GetMetadataForSingleIP(request *common.RequestData) *common.GeoData {
 		//TODO metric here
 		return nil
 	}
-n
-	return ConvertIPNodeToGeoData(node, CurrentGeoDataset.LocationNodes, asnNode)
+
+	return ConvertIPNodeToGeoData(node, CurrentGeoDataset.LocationNodes, asNode)
 }
 
 // ConvertIPNodeToGeoData takes a parser.IPNode, plus a list of
