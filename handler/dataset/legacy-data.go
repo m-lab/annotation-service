@@ -123,7 +123,8 @@ func ExtractDateFromFilename(filename string) (time.Time, error) {
 	return time.Parse(time.RFC3339, filedate[0][0:4]+"-"+filedate[0][4:6]+"-"+filedate[0][6:8]+"T00:00:00Z")
 }
 
-// UpdateFilenamelist extract the filenames from downloader bucket
+// UpdateFilenamelist extract the filenames from downloader bucket.
+// DatasetNames are sorted in lexographical order.
 func UpdateFilenamelist(bucketName string) error {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
