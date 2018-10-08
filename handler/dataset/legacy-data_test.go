@@ -7,7 +7,7 @@ import (
 
 	"github.com/m-lab/annotation-service/handler/dataset"
 	"github.com/m-lab/annotation-service/handler/geoip"
-	check "gopkg.in/check.v1"
+	"gopkg.in/check.v1"
 )
 
 func TestExtractDateFromFilename(t *testing.T) {
