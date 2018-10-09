@@ -28,6 +28,6 @@ func TestCreateZipReader(t *testing.T) {
 	}
 
 	if len(zipReader.File) != 3 {
-		t.Errorf("wrong number of files", len(zipReader.File))
+		t.Error("wrong number of files", len(zipReader.File))
 	}
 }
