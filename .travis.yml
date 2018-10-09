@@ -12,9 +12,6 @@ language: go
 # Without this, annotator.sh fails, related to gcloud.
 sudo: required
 
-go:
-- 1.8
-
 before_install:
 - go get github.com/mattn/goveralls
 - go get github.com/wadey/gocovmerge
@@ -54,7 +51,7 @@ cache:
 
 script:
 # This sets up the dev appserver for the aetest support used by unit tests.
-- export GOOGLE_APPLICATION_CREDENTIALS="${HOME}/gcloud-service-key.json"
+- if [[ -r "${HOME}/gcloud-service-key.json" ]]; then export GOOGLE_APPLICATION_CREDENTIALS="${HOME}/gcloud-service-key.json"; fi
 - export APPENGINE_DEV_APPSERVER="${HOME}/google-cloud-sdk/bin/dev_appserver.py"
 - source "${HOME}/google-cloud-sdk/path.bash.inc"
 
