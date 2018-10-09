@@ -5,5 +5,9 @@ ADD . /go/src/github.com/m-lab/annotation-service
 RUN go get github.com/m-lab/annotation-service
 RUN chmod -R a+rx /go/bin/annotation-service
 
-RUN apk del gcc libc-dev
-ENTRYPOINT ["/go/bin/annotation-service"]
+FROM golang:alpine
+RUN apk update && apk add geoip
+COPY --from=build /go/bin/annotation-service /
+WORKDIR /
+
+ENTRYPOINT ["/annotation-service"]
