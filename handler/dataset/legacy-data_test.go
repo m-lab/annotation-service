@@ -28,7 +28,7 @@ func TestSelectGeoLegacyFile(t *testing.T) {
 	err := dataset.UpdateFilenamelist(testBucket)
 	if err != nil {
 		log.Println("cannot load test datasets")
-		log.Println("This can happen when running tests from branches outside of githib.com/m-lab/annotation-server.  The rest of this test is being skipped.")
+		log.Println("This can happen when running tests from branches outside of github.com/m-lab/annotation-server.  The rest of this test is being skipped.")
 		return
 	}
 	date1, _ := time.Parse("January 2, 2006", "January 3, 2011")
