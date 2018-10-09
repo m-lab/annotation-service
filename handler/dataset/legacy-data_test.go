@@ -2,6 +2,7 @@ package dataset_test
 
 import (
 	"fmt"
+	"log"
 	"testing"
 	"time"
 

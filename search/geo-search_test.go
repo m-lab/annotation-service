@@ -1,8 +1,11 @@
 package search_test
 
 import (
+	"archive/zip"
+	"bytes"
 	"encoding/binary"
 	"errors"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"net"
@@ -24,16 +27,16 @@ var (
 )
 
 func TestGeoLite1(t *testing.T) {
-	ctx, done, err := aetest.NewContext()
+	contents, err := ioutil.ReadFile("../parser/testdata/GeoLiteLatest.zip")
 	if err != nil {
-		log.Println(err)
-		t.Errorf("Failed to create aecontext")
+		t.Error(err)
+		return
 	}
-	defer done()
-	reader, err := loader.CreateZipReader(ctx, "test-annotator-sandbox", "MaxMind/2017/09/07/Maxmind%2F2017%2F09%2F01%2F20170901T085044Z-GeoLiteCity-latest.zip")
+
+	byteReader := bytes.NewReader(contents)
+	reader, err := zip.NewReader(byteReader, int64(len(contents)))
 	if err != nil {
-		log.Println(err)
-		log.Println("This statement errors out when things are being tested from github repos that are not github.com/m-lab/annotation-server.  We are assuming that this is the case, and skipping the rest of this test.")
+		t.Error(err)
 		return
 	}
 
@@ -163,13 +166,14 @@ func preload() error {
 	}
 	preloadComplete = true
 
-	ctx, done, err := aetest.NewContext()
+	contents, err := ioutil.ReadFile("../parser/testdata/GeoLite2City.zip")
 	if err != nil {
 		preloadStatus = err
 		return preloadStatus
 	}
-	defer done()
-	reader, err := loader.CreateZipReader(ctx, "test-annotator-sandbox", "MaxMind/2017/09/07/Maxmind%2F2017%2F09%2F07%2F20170907T023620Z-GeoLite2-City-CSV.zip")
+
+	byteReader := bytes.NewReader(contents)
+	reader, err := zip.NewReader(byteReader, int64(len(contents)))
 	if err != nil {
 		preloadStatus = err
 		return preloadStatus
