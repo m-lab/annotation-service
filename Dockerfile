@@ -5,9 +5,5 @@ ADD . /go/src/github.com/m-lab/annotation-service
 RUN go get github.com/m-lab/annotation-service
 RUN chmod -R a+rx /go/bin/annotation-service
 
-# Now copy the built binary into a minimal base image.
-FROM alpine
-COPY --from=build /go/bin/annotation-service /
-WORKDIR /
-
-ENTRYPOINT ["/annotation-service"]
+RUN apk del gcc libc-dev
+ENTRYPOINT ["/go/bin/annotation-service"]
