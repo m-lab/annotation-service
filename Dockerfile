@@ -6,7 +6,7 @@ RUN go get github.com/m-lab/annotation-service
 RUN chmod -R a+rx /go/bin/annotation-service
 
 # Now copy the built binary into a minimal base image.
-FROM gcr.io/distroless/base
+FROM alpine
 COPY --from=build /go/bin/annotation-service /
 WORKDIR /
 
