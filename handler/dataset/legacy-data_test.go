@@ -27,6 +27,10 @@ func TestSelectGeoLegacyFile(t *testing.T) {
 	testBucket := "downloader-mlab-testing"
 	err := dataset.UpdateFilenamelist(testBucket)
 	if err != nil {
+		// TODO: make dataset produce rich error types to allow us to
+		// distinguish between auth error (which should cause us to
+		// skip the rest of the tests) and all other error types (which
+		// should properly be errors and cause the test to fail).
 		log.Println("cannot load test datasets")
 		log.Println("This can happen when running tests from branches outside of github.com/m-lab/annotation-server.  The rest of this test is being skipped.")
 		return
