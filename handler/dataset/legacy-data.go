@@ -179,11 +179,11 @@ func SelectGeoLegacyFile(requestDate time.Time, bucketName string) (string, erro
 			lastFilename = fileName
 		}
 	}
-	// If there is no filename selected, return the latest dataset.
-	if requestDate.After(CutOffDate) && lastest_filename != "" {
-		return lastest_filename, nil
+	// If there is no filename selected, return the latest dataset
+	if lastFilename == "" {
+		return "", errors.New("cannot find proper dataset")
 	}
-	return "", errors.New("cannot find proper dataset")
+	return lastFilename, nil
 }
 
 // LoadGeoliteDataset will check GCS for the matching dataset, download
