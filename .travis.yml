@@ -18,8 +18,10 @@ go:
 before_install:
 - go get github.com/mattn/goveralls
 - go get github.com/wadey/gocovmerge
-- sudo apt-get install libgeoip-dev bzr
+- sudo apt-get update -q
+- sudo apt-get install -y libgeoip-dev pkg-config
 - go get gopkg.in/check.v1
+- go get github.com/abh/geoip
 
 # This installs gcloud, sets up devappserver.
 - $TRAVIS_BUILD_DIR/annotator.sh
@@ -64,13 +66,14 @@ script:
 
 # Run all tests, collecting coverage data.
 - go test -covermode=count -coverprofile=handler.cov -v github.com/m-lab/annotation-service/handler
+- go test -covermode=count -coverprofile=dataset.cov -v github.com/m-lab/annotation-service/handler/dataset
 - go test -covermode=count -coverprofile=loader.cov -v github.com/m-lab/annotation-service/loader
 - go test -covermode=count -coverprofile=metrics.cov -v github.com/m-lab/annotation-service/metrics
 - go test -covermode=count -coverprofile=parser.cov -v github.com/m-lab/annotation-service/parser
 - go test -covermode=count -coverprofile=search.cov -v github.com/m-lab/annotation-service/search
 
 # Coveralls
-- $HOME/gopath/bin/gocovmerge handler.cov loader.cov parser.cov search.cov > merge.cov
+- $HOME/gopath/bin/gocovmerge handler.cov dataset.cov loader.cov parser.cov search.cov > merge.cov
 - $HOME/gopath/bin/goveralls -coverprofile=merge.cov -service=travis-ci
 
 # Build and prepare for deployment
