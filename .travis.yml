@@ -34,7 +34,9 @@ before_install:
 # The tar file contains newly created keys for each of the three service accounts.
 - travis/decrypt.sh "$encrypted_ca29bb0d9214_key" "$encrypted_ca29bb0d9214_iv"
   keys/service-accounts.tar.enc /tmp/service-accounts.tar /tmp
-- tar tvf /tmp/service-accounts.tar
+- if [[ -r /tmp/service-accounts.tar ]] ; then
+  tar tvf /tmp/service-accounts.tar ;
+  fi
 
 - echo Branch is ${TRAVIS_BRANCH} and Tag is $TRAVIS_TAG
 
@@ -51,7 +53,9 @@ cache:
 
 script:
 # This sets up the dev appserver for the aetest support used by unit tests.
-- if [[ -r "${HOME}/gcloud-service-key.json" ]]; then export GOOGLE_APPLICATION_CREDENTIALS="${HOME}/gcloud-service-key.json"; fi
+- if [[ -r "${HOME}/gcloud-service-key.json" ]]; then
+  export GOOGLE_APPLICATION_CREDENTIALS="${HOME}/gcloud-service-key.json";
+  fi
 - export APPENGINE_DEV_APPSERVER="${HOME}/google-cloud-sdk/bin/dev_appserver.py"
 - source "${HOME}/google-cloud-sdk/path.bash.inc"
 
