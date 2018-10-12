@@ -12,12 +12,12 @@ import (
 )
 
 func TestExtractDateFromFilename(t *testing.T) {
-	date, err := dataset.ExtractDateFromFilename("Maxmind/2017/05/08/20170508T080000Z-GeoLiteCity.dat.gz")
+	date, err := handler.ExtractDateFromFilename("Maxmind/2017/05/08/20170508T080000Z-GeoLiteCity.dat.gz")
 	if date.Year() != 2017 || date.Month() != 5 || date.Day() != 8 || err != nil {
 		t.Errorf("Did not extract data correctly. Expected %d, got %v, %+v.", 20170508, date, err)
 	}
 
-	date2, err := dataset.ExtractDateFromFilename("Maxmind/2017/10/05/20171005T033334Z-GeoLite2-City-CSV.zip")
+	date2, err := handler.ExtractDateFromFilename("Maxmind/2017/10/05/20171005T033334Z-GeoLite2-City-CSV.zip")
 	if date2.Year() != 2017 || date2.Month() != 10 || date2.Day() != 5 || err != nil {
 		t.Errorf("Did not extract data correctly. Expected %d, got %v, %+v.", 20171005, date2, err)
 	}
@@ -59,7 +59,7 @@ func TestSelectGeoLegacyFile(t *testing.T) {
 
 	// after the cutoff date.
 	date4, _ := time.Parse("January 2, 2006", "August 15, 2017", true)
-	filename4, err := dataset.SelectGeoLegacyFile(date4, testBucket)
+	filename4, err := handler.SelectGeoLegacyFile(date4, testBucket)
 	if filename4 != "Maxmind/2017/08/15/20170815T200946Z-GeoLite2-City-CSV.zip" || err != nil {
 		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
 			"Maxmind/2017/08/15/20170815T200946Z-GeoLite2-City-CSV.zip", filename4, err)
