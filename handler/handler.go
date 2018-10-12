@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/m-lab/annotation-service/common"
+	"github.com/m-lab/annotation-service/handler/geoip"
 	"github.com/m-lab/annotation-service/metrics"
 	"github.com/m-lab/annotation-service/parser"
 	"github.com/m-lab/annotation-service/search"
@@ -77,7 +78,11 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := GetMetadataForSingleIP(data)
+	result, err := GetMetadataForSingleIP(data)
+	if err != nil {
+		fmt.Fprintf(w, "Cannot get meta data")
+		return
+	}
 	encodedResult, err := json.Marshal(result)
 	if err != nil {
 		fmt.Fprintf(w, "Unknown JSON Encoding Error")
@@ -151,7 +156,7 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 
 	responseMap := make(map[string]*common.GeoData)
 	for _, data := range dataSlice {
-		responseMap[data.IP+strconv.FormatInt(data.Timestamp.Unix(), encodingBase)] = GetMetadataForSingleIP(&data)
+		responseMap[data.IP+strconv.FormatInt(data.Timestamp.Unix(), encodingBase)], _ = GetMetadataForSingleIP(&data)
 	}
 	encodedResult, err := json.Marshal(responseMap)
 	if err != nil {
@@ -193,7 +198,7 @@ func BatchValidateAndParse(source io.Reader) ([]common.RequestData, error) {
 	return validatedData, nil
 }
 
-func UseGeoLite2Dataset(request *common.RequestData, dataset *parser.GeoDataset, mutex sync.RWMutex) (*common.GeoData, error) {
+func UseGeoLite2Dataset(request *common.RequestData, dataset *parser.GeoDataset, mutex *sync.RWMutex) (*common.GeoData, error) {
 	if dataset == nil {
 		// TODO: Block until the value is not nil
 		return nil, errors.New("Dataset is not ready")

@@ -97,6 +97,7 @@ import (
 	"google.golang.org/api/iterator"
 )
 
+var DatasetNames = make([]string, 0)
 var LatestDatasetDate time.Time
 
 const (
@@ -127,9 +128,8 @@ func UpdateFilenamelist(bucketName string) error {
 		return err
 	}
 	prospectiveFiles := client.Bucket(bucketName).Objects(ctx, &storage.Query{Prefix: MaxmindPrefix})
-	DatasetNames = make([]string, 0)
 
-	lastestFileName = ""
+	lastestFileName := ""
 	for file, err := prospectiveFiles.Next(); err != iterator.Done; file, err = prospectiveFiles.Next() {
 		if err != nil {
 			return err

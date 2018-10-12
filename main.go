@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 	"net/http"
-        "os"
 	_ "net/http/pprof"
+	"os"
 
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/metrics"
@@ -20,7 +20,7 @@ func updateMaxmindDatasets(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-        handler.PopulateLatestData()
+	handler.PopulateLatestData()
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
 }
