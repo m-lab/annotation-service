@@ -1,4 +1,4 @@
-package dataset
+package handler
 
 /* From 2013/08/28 - 2017/08/08, Maxmind provide GeoLite dataset in legacy format
 
@@ -91,18 +91,13 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
-	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/handler/geoip"
 	"github.com/m-lab/annotation-service/loader"
 	"github.com/m-lab/annotation-service/parser"
 	"google.golang.org/api/iterator"
 )
 
-// This is the regex used to filter for which files we want to consider acceptable for using with Geolite2
-var GeoLegacyRegex = regexp.MustCompile(`.*-GeoLiteCity.dat.*`)
-var GeoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
-
-var DatasetNames []string
+var LatestDatasetDate time.Time
 
 const (
 	MaxmindPrefix = "Maxmind/" // Folder containing the maxmind files
@@ -123,7 +118,7 @@ func ExtractDateFromFilename(filename string) (time.Time, error) {
 	return time.Parse(time.RFC3339, filedate[0][0:4]+"-"+filedate[0][4:6]+"-"+filedate[0][6:8]+"T00:00:00Z")
 }
 
-// UpdateFilenamelist extract the filenames from downloader bucket.
+// UpdateFilenamelist extracts the filenames from downloader bucket.
 // DatasetNames are sorted in lexographical order.
 func UpdateFilenamelist(bucketName string) error {
 	ctx := context.Background()
@@ -134,20 +129,27 @@ func UpdateFilenamelist(bucketName string) error {
 	prospectiveFiles := client.Bucket(bucketName).Objects(ctx, &storage.Query{Prefix: MaxmindPrefix})
 	DatasetNames = make([]string, 0)
 
+	lastestFileName = ""
 	for file, err := prospectiveFiles.Next(); err != iterator.Done; file, err = prospectiveFiles.Next() {
 		if err != nil {
 			return err
 		}
 		DatasetNames = append(DatasetNames, file.Name)
+		if GeoLite2Regex.MatchString(file.Name) {
+			lastestFileName = file.Name
+		}
 	}
+
+	LatestDatasetDate, _ = ExtractDateFromFilename(lastestFileName)
+
 	return nil
 }
 
-// SelectGeoLegacyFile return the legacy GelLiteCity.data filename given a date in format yyyymmdd.
+// SelectGeoLegacyFile returns the legacy GelLiteCity.data filename given a date in format yyyymmdd.
 // For any input date earlier than 2013/08/28, we will return 2013/08/28 dataset.
 // For any input date later than latest available dataset, we will return the latest dataset
 // Otherwise, we return the last dataset before the input date.
-func SelectGeoLegacyFile(requestDate time.Time, bucketName string) (string, error) {
+func SelectGeoLegacyFile(requestDate time.Time, bucketName string, isIP4 bool) (string, error) {
 	earliestArchiveDate, _ := time.Parse("January 2, 2006", "August 28, 2013")
 	if requestDate.Before(earliestArchiveDate) {
 		return "Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz", nil
@@ -166,7 +168,8 @@ func SelectGeoLegacyFile(requestDate time.Time, bucketName string) (string, erro
 				return lastFilename, nil
 			}
 			lastFilename = fileName
-		} else if !requestDate.Before(CutOffDate) && handler.GeoLite2Regex.MatchString(fileName) {
+		} else if !requestDate.Before(CutOffDate) &&
+			((isIP4 && GeoLite2Regex.MatchString(fileName)) || (!isIP4 && GeoLegacyv6Regex(fileName))) {
 			// Search GeoLite2 dataset
 			fileDate, err := ExtractDateFromFilename(fileName)
 			if err != nil {
@@ -189,48 +192,48 @@ func SelectGeoLegacyFile(requestDate time.Time, bucketName string) (string, erro
 // LoadGeoliteDataset will check GCS for the matching dataset, download
 // it, process it, and load it into memory so that it can be easily
 // searched, then it will return a pointer to that GeoDataset or an error.
-func LoadLegacyGeoliteDataset(requestDate time.Time, bucketName string) (*geoip.GeoIP, error) {
-	CutOffDate, _ := time.Parse("January 2, 2006", GeoLite2CutOffDate)
-	if requestDate.Before(CutOffDate) {
-		filename, err := SelectGeoLegacyFile(requestDate, bucketName)
-		if err != nil {
-			return nil, err
-		}
-		// load the legacy binary dataset
-		dataFileName := "GeoLiteCity.dat"
-		err = loader.UncompressGzFile(context.Background(), bucketName, filename, dataFileName)
-		if err != nil {
-			return nil, err
-		}
-		gi, err := geoip.Open(dataFileName)
-		if err != nil {
-			return nil, errors.New("could not open GeoIP database")
-		}
-		return gi, nil
+func LoadLegacyGeoliteDataset(filename string, bucketname string) (*geoip.GeoIP, error) {
+	// load the legacy binary dataset
+	dataFileName := "GeoLiteCity.dat"
+	err = loader.UncompressGzFile(context.Background(), bucketName, filename, dataFileName)
+	if err != nil {
+		return nil, err
 	}
-	return nil, errors.New("should call LoadGeoLite2Dataset with input date")
+	gi, err := geoip.Open(dataFileName)
+	if err != nil {
+		return nil, errors.New("could not open GeoIP database")
+	}
+	return gi, nil
 }
 
-func LoadGeoLite2Dataset(requestDate time.Time, bucketName string) (*parser.GeoDataset, error) {
-	CutOffDate, _ := time.Parse("January 2, 2006", GeoLite2CutOffDate)
-	if !requestDate.Before(CutOffDate) {
-		filename, err := SelectGeoLegacyFile(requestDate, bucketName)
-		if err != nil {
-			return nil, err
-		}
-		// load GeoLite2 dataset
-		zip, err := loader.CreateZipReader(context.Background(), bucketName, filename)
-		if err != nil {
-			return nil, err
-		}
-		return parser.LoadGeoLite2(zip)
+func LoadGeoLite2Dataset(filename string, bucketname string) (*parser.GeoDataset, error) {
+	zip, err := loader.CreateZipReader(context.Background(), bucketname, filename)
+	if err != nil {
+		return nil, err
 	}
-	return nil, errors.New("should call LoadLegacyGeoliteDataset with input date")
+	return parser.LoadGeoLite2(zip)
 }
 
-func GetRecordFromLegacyDataset(gi *geoip.GeoIP, ip string) {
+func GetRecordFromLegacyDataset(gi *geoip.GeoIP, ip string) *common.GeoData {
 	if gi != nil {
 		record := gi.GetRecord(ip)
 		fmt.Printf("%v\n", record)
+	}
+
+	return &common.GeoData{
+		Geo: &common.GeolocationIP{
+			Continent_code: record.ContinentCode,
+			Country_code:   record.CountryCode,
+			Country_code3:  record.CountryCode3,
+			Country_name:   record.CountryName,
+			Region:         record.Region,
+			Metro_code:     record.MetroCode,
+			City:           record.City,
+			Area_code:      record.AreaCode,
+			Postal_code:    record.PostalCode,
+			Latitude:       record.Latitude,
+			Longitude:      record.Longitude,
+		},
+		ASN: &common.IPASNData{},
 	}
 }

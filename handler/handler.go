@@ -32,6 +32,17 @@ var (
 	// This is a pointer to a GeoDataset struct containing the absolute
 	// latest data for the annotator to search and reply with
 	CurrentGeoDataset *parser.GeoDataset = nil
+
+	// A mutex to make sure that we are not reading from a dataset
+	// pointer while trying to update it
+	Geolite2DatasetMutex = &sync.RWMutex{}
+	LegacyDatasetMutex   = &sync.RWMutex{}
+
+	// The list of GeoLite2 datasets (except the current one) that are already in memory.
+	Geolite2DatasetInMemory = make(map[string]*parser.GeoDataset)
+
+	// The list of legacy datasets that are already in memory.
+	LegacyDatasetInMemory = make(map[string]*geoip.GeoIP)
 )
 
 const (
@@ -182,29 +193,24 @@ func BatchValidateAndParse(source io.Reader) ([]common.RequestData, error) {
 	return validatedData, nil
 }
 
-// GetMetadataForSingleIP takes a pointer to a common.RequestData
-// struct and will use it to fetch the appropriate associated
-// metadata, returning a pointer. It is gaurenteed to return a non-nil
-// pointer, even if it cannot find the appropriate metadata.
-func GetMetadataForSingleIP(request *common.RequestData) *common.GeoData {
-	metrics.Metrics_totalLookups.Inc()
-	if CurrentGeoDataset == nil {
+func UseGeoLite2Dataset(request *common.RequestData, dataset *parser.GeoDataset, mutex sync.RWMutex) (*common.GeoData, error) {
+	if dataset == nil {
 		// TODO: Block until the value is not nil
-		return nil
+		return nil, errors.New("Dataset is not ready")
 	}
 	// TODO: Figure out which table to use based on time
 	err := errors.New("unknown IP format")
-	currentDataMutex.RLock()
+	mutex.RLock()
 	// TODO(gfr) release lock sooner?
-	defer currentDataMutex.RUnlock()
+	defer mutex.RUnlock()
 	var node parser.IPNode
 	// TODO: Push this logic down to searchlist (after binary search is implemented)
 	if request.IPFormat == 4 {
 		node, err = search.SearchBinary(
-			CurrentGeoDataset.IP4Nodes, request.IP)
+			dataset.IP4Nodes, request.IP)
 	} else if request.IPFormat == 6 {
 		node, err = search.SearchBinary(
-			CurrentGeoDataset.IP6Nodes, request.IP)
+			dataset.IP6Nodes, request.IP)
 	}
 
 	if err != nil {
@@ -213,10 +219,56 @@ func GetMetadataForSingleIP(request *common.RequestData) *common.GeoData {
 			log.Println(err, request.IP)
 		}
 		//TODO metric here
-		return nil
+		return nil, err
 	}
 
-	return ConvertIPNodeToGeoData(node, CurrentGeoDataset.LocationNodes)
+	return ConvertIPNodeToGeoData(node, CurrentGeoDataset.LocationNodes), nil
+}
+
+// GetMetadataForSingleIP takes a pointer to a common.RequestData
+// struct and will use it to fetch the appropriate associated
+// metadata, returning a pointer. It is gaurenteed to return a non-nil
+// pointer, even if it cannot find the appropriate metadata.
+func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error) {
+	metrics.Metrics_totalLookups.Inc()
+
+	if request.Timestamp.After(LatestDatasetDate) {
+		return UseGeoLite2Dataset(request, CurrentGeoDataset, currentDataMutex)
+	}
+	// Check the timestamp of request for correct dataset.
+	isIP4 := true
+	if request.IPFormat == 6 {
+		isIP4 := false
+	}
+	filename, err := SelectGeoLegacyFile(request.Timestamp, BucketName, isIP4)
+
+	if err != nil {
+		return nil, errors.New("Cannot get historical dataset")
+	}
+	if GeoLite2Regex.MatchString(filename) {
+		if parser, ok := Geolite2DatasetInMemory[filename]; ok && parser != nil {
+			return UseGeoLite2Dataset(request, parser, Geolite2DatasetMutex)
+		} else {
+			// load the new dataset into memory
+			parser, err := LoadGeoLite2Dataset(filename, BucketName)
+			if err != nil {
+				return nil, errors.New("Cannot load historical dataset into memory")
+			}
+			Geolite2DatasetInMemory[filename] = parser
+			return UseGeoLite2Dataset(request, parser, Geolite2DatasetMutex)
+		}
+	} else {
+		if parser, ok := LegacyDatasetInMemory[filename]; ok && parser != nil {
+			return GetRecordFromLegacyDataset(parser, request.IP), nil
+		} else {
+			parser, err := LoadLegacyGeoliteDataset(filename, BucketName)
+			if err != nil {
+				return nil, errors.New("Cannot load historical dataset into memory")
+			}
+			LegacyDatasetInMemory[filename] = parser
+			return GetRecordFromLegacyDataset(parser, request.IP), nil
+		}
+	}
 }
 
 // ConvertIPNodeToGeoData takes a parser.IPNode, plus a list of
