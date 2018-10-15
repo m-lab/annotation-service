@@ -91,6 +91,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
+	"github.com/m-lab/annotation-service/common"
 	"github.com/m-lab/annotation-service/handler/geoip"
 	"github.com/m-lab/annotation-service/loader"
 	"github.com/m-lab/annotation-service/parser"
@@ -101,7 +102,6 @@ var DatasetNames = make([]string, 0)
 var LatestDatasetDate time.Time
 
 const (
-	MaxmindPrefix = "Maxmind/" // Folder containing the maxmind files
 	// This is the date we have the first GeoLite2 dataset.
 	// Any request earlier than this date using legacy binary datasets
 	// later than this date using GeoLite2 datasets
@@ -169,7 +169,7 @@ func SelectGeoLegacyFile(requestDate time.Time, bucketName string, isIP4 bool) (
 			}
 			lastFilename = fileName
 		} else if !requestDate.Before(CutOffDate) &&
-			((isIP4 && GeoLite2Regex.MatchString(fileName)) || (!isIP4 && GeoLegacyv6Regex(fileName))) {
+			((isIP4 && GeoLite2Regex.MatchString(fileName)) || (!isIP4 && GeoLegacyv6Regex.MatchString(fileName))) {
 			// Search GeoLite2 dataset
 			fileDate, err := ExtractDateFromFilename(fileName)
 			if err != nil {
@@ -195,7 +195,7 @@ func SelectGeoLegacyFile(requestDate time.Time, bucketName string, isIP4 bool) (
 func LoadLegacyGeoliteDataset(filename string, bucketname string) (*geoip.GeoIP, error) {
 	// load the legacy binary dataset
 	dataFileName := "GeoLiteCity.dat"
-	err = loader.UncompressGzFile(context.Background(), bucketName, filename, dataFileName)
+	err := loader.UncompressGzFile(context.Background(), bucketName, filename, dataFileName)
 	if err != nil {
 		return nil, err
 	}
@@ -215,11 +215,11 @@ func LoadGeoLite2Dataset(filename string, bucketname string) (*parser.GeoDataset
 }
 
 func GetRecordFromLegacyDataset(gi *geoip.GeoIP, ip string) *common.GeoData {
-	if gi != nil {
-		record := gi.GetRecord(ip)
-		fmt.Printf("%v\n", record)
+	if gi == nil {
+		return nil
 	}
-
+	record := gi.GetRecord(ip)
+	fmt.Printf("%v\n", record)
 	return &common.GeoData{
 		Geo: &common.GeolocationIP{
 			Continent_code: record.ContinentCode,
@@ -227,12 +227,12 @@ func GetRecordFromLegacyDataset(gi *geoip.GeoIP, ip string) *common.GeoData {
 			Country_code3:  record.CountryCode3,
 			Country_name:   record.CountryName,
 			Region:         record.Region,
-			Metro_code:     record.MetroCode,
+			Metro_code:     int64(record.MetroCode),
 			City:           record.City,
-			Area_code:      record.AreaCode,
+			Area_code:      int64(record.AreaCode),
 			Postal_code:    record.PostalCode,
-			Latitude:       record.Latitude,
-			Longitude:      record.Longitude,
+			Latitude:       float64(record.Latitude),
+			Longitude:      float64(record.Longitude),
 		},
 		ASN: &common.IPASNData{},
 	}
