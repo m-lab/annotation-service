@@ -243,7 +243,7 @@ func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error
 	// Check the timestamp of request for correct dataset.
 	isIP4 := true
 	if request.IPFormat == 6 {
-		isIP4 := false
+		isIP4 = false
 	}
 	filename, err := SelectGeoLegacyFile(request.Timestamp, BucketName, isIP4)
 
