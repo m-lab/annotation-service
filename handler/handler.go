@@ -159,7 +159,7 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	for _, data := range dataSlice {
 		responseMap[data.IP+strconv.FormatInt(data.Timestamp.Unix(), encodingBase)], err = GetMetadataForSingleIP(&data)
 		if err != nil {
-			log.Println("Error with meta request: %v", err)
+			log.Println(err)
 		}
 	}
 	encodedResult, err := json.Marshal(responseMap)
