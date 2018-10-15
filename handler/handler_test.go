@@ -255,7 +255,10 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		res := handler.GetMetadataForSingleIP(test.req)
+		res, err := handler.GetMetadataForSingleIP(test.req)
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
 		if !reflect.DeepEqual(res, test.res) {
 			t.Errorf("Expected %v, got %v", test.res, res)
 		}
