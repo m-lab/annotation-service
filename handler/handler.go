@@ -149,18 +149,22 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	r.Body.Close()
 
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		fmt.Fprintf(w, "Invalid Request!")
 		return
 	}
 
+	// TODO: speed up the batch process because they will use the same dataset most of the time.
 	responseMap := make(map[string]*common.GeoData)
 	for _, data := range dataSlice {
-		responseMap[data.IP+strconv.FormatInt(data.Timestamp.Unix(), encodingBase)], _ = GetMetadataForSingleIP(&data)
+		responseMap[data.IP+strconv.FormatInt(data.Timestamp.Unix(), encodingBase)], err = GetMetadataForSingleIP(&data)
+		if err != nil {
+			log.Println("Error with meta request: %v", err)
+		}
 	}
 	encodedResult, err := json.Marshal(responseMap)
 	if err != nil {
-		fmt.Fprintf(w, "Unknown JSON Encoding Error")
+		log.Println(w, "Unknown JSON Encoding Error")
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
@@ -246,12 +250,14 @@ func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error
 		isIP4 = false
 	}
 	filename, err := SelectGeoLegacyFile(request.Timestamp, BucketName, isIP4)
+	log.Println("legacy dataset: " + filename)
 
 	if err != nil {
 		return nil, errors.New("Cannot get historical dataset")
 	}
 	if GeoLite2Regex.MatchString(filename) {
 		if parser, ok := Geolite2DatasetInMemory[filename]; ok && parser != nil {
+			log.Println("GeoLite 2 dataset already in memory")
 			return UseGeoLite2Dataset(request, parser, Geolite2DatasetMutex)
 		} else {
 			// load the new dataset into memory
@@ -259,18 +265,25 @@ func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error
 			if err != nil {
 				return nil, errors.New("Cannot load historical dataset into memory")
 			}
+			log.Println("Load new GeoLite 2 dataset into memory")
+			Geolite2DatasetMutex.Lock()
 			Geolite2DatasetInMemory[filename] = parser
+			Geolite2DatasetMutex.Unlock()
 			return UseGeoLite2Dataset(request, parser, Geolite2DatasetMutex)
 		}
 	} else {
 		if parser, ok := LegacyDatasetInMemory[filename]; ok && parser != nil {
+			log.Println("Legacy dataset already in memory")
 			return GetRecordFromLegacyDataset(parser, request.IP), nil
 		} else {
 			parser, err := LoadLegacyGeoliteDataset(filename, BucketName)
 			if err != nil {
 				return nil, errors.New("Cannot load historical dataset into memory")
 			}
+			log.Println("Load new legacy dataset into memory")
+			LegacyDatasetMutex.Lock()
 			LegacyDatasetInMemory[filename] = parser
+			LegacyDatasetMutex.Unlock()
 			return GetRecordFromLegacyDataset(parser, request.IP), nil
 		}
 	}
