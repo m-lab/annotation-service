@@ -15,7 +15,7 @@ import (
 
 	"github.com/m-lab/annotation-service/common"
 	"github.com/m-lab/annotation-service/metrics"
-	"github.com/twabulldogg/annotation-service/parser"
+	"github.com/m-lab/annotation-service/parser"
 	"github.com/m-lab/annotation-service/search"
 )
 
@@ -203,7 +203,7 @@ func GetMetadataForSingleIP(request *common.RequestData) *common.GeoData {
 	if request.IPFormat == 4 {
 		node, err = search.SearchBinary(
 			CurrentGeoDataset.IP4Nodes, request.IP)
-		asNode, err = search.SearchBinary(
+		asNode, err = search.SearchBinaryASN(
 			CurrentGeoDataset.ASN4Nodes, request.IP)
 	} else if request.IPFormat == 6 {
 		node, err = search.SearchBinary(
@@ -225,7 +225,7 @@ func GetMetadataForSingleIP(request *common.RequestData) *common.GeoData {
 // ConvertIPNodeToGeoData takes a parser.IPNode, plus a list of
 // locationNodes. It will then use that data to fill in a GeoData
 // struct and return its pointer.
-func ConvertIPNodeToGeoData(ipNode parser.IPNode, locationNodes []parser.LocationNode, asnNodes parser.ASNNode) *common.GeoData {
+func ConvertIPNodeToGeoData(ipNode parser.IPNode, locationNodes []parser.LocationNode, asnNode parser.ASNNode) *common.GeoData {
 	locNode := parser.LocationNode{}
 	if ipNode.LocationIndex >= 0 {
 		locNode = locationNodes[ipNode.LocationIndex]
@@ -247,7 +247,6 @@ func ConvertIPNodeToGeoData(ipNode parser.IPNode, locationNodes []parser.Locatio
 		},
 		ASN: &common.IPASNData{
                         ASN:            asnNode.ASN,
-                        Prefix:         asnNode.Prefix,
                         ASN_org:        asnNode.ASN_org,
                 },
 	}

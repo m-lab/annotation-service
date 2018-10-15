@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 	"time"
-
+	"fmt"
 	"github.com/m-lab/annotation-service/common"
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/parser"
@@ -24,7 +24,7 @@ func TestAnnotate(t *testing.T) {
 		time string
 		res  string
 	}{
-		{"1.4.128.0", "625600", `{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":42.1,"longitude":-73.1},"ASN":{}}`},
+		{"1.4.128.0", "625600", `{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":42.1,"longitude":-73.1},"ASN":{"ASN": 10583, "ASN_org": "Not a Real Org"}}`},
 		{"This will be an error.", "1000", "Invalid request"},
 	}
 	handler.CurrentGeoDataset = &parser.GeoDataset{
@@ -54,7 +54,9 @@ func TestAnnotate(t *testing.T) {
 			},
 		},
 	}
+	fmt.Println(tests)
 	for _, test := range tests {
+		fmt.Println(test)
 		w := httptest.NewRecorder()
 		r := &http.Request{}
 		r.URL, _ = url.Parse("/annotate?ip_addr=" + url.QueryEscape(test.ip) + "&since_epoch=" + url.QueryEscape(test.time))
@@ -266,11 +268,13 @@ func TestConvertIPNodeToGeoData(t *testing.T) {
 	tests := []struct {
 		node parser.IPNode
 		locs []parser.LocationNode
+		asn parser.ASNNode
 		res  *common.GeoData
 	}{
 		{
 			node: parser.IPNode{LocationIndex: 0, PostalCode: "10583"},
 			locs: []parser.LocationNode{{CityName: "Not A Real City", RegionCode: "ME"}},
+			asn: parser.ASNNode{ASN: 10583, ASN_org: "Not a Real Org"},
 			res: &common.GeoData{
 				Geo: &common.GeolocationIP{City: "Not A Real City", Postal_code: "10583", Region: "ME"},
 				ASN: &common.IPASNData{}},
@@ -278,13 +282,14 @@ func TestConvertIPNodeToGeoData(t *testing.T) {
 		{
 			node: parser.IPNode{LocationIndex: -1, PostalCode: "10583"},
 			locs: nil,
+			asn: parser.ASNNode{ASN: 10583, ASN_org: "Not a Real Org"},
 			res: &common.GeoData{
 				Geo: &common.GeolocationIP{Postal_code: "10583"},
 				ASN: &common.IPASNData{}},
 		},
 	}
 	for _, test := range tests {
-		res := handler.ConvertIPNodeToGeoData(test.node, test.locs)
+		res := handler.ConvertIPNodeToGeoData(test.node, test.locs, test.asn)
 		if !reflect.DeepEqual(res, test.res) {
 			t.Errorf("Expected %v, got %v", test.res, res)
 		}
