@@ -195,7 +195,7 @@ func SelectGeoLegacyFile(requestDate time.Time, bucketName string, isIP4 bool) (
 func LoadLegacyGeoliteDataset(filename string, bucketname string) (*geoip.GeoIP, error) {
 	// load the legacy binary dataset
 	dataFileName := "GeoLiteCity.dat"
-	err := loader.UncompressGzFile(context.Background(), bucketName, filename, dataFileName)
+	err := loader.UncompressGzFile(context.Background(), bucketname, filename, dataFileName)
 	if err != nil {
 		return nil, err
 	}
