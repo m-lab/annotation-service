@@ -12,7 +12,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"fmt"
 	"github.com/m-lab/annotation-service/common"
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/parser"
@@ -54,9 +53,7 @@ func TestAnnotate(t *testing.T) {
 			},
 		},
 	}
-	fmt.Println(tests)
 	for _, test := range tests {
-		fmt.Println(test)
 		w := httptest.NewRecorder()
 		r := &http.Request{}
 		r.URL, _ = url.Parse("/annotate?ip_addr=" + url.QueryEscape(test.ip) + "&since_epoch=" + url.QueryEscape(test.time))
