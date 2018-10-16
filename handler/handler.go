@@ -242,6 +242,7 @@ func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error
 	metrics.Metrics_totalLookups.Inc()
 
 	if request.Timestamp.After(LatestDatasetDate) {
+		log.Println("Use latest dataset")
 		return UseGeoLite2Dataset(request, CurrentGeoDataset, currentDataMutex)
 	}
 	// Check the timestamp of request for correct dataset.

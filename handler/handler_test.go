@@ -19,12 +19,13 @@ import (
 )
 
 func TestAnnotate(t *testing.T) {
+	handler.UpdateFilenamelist("downloader-mlab-testing")
 	tests := []struct {
 		ip   string
 		time string
 		res  string
 	}{
-		{"1.4.128.0", "625600", `{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":42.1,"longitude":-73.1},"ASN":{}}`},
+		{"1.4.128.0", "1539704761", `{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":42.1,"longitude":-73.1},"ASN":{}}`},
 		{"This will be an error.", "1000", "Invalid request"},
 	}
 	handler.CurrentGeoDataset = &parser.GeoDataset{
@@ -106,7 +107,6 @@ func TestValidateAndParse(t *testing.T) {
 			t.Errorf("Expected %+v, got %+v.", test.err, err)
 		}
 	}
-
 }
 
 type badReader int
@@ -161,7 +161,6 @@ func TestBatchValidateAndParse(t *testing.T) {
 			t.Errorf("Expected %+v, got %+v.", test.err, err)
 		}
 	}
-
 }
 
 func TestBatchAnnotate(t *testing.T) {
@@ -176,11 +175,11 @@ func TestBatchAnnotate(t *testing.T) {
 			alt:  "",
 		},
 		{
-			body: `[{"ip": "127.0.0.1", "timestamp": "2017-08-25T13:31:12.149678161-04:00"},
-                               {"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "timestamp": "2017-08-25T13:31:12.149678161-04:00"}]`,
-			res: `{"127.0.0.1ov94o0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583"},"ASN":{}},"2620:0:1003:1008:5179:57e3:3c75:1886ov94o0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583"},"ASN":{}}}`,
+			body: `[{"ip": "127.0.0.1", "timestamp": "2018-12-25T13:31:12.149678161-04:00"},
+                               {"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "timestamp": "2018-12-25T13:31:12.149678161-04:00"}]`,
+			res: `{"127.0.0.1pkazc0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583"},"ASN":{}},"2620:0:1003:1008:5179:57e3:3c75:1886pkazc0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583"},"ASN":{}}}`,
 			// TODO - remove alt after updating json annotations to omitempty.
-			alt: `{"127.0.0.1ov94o0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}},"2620:0:1003:1008:5179:57e3:3c75:1886ov94o0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}}}`,
+			alt: `{"127.0.0.1pkazc0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}},"2620:0:1003:1008:5179:57e3:3c75:1886pkazc0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}}}`,
 		},
 	}
 	handler.CurrentGeoDataset = &parser.GeoDataset{
@@ -225,7 +224,7 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 		res *common.GeoData
 	}{
 		{
-			req: &common.RequestData{"127.0.0.1", 4, time.Unix(0, 0)},
+			req: &common.RequestData{"127.0.0.1", 4, time.Now()},
 			res: &common.GeoData{
 				Geo: &common.GeolocationIP{City: "Not A Real City", Postal_code: "10583"},
 				ASN: &common.IPASNData{}},
