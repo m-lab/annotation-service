@@ -88,6 +88,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strconv"
 	"time"
 
 	"cloud.google.com/go/storage"
@@ -214,6 +215,11 @@ func LoadGeoLite2Dataset(filename string, bucketname string) (*parser.GeoDataset
 	return parser.LoadGeoLite2(zip)
 }
 
+func Round(x float32) float64 {
+	i, _ := strconv.ParseFloat(fmt.Sprintf("%.3f", x), 64)
+	return i
+}
+
 func GetRecordFromLegacyDataset(gi *geoip.GeoIP, ip string) *common.GeoData {
 	if gi == nil {
 		return nil
@@ -231,8 +237,8 @@ func GetRecordFromLegacyDataset(gi *geoip.GeoIP, ip string) *common.GeoData {
 			City:           record.City,
 			Area_code:      int64(record.AreaCode),
 			Postal_code:    record.PostalCode,
-			Latitude:       float64(record.Latitude),
-			Longitude:      float64(record.Longitude),
+			Latitude:       Round(record.Latitude),
+			Longitude:      Round(record.Longitude),
 		},
 		ASN: &common.IPASNData{},
 	}

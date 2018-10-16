@@ -67,6 +67,29 @@ func TestAnnotate(t *testing.T) {
 	}
 }
 
+func TestLegacyDataset(t *testing.T) {
+	handler.UpdateFilenamelist("downloader-mlab-testing")
+	tests := []struct {
+		ip   string
+		time string
+		res  string
+	}{
+		{"1.4.128.0", "1199145600", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"ASN":{}}`},
+		{"1.5.190.1", "1420070400", `{"Geo":{"continent_code":"AS","country_code":"JP","country_code3":"JPN","country_name":"Japan","region":"40","city":"Tokyo","latitude":35.685,"longitude":139.751},"ASN":{}}`},
+		{"1.9.128.0", "1512086400", `{"Geo":{"continent_code":"AS","country_code":"MY","country_name":"Malaysia","region":"14","city":"Kuala Lumpur","postal_code":"50400","latitude":3.149,"longitude":101.697},"ASN":{}}`},
+	}
+	for _, test := range tests {
+		w := httptest.NewRecorder()
+		r := &http.Request{}
+		r.URL, _ = url.Parse("/annotate?ip_addr=" + url.QueryEscape(test.ip) + "&since_epoch=" + url.QueryEscape(test.time))
+		handler.Annotate(w, r)
+		body := w.Body.String()
+		if string(body) != test.res {
+			t.Errorf("\nGot\n__%s__\nexpected\n__%s__\n", body, test.res)
+		}
+	}
+}
+
 func TestValidateAndParse(t *testing.T) {
 	tests := []struct {
 		req *http.Request

@@ -231,7 +231,7 @@ func UseGeoLite2Dataset(request *common.RequestData, dataset *parser.GeoDataset,
 		return nil, err
 	}
 
-	return ConvertIPNodeToGeoData(node, CurrentGeoDataset.LocationNodes), nil
+	return ConvertIPNodeToGeoData(node, dataset.LocationNodes), nil
 }
 
 // GetMetadataForSingleIP takes a pointer to a common.RequestData
@@ -264,6 +264,7 @@ func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error
 			// load the new dataset into memory
 			parser, err := LoadGeoLite2Dataset(filename, BucketName)
 			if err != nil {
+				log.Println(err)
 				return nil, errors.New("Cannot load historical dataset into memory")
 			}
 			log.Println("Load new GeoLite 2 dataset into memory")
