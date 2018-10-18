@@ -25,25 +25,52 @@ func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 }
 
+type DatasetInMemory struct {
+	data  map[string]*parser.GeoDataset
+	mutex *sync.RWMutex
+}
+
+func (d DatasetInMemory) Init() {
+	d.date = make(map[string]*parser.GeoDataset)
+	mutex = &sync.RWMutex{}
+}
+
+// This func will make the data map size to 1 and contains only the current dataset.
+func (d DatasetInMemory) SetCurrentDataset(inputData *parser.GeoDataset) {
+	d.mutex.Lock()
+	d.date = make(map[string]*parser.GeoDataset)
+	d.data["current"] = inputData
+	d.mutex.Unlock()
+}
+
+func (d DatasetInMemory) AddDataset(string filename, inputData *parser.GeoDataset) {
+	d.mutex.Lock()
+	d.data[filename] = inputData
+	d.mutex.Unlock()
+}
+
+func (d DatasetInMemory) GetDataset(string filename) *parser.GeoDataset {
+	d.mutex.RLock()
+	defer d.mutex.RUnlock()
+	return d.data[filename]
+}
+
+func (d DatasetInMemory) GetCurrentDataset() *parser.GeoDataset {
+	d.mutex.RLock()
+	defer d.mutex.RUnlock()
+	return d.data["current"]
+}
+
 var (
-	// A mutex to make sure that we are not reading from the dataset
-	// pointer while trying to update it
-	currentDataMutex = &sync.RWMutex{}
+	// This is a struct containing the latest data for the annotator to search
+	// and reply with. The size of data map inside is 1.
+	CurrentGeoDataset DatasetInMemory
 
-	// This is a pointer to a GeoDataset struct containing the absolute
-	// latest data for the annotator to search and reply with
-	CurrentGeoDataset *parser.GeoDataset = nil
+	// The GeoLite2 datasets (except the current one) that are already in memory.
+	Geolite2DatasetInMemory DatasetInMemory
 
-	// A mutex to make sure that we are not reading from a dataset
-	// pointer while trying to update it
-	Geolite2DatasetMutex = &sync.RWMutex{}
-	LegacyDatasetMutex   = &sync.RWMutex{}
-
-	// The list of GeoLite2 datasets (except the current one) that are already in memory.
-	Geolite2DatasetInMemory = make(map[string]*parser.GeoDataset)
-
-	// The list of legacy datasets that are already in memory.
-	LegacyDatasetInMemory = make(map[string]*geoip.GeoIP)
+	// The legacy datasets that are already in memory.
+	LegacyDatasetInMemory DatasetInMemory
 )
 
 const (
@@ -202,16 +229,15 @@ func BatchValidateAndParse(source io.Reader) ([]common.RequestData, error) {
 	return validatedData, nil
 }
 
-func UseGeoLite2Dataset(request *common.RequestData, dataset *parser.GeoDataset, mutex *sync.RWMutex) (*common.GeoData, error) {
+func UseGeoLite2Dataset(request *common.RequestData, dataset DatasetInMemory, isCurrent bool) (*common.GeoData, error) {
 	if dataset == nil {
 		// TODO: Block until the value is not nil
 		return nil, errors.New("Dataset is not ready")
 	}
 	// TODO: Figure out which table to use based on time
 	err := errors.New("unknown IP format")
-	mutex.RLock()
-	// TODO(gfr) release lock sooner?
-	defer mutex.RUnlock()
+	var dataset *parser.GeoDataset
+
 	var node parser.IPNode
 	// TODO: Push this logic down to searchlist (after binary search is implemented)
 	if request.IPFormat == 4 {
@@ -243,7 +269,7 @@ func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error
 
 	if request.Timestamp.After(LatestDatasetDate) {
 		log.Println("Use latest dataset")
-		return UseGeoLite2Dataset(request, CurrentGeoDataset, currentDataMutex)
+		return UseGeoLite2Dataset(request, CurrentGeoDataset.GetCurrentDataset())
 	}
 	// Check the timestamp of request for correct dataset.
 	isIP4 := true
@@ -257,9 +283,9 @@ func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error
 		return nil, errors.New("Cannot get historical dataset")
 	}
 	if GeoLite2Regex.MatchString(filename) {
-		if parser, ok := Geolite2DatasetInMemory[filename]; ok && parser != nil {
+		if parser := Geolite2DatasetInMemory.GetDataset(filename); parser != nil {
 			log.Println("GeoLite 2 dataset already in memory")
-			return UseGeoLite2Dataset(request, parser, Geolite2DatasetMutex)
+			return UseGeoLite2Dataset(request, parser)
 		} else {
 			// load the new dataset into memory
 			parser, err := LoadGeoLite2Dataset(filename, BucketName)
@@ -268,10 +294,9 @@ func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error
 				return nil, errors.New("Cannot load historical dataset into memory")
 			}
 			log.Println("Load new GeoLite 2 dataset into memory")
-			Geolite2DatasetMutex.Lock()
-			Geolite2DatasetInMemory[filename] = parser
-			Geolite2DatasetMutex.Unlock()
-			return UseGeoLite2Dataset(request, parser, Geolite2DatasetMutex)
+
+			Geolite2DatasetInMemory.AddDataset(filename, parser)
+			return UseGeoLite2Dataset(request, parser)
 		}
 	} else {
 		if parser, ok := LegacyDatasetInMemory[filename]; ok && parser != nil {
@@ -283,9 +308,7 @@ func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error
 				return nil, errors.New("Cannot load historical dataset into memory")
 			}
 			log.Println("Load new legacy dataset into memory")
-			LegacyDatasetMutex.Lock()
-			LegacyDatasetInMemory[filename] = parser
-			LegacyDatasetMutex.Unlock()
+			LegacyDatasetInMemory.AddDataset(filename, parser)
 			return GetRecordFromLegacyDataset(parser, request.IP), nil
 		}
 	}

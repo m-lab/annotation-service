@@ -38,9 +38,11 @@ func PopulateLatestData() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	currentDataMutex.Lock()
-	CurrentGeoDataset = data
-	currentDataMutex.Unlock()
+
+	CurrentGeoDataset.SetCurrentDataset(data)
+	// clear the data in memeory for historical data.
+	Geolite2DatasetInMemory.Init()
+	LegacyDatasetInMemory.Init()
 }
 
 // DetermineFilenameOfLatestGeolite2File will get a list of filenames
