@@ -20,19 +20,6 @@ import (
 	//"github.com/m-lab/annotation-service/parser"
 )
 
-func TestMutex(t *testing.T) {
-	testMutex := &sync.RWMutex{}
-
-	req := &common.RequestData{"127.0.0.1", 4, time.Now()}
-	data, _ := handler.LoadLatestGeolite2File()
-	testMutex.Lock()
-	log.Println("start check")
-	handler.UseGeoLite2Dataset(req, data, &testMutex)
-	testMutex.Unlock()
-	log.Println("sth wrong")
-}
-
-/*
 func TestAnnotate(t *testing.T) {
 	handler.UpdateFilenamelist("downloader-mlab-testing")
 	tests := []struct {
@@ -330,4 +317,4 @@ func TestConvertIPNodeToGeoData(t *testing.T) {
 			t.Errorf("Expected %v, got %v", test.res, res)
 		}
 	}
-}*/
+}

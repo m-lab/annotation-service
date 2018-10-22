@@ -220,7 +220,7 @@ func Round(x float32) float64 {
 	return i
 }
 
-func GetRecordFromLegacyDataset(gi *geoip.GeoIP, ip string) *common.GeoData {
+func GetRecordFromLegacyDataset(ip string, gi *geoip.GeoIP) *common.GeoData {
 	if gi == nil {
 		return nil
 	}
