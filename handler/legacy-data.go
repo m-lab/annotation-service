@@ -227,7 +227,6 @@ func GetRecordFromLegacyDataset(ip string, gi *geoip.GeoIP) *common.GeoData {
 		return nil
 	}
 	record := gi.GetRecord(ip)
-	fmt.Printf("%v\n", record)
 	return &common.GeoData{
 		Geo: &common.GeolocationIP{
 			Continent_code: record.ContinentCode,

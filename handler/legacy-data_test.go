@@ -1,7 +1,6 @@
 package handler_test
 
 import (
-	"fmt"
 	"log"
 	"testing"
 	"time"
@@ -84,7 +83,9 @@ var _ = check.Suite(&GeoIPSuite{})
 
 func (s *GeoIPSuite) TestLoadLegacyGeoliteDataset(c *check.C) {
 	gi, err := handler.LoadLegacyGeoliteDataset("Maxmind/2014/03/07/20140307T160000Z-GeoLiteCity.dat.gz", "downloader-mlab-testing")
-	fmt.Printf("%v", err)
+	if err != nil {
+		log.Println(err)
+	}
 	if gi != nil {
 		record := gi.GetRecord("207.171.7.51")
 		c.Assert(record, check.NotNil)

@@ -4,14 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	//"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"reflect"
 	"strings"
-	//"sync"
 	"testing"
 	"time"
 
@@ -19,6 +17,9 @@ import (
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/parser"
 )
+
+// TODO: unittests here use the external test files with project mlab-testing.
+// We could use an stiface fake to provide the test files instead in the future.
 
 func TestAnnotate(t *testing.T) {
 	handler.UpdateFilenamelist("downloader-mlab-testing")
