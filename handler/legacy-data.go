@@ -92,10 +92,10 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
-	"github.com/m-lab/annotation-service/common"
 	"github.com/m-lab/annotation-service/handler/geoip"
 	"github.com/m-lab/annotation-service/loader"
 	"github.com/m-lab/annotation-service/parser"
+	"github.com/m-lab/etl/annotation"
 	"google.golang.org/api/iterator"
 )
 
@@ -222,13 +222,13 @@ func Round(x float32) float64 {
 	return i
 }
 
-func GetRecordFromLegacyDataset(ip string, gi *geoip.GeoIP) *common.GeoData {
+func GetRecordFromLegacyDataset(ip string, gi *geoip.GeoIP) *annotation.GeoData {
 	if gi == nil {
 		return nil
 	}
 	record := gi.GetRecord(ip)
-	return &common.GeoData{
-		Geo: &common.GeolocationIP{
+	return &annotation.GeoData{
+		Geo: &annotation.GeolocationIP{
 			Continent_code: record.ContinentCode,
 			Country_code:   record.CountryCode,
 			Country_code3:  record.CountryCode3,
@@ -241,6 +241,6 @@ func GetRecordFromLegacyDataset(ip string, gi *geoip.GeoIP) *common.GeoData {
 			Latitude:       Round(record.Latitude),
 			Longitude:      Round(record.Longitude),
 		},
-		ASN: &common.IPASNData{},
+		ASN: &annotation.IPASNData{},
 	}
 }

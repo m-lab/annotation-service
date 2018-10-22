@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/m-lab/annotation-service/common"
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/parser"
+	"github.com/m-lab/etl/annotation"
 )
 
 // TODO: unittests here use the external test files with project mlab-testing.
@@ -99,7 +99,7 @@ func TestLegacyDataset(t *testing.T) {
 func TestValidateAndParse(t *testing.T) {
 	tests := []struct {
 		req *http.Request
-		res *common.RequestData
+		res *annotation.RequestData
 		err error
 	}{
 		{
@@ -117,13 +117,13 @@ func TestValidateAndParse(t *testing.T) {
 		{
 			req: httptest.NewRequest("GET",
 				"http://example.com/annotate?ip_addr=127.0.0.1&since_epoch=10", nil),
-			res: &common.RequestData{"127.0.0.1", 4, time.Unix(10, 0)},
+			res: &annotation.RequestData{"127.0.0.1", 4, time.Unix(10, 0)},
 			err: nil,
 		},
 		{
 			req: httptest.NewRequest("GET",
 				"http://example.com/annotate?ip_addr=2620:0:1003:1008:5179:57e3:3c75:1886&since_epoch=10", nil),
-			res: &common.RequestData{"2620:0:1003:1008:5179:57e3:3c75:1886", 6, time.Unix(10, 0)},
+			res: &annotation.RequestData{"2620:0:1003:1008:5179:57e3:3c75:1886", 6, time.Unix(10, 0)},
 			err: nil,
 		},
 	}
@@ -148,7 +148,7 @@ func TestBatchValidateAndParse(t *testing.T) {
 	timeCon, _ := time.Parse(time.RFC3339, "2002-10-02T15:00:00Z")
 	tests := []struct {
 		source io.Reader
-		res    []common.RequestData
+		res    []annotation.RequestData
 		err    error
 	}{
 		{
@@ -163,7 +163,7 @@ func TestBatchValidateAndParse(t *testing.T) {
 		},
 		{
 			source: bytes.NewBufferString(`[]`),
-			res:    []common.RequestData{},
+			res:    []annotation.RequestData{},
 			err:    nil,
 		},
 		{
@@ -174,7 +174,7 @@ func TestBatchValidateAndParse(t *testing.T) {
 		{
 			source: bytes.NewBufferString(`[{"ip": "127.0.0.1", "timestamp": "2002-10-02T15:00:00Z"},` +
 				`{"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "timestamp": "2002-10-02T15:00:00Z"}]`),
-			res: []common.RequestData{
+			res: []annotation.RequestData{
 				{"127.0.0.1", 4, timeCon},
 				{"2620:0:1003:1008:5179:57e3:3c75:1886", 6, timeCon},
 			},
@@ -249,14 +249,14 @@ func TestBatchAnnotate(t *testing.T) {
 // returning a canned response
 func TestGetMetadataForSingleIP(t *testing.T) {
 	tests := []struct {
-		req *common.RequestData
-		res *common.GeoData
+		req *annotation.RequestData
+		res *annotation.GeoData
 	}{
 		{
-			req: &common.RequestData{"127.0.0.1", 4, time.Now()},
-			res: &common.GeoData{
-				Geo: &common.GeolocationIP{City: "Not A Real City", Postal_code: "10583"},
-				ASN: &common.IPASNData{}},
+			req: &annotation.RequestData{"127.0.0.1", 4, time.Now()},
+			res: &annotation.GeoData{
+				Geo: &annotation.GeolocationIP{City: "Not A Real City", Postal_code: "10583"},
+				ASN: &annotation.IPASNData{}},
 		},
 	}
 	handler.CurrentGeoDataset.SetCurrentDataset(&parser.GeoDataset{
@@ -297,21 +297,21 @@ func TestConvertIPNodeToGeoData(t *testing.T) {
 	tests := []struct {
 		node parser.IPNode
 		locs []parser.LocationNode
-		res  *common.GeoData
+		res  *annotation.GeoData
 	}{
 		{
 			node: parser.IPNode{LocationIndex: 0, PostalCode: "10583"},
 			locs: []parser.LocationNode{{CityName: "Not A Real City", RegionCode: "ME"}},
-			res: &common.GeoData{
-				Geo: &common.GeolocationIP{City: "Not A Real City", Postal_code: "10583", Region: "ME"},
-				ASN: &common.IPASNData{}},
+			res: &annotation.GeoData{
+				Geo: &annotation.GeolocationIP{City: "Not A Real City", Postal_code: "10583", Region: "ME"},
+				ASN: &annotation.IPASNData{}},
 		},
 		{
 			node: parser.IPNode{LocationIndex: -1, PostalCode: "10583"},
 			locs: nil,
-			res: &common.GeoData{
-				Geo: &common.GeolocationIP{Postal_code: "10583"},
-				ASN: &common.IPASNData{}},
+			res: &annotation.GeoData{
+				Geo: &annotation.GeolocationIP{Postal_code: "10583"},
+				ASN: &annotation.IPASNData{}},
 		},
 	}
 	for _, test := range tests {

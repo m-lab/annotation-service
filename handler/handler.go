@@ -13,11 +13,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/m-lab/annotation-service/common"
 	"github.com/m-lab/annotation-service/handler/geoip"
 	"github.com/m-lab/annotation-service/metrics"
 	"github.com/m-lab/annotation-service/parser"
 	"github.com/m-lab/annotation-service/search"
+	"github.com/m-lab/etl/annotation"
 )
 
 func init() {
@@ -137,7 +137,7 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 // ValidateAndParse takes a request and validates the URL parameters,
 // verifying that it has a valid ip address and time. Then, it uses
 // that to construct a RequestData struct and returns the pointer.
-func ValidateAndParse(r *http.Request) (*common.RequestData, error) {
+func ValidateAndParse(r *http.Request) (*annotation.RequestData, error) {
 	query := r.URL.Query()
 
 	time_milli, err := strconv.ParseInt(query.Get("since_epoch"), 10, 64)
@@ -152,9 +152,9 @@ func ValidateAndParse(r *http.Request) (*common.RequestData, error) {
 		return nil, errors.New("invalid IP address")
 	}
 	if newIP.To4() != nil {
-		return &common.RequestData{ip, 4, time.Unix(time_milli, 0)}, nil
+		return &annotation.RequestData{ip, 4, time.Unix(time_milli, 0)}, nil
 	}
-	return &common.RequestData{ip, 6, time.Unix(time_milli, 0)}, nil
+	return &annotation.RequestData{ip, 6, time.Unix(time_milli, 0)}, nil
 }
 
 // BatchResponse is the response type for batch requests.  It is converted to
@@ -162,19 +162,19 @@ func ValidateAndParse(r *http.Request) (*common.RequestData, error) {
 type BatchResponse struct {
 	Version string
 	Date    time.Time
-	Results map[string]*common.GeoData
+	Results map[string]*annotation.GeoData
 }
 
 // NewBatchResponse returns a new response struct.
 // Caller must properly initialize the version and date strings.
 // TODO - pass in the data source and use to populate the version/date.
 func NewBatchResponse(size int) *BatchResponse {
-	responseMap := make(map[string]*common.GeoData, size)
+	responseMap := make(map[string]*annotation.GeoData, size)
 	return &BatchResponse{"", time.Time{}, responseMap}
 }
 
 // BatchAnnotate is a URL handler that expects the body of the request
-// to contain a JSON encoded slice of common.RequestDatas. It will
+// to contain a JSON encoded slice of annotation.RequestDatas. It will
 // look up all the ip addresses and bundle them into a map of metadata
 // structs (with the keys being the ip concatenated with the base 36
 // encoded timestamp) and send them back, again JSON encoded.
@@ -198,7 +198,7 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: speed up the batch process because they will use the same dataset most of the time.
-	responseMap := make(map[string]*common.GeoData)
+	responseMap := make(map[string]*annotation.GeoData)
 	for _, data := range dataSlice {
 		responseMap[data.IP+strconv.FormatInt(data.Timestamp.Unix(), encodingBase)], err = GetMetadataForSingleIP(&data)
 		if err != nil {
@@ -216,16 +216,16 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 
 // BatchValidateAndParse will take a reader (likely the body of a
 // request) containing the JSON encoded array of
-// common.RequestDatas. It will then validate that json and use it to
-// construct a slice of common.RequestDatas, which it will return. If
+// annotation.RequestDatas. It will then validate that json and use it to
+// construct a slice of annotation.RequestDatas, which it will return. If
 // it encounters an error, then it will return nil and that error.
-func BatchValidateAndParse(source io.Reader) ([]common.RequestData, error) {
+func BatchValidateAndParse(source io.Reader) ([]annotation.RequestData, error) {
 	jsonBuffer, err := ioutil.ReadAll(source)
-	validatedData := []common.RequestData{}
+	validatedData := []annotation.RequestData{}
 	if err != nil {
 		return nil, err
 	}
-	uncheckedData := []common.RequestData{}
+	uncheckedData := []annotation.RequestData{}
 
 	err = json.Unmarshal(jsonBuffer, &uncheckedData)
 	if err != nil {
@@ -240,12 +240,12 @@ func BatchValidateAndParse(source io.Reader) ([]common.RequestData, error) {
 		if newIP.To4() != nil {
 			ipType = 4
 		}
-		validatedData = append(validatedData, common.RequestData{data.IP, ipType, data.Timestamp})
+		validatedData = append(validatedData, annotation.RequestData{data.IP, ipType, data.Timestamp})
 	}
 	return validatedData, nil
 }
 
-func UseGeoLite2Dataset(request *common.RequestData, dataset *parser.GeoDataset) (*common.GeoData, error) {
+func UseGeoLite2Dataset(request *annotation.RequestData, dataset *parser.GeoDataset) (*annotation.GeoData, error) {
 	if dataset == nil {
 		// TODO: Block until the value is not nil
 		return nil, errors.New("Dataset is not ready")
@@ -274,11 +274,11 @@ func UseGeoLite2Dataset(request *common.RequestData, dataset *parser.GeoDataset)
 	return ConvertIPNodeToGeoData(node, dataset.LocationNodes), nil
 }
 
-// GetMetadataForSingleIP takes a pointer to a common.RequestData
+// GetMetadataForSingleIP takes a pointer to a annotation.RequestData
 // struct and will use it to fetch the appropriate associated
 // metadata, returning a pointer. It is gaurenteed to return a non-nil
 // pointer, even if it cannot find the appropriate metadata.
-func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error) {
+func GetMetadataForSingleIP(request *annotation.RequestData) (*annotation.GeoData, error) {
 	metrics.Metrics_totalLookups.Inc()
 
 	if request.Timestamp.After(LatestDatasetDate) {
@@ -331,13 +331,13 @@ func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error
 // ConvertIPNodeToGeoData takes a parser.IPNode, plus a list of
 // locationNodes. It will then use that data to fill in a GeoData
 // struct and return its pointer.
-func ConvertIPNodeToGeoData(ipNode parser.IPNode, locationNodes []parser.LocationNode) *common.GeoData {
+func ConvertIPNodeToGeoData(ipNode parser.IPNode, locationNodes []parser.LocationNode) *annotation.GeoData {
 	locNode := parser.LocationNode{}
 	if ipNode.LocationIndex >= 0 {
 		locNode = locationNodes[ipNode.LocationIndex]
 	}
-	return &common.GeoData{
-		Geo: &common.GeolocationIP{
+	return &annotation.GeoData{
+		Geo: &annotation.GeolocationIP{
 			Continent_code: locNode.ContinentCode,
 			Country_code:   locNode.CountryCode,
 			Country_code3:  "", // missing from geoLite2 ?
@@ -350,7 +350,7 @@ func ConvertIPNodeToGeoData(ipNode parser.IPNode, locationNodes []parser.Locatio
 			Latitude:       ipNode.Latitude,
 			Longitude:      ipNode.Longitude,
 		},
-		ASN: &common.IPASNData{},
+		ASN: &annotation.IPASNData{},
 	}
 
 }
