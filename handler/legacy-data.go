@@ -142,7 +142,9 @@ func UpdateFilenamelist(bucketName string) error {
 	}
 
 	LatestDatasetDate, _ = ExtractDateFromFilename(lastestFileName)
-
+	CurrentGeoDataset.Init()
+	Geolite2DatasetInMemory.Init()
+	LegacyDatasetInMemory.Init()
 	return nil
 }
 

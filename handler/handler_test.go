@@ -1,23 +1,23 @@
 package handler_test
 
 import (
-	//"bytes"
-	//"errors"
-	//"io"
-	"log"
-	//"net"
-	//"net/http"
-	//"net/http/httptest"
-	//"net/url"
-	//"reflect"
-	//"strings"
-	"sync"
+	"bytes"
+	"errors"
+	"io"
+	//"log"
+	"net"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"reflect"
+	"strings"
+	//"sync"
 	"testing"
 	"time"
 
 	"github.com/m-lab/annotation-service/common"
 	"github.com/m-lab/annotation-service/handler"
-	//"github.com/m-lab/annotation-service/parser"
+	"github.com/m-lab/annotation-service/parser"
 )
 
 func TestAnnotate(t *testing.T) {
@@ -30,7 +30,7 @@ func TestAnnotate(t *testing.T) {
 		{"1.4.128.0", "1539704761", `{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":42.1,"longitude":-73.1},"ASN":{}}`},
 		{"This will be an error.", "1000", "Invalid request"},
 	}
-	handler.CurrentGeoDataset = &parser.GeoDataset{
+	dataset := &parser.GeoDataset{
 		IP4Nodes: []parser.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),
@@ -57,6 +57,8 @@ func TestAnnotate(t *testing.T) {
 			},
 		},
 	}
+	handler.CurrentGeoDataset.Init()
+	handler.CurrentGeoDataset.SetCurrentDataset(dataset)
 	for _, test := range tests {
 		w := httptest.NewRecorder()
 		r := &http.Request{}
@@ -208,7 +210,7 @@ func TestBatchAnnotate(t *testing.T) {
 			alt: `{"127.0.0.1pkazc0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}},"2620:0:1003:1008:5179:57e3:3c75:1886pkazc0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}}}`,
 		},
 	}
-	handler.CurrentGeoDataset = &parser.GeoDataset{
+	handler.CurrentGeoDataset.SetCurrentDataset(&parser.GeoDataset{
 		IP4Nodes: []parser.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),
@@ -230,7 +232,7 @@ func TestBatchAnnotate(t *testing.T) {
 				CityName: "Not A Real City", RegionCode: "ME",
 			},
 		},
-	}
+	})
 	for _, test := range tests {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("POST", "/batch_annotate", strings.NewReader(test.body))
@@ -256,7 +258,7 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 				ASN: &common.IPASNData{}},
 		},
 	}
-	handler.CurrentGeoDataset = &parser.GeoDataset{
+	handler.CurrentGeoDataset.SetCurrentDataset(&parser.GeoDataset{
 		IP4Nodes: []parser.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),
@@ -278,7 +280,7 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 				CityName: "Not A Real City",
 			},
 		},
-	}
+	})
 	for _, test := range tests {
 		res, err := handler.GetMetadataForSingleIP(test.req)
 		if err != nil {

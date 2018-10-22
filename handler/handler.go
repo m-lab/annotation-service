@@ -26,53 +26,53 @@ func init() {
 }
 
 type DatasetInMemory struct {
+	sync.RWMutex
+	current    *parser.GeoDataset
 	data       map[string]*parser.GeoDataset
 	legacyData map[string]*geoip.GeoIP
-	mutex      *sync.RWMutex
 }
 
-func (d DatasetInMemory) Init() {
+func (d *DatasetInMemory) Init() {
+	d.current = nil
 	d.data = make(map[string]*parser.GeoDataset)
 	d.legacyData = make(map[string]*geoip.GeoIP)
-	d.mutex = &sync.RWMutex{}
 }
 
 // This func will make the data map size to 1 and contains only the current dataset.
-func (d DatasetInMemory) SetCurrentDataset(inputData *parser.GeoDataset) {
-	d.mutex.Lock()
-	d.data = make(map[string]*parser.GeoDataset)
-	d.data["current"] = inputData
-	d.mutex.Unlock()
+func (d *DatasetInMemory) SetCurrentDataset(inputData *parser.GeoDataset) {
+	d.Lock()
+	d.current = inputData
+	d.Unlock()
 }
 
-func (d DatasetInMemory) AddDataset(filename string, inputData *parser.GeoDataset) {
-	d.mutex.Lock()
+func (d *DatasetInMemory) GetCurrentDataset() *parser.GeoDataset {
+	d.RLock()
+	defer d.RUnlock()
+	return d.current
+}
+
+func (d *DatasetInMemory) AddDataset(filename string, inputData *parser.GeoDataset) {
+	d.Lock()
 	d.data[filename] = inputData
-	d.mutex.Unlock()
+	d.Unlock()
 }
 
-func (d DatasetInMemory) GetDataset(filename string) *parser.GeoDataset {
-	d.mutex.RLock()
-	defer d.mutex.RUnlock()
+func (d *DatasetInMemory) GetDataset(filename string) *parser.GeoDataset {
+	d.RLock()
+	defer d.RUnlock()
 	return d.data[filename]
 }
 
-func (d DatasetInMemory) GetCurrentDataset() *parser.GeoDataset {
-	d.mutex.RLock()
-	defer d.mutex.RUnlock()
-	return d.data["current"]
-}
-
-func (d DatasetInMemory) GetLegacyDataset(filename string) *geoip.GeoIP {
-	d.mutex.RLock()
-	defer d.mutex.RUnlock()
+func (d *DatasetInMemory) GetLegacyDataset(filename string) *geoip.GeoIP {
+	d.RLock()
+	defer d.RUnlock()
 	return d.legacyData[filename]
 }
 
-func (d DatasetInMemory) AddLegacyDataset(filename string, inputData *geoip.GeoIP) {
-	d.mutex.Lock()
+func (d *DatasetInMemory) AddLegacyDataset(filename string, inputData *geoip.GeoIP) {
+	d.Lock()
 	d.legacyData[filename] = inputData
-	d.mutex.Unlock()
+	d.Unlock()
 }
 
 var (
@@ -115,12 +115,14 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 
 	data, err := ValidateAndParse(r)
 	if err != nil {
+		log.Println(err)
 		fmt.Fprintf(w, "Invalid request")
 		return
 	}
 
 	result, err := GetMetadataForSingleIP(data)
 	if err != nil {
+		log.Println(err)
 		fmt.Fprintf(w, "Cannot get meta data")
 		return
 	}
