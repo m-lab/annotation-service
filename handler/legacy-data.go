@@ -87,6 +87,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"regexp"
 	"strconv"
 	"time"
@@ -141,7 +142,10 @@ func UpdateFilenamelist(bucketName string) error {
 		}
 	}
 
-	LatestDatasetDate, _ = ExtractDateFromFilename(lastestFileName)
+	LatestDatasetDate, err = ExtractDateFromFilename(lastestFileName)
+	if err != nil {
+		log.Println(err)
+	}
 	CurrentGeoDataset.Init()
 	Geolite2DatasetInMemory.Init()
 	LegacyDatasetInMemory.Init()

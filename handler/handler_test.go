@@ -321,3 +321,14 @@ func TestConvertIPNodeToGeoData(t *testing.T) {
 		}
 	}
 }
+
+func TestArrayOps(t *testing.T) {
+	sampleArray := []string{"abc", "def"}
+	if !handler.Contains(sampleArray, "abc") {
+		t.Errorf("Contains func not working")
+	}
+	sampleArray = handler.Deletes(sampleArray, "abc")
+	if handler.Contains(sampleArray, "abc") {
+		t.Errorf("Deletes func not working")
+	}
+}

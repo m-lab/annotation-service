@@ -85,6 +85,12 @@ var (
 
 	// The legacy datasets that are already in memory.
 	LegacyDatasetInMemory DatasetInMemory
+
+	// The list of dataset that was loading right now.
+	PendingDataset = make([]string, 5)
+
+	// mutex to protect PendingDataset
+	PendingMutex = &sync.RWMutex{}
 )
 
 const (
@@ -274,15 +280,35 @@ func UseGeoLite2Dataset(request *annotation.RequestData, dataset *parser.GeoData
 	return ConvertIPNodeToGeoData(node, dataset.LocationNodes), nil
 }
 
+func Contains(a []string, x string) bool {
+	for _, n := range a {
+		if x == n {
+			return true
+		}
+	}
+	return false
+}
+
+func Deletes(a []string, x string) []string {
+	var na []string
+	for _, v := range a {
+		if v == x {
+			continue
+		} else {
+			na = append(na, v)
+		}
+	}
+	return na
+}
+
 // GetMetadataForSingleIP takes a pointer to a annotation.RequestData
 // struct and will use it to fetch the appropriate associated
 // metadata, returning a pointer. It is gaurenteed to return a non-nil
 // pointer, even if it cannot find the appropriate metadata.
 func GetMetadataForSingleIP(request *annotation.RequestData) (*annotation.GeoData, error) {
 	metrics.Metrics_totalLookups.Inc()
-
 	if request.Timestamp.After(LatestDatasetDate) {
-		log.Println("Use latest dataset")
+		//log.Println("Use latest dataset")
 		return UseGeoLite2Dataset(request, CurrentGeoDataset.GetCurrentDataset())
 	}
 	// Check the timestamp of request for correct dataset.
@@ -291,7 +317,7 @@ func GetMetadataForSingleIP(request *annotation.RequestData) (*annotation.GeoDat
 		isIP4 = false
 	}
 	filename, err := SelectGeoLegacyFile(request.Timestamp, BucketName, isIP4)
-	log.Println("legacy dataset: " + filename)
+	//log.Println("legacy dataset: " + filename)
 
 	if err != nil {
 		return nil, errors.New("Cannot get historical dataset")
@@ -301,27 +327,57 @@ func GetMetadataForSingleIP(request *annotation.RequestData) (*annotation.GeoDat
 			log.Println("GeoLite 2 dataset already in memory")
 			return UseGeoLite2Dataset(request, parser)
 		} else {
-			// load the new dataset into memory
+			// It is possible that multiple requests are racing to load the same dataset.
+			// There is a protected var "PendingDataset" to prevent this happending.
+			PendingMutex.RLock()
+			log.Println(PendingDataset)
+			if Contains(PendingDataset, filename) {
+				// dataset loading, just return.
+				return nil, errors.New("Historical dataset is loading into memory right now " + filename)
+			}
+			PendingMutex.RUnlock()
+			log.Println("Load new GeoLite 2 dataset into memory " + filename)
+			PendingMutex.Lock()
+			PendingDataset = append(PendingDataset, filename)
+			PendingMutex.Unlock()
 			parser, err := LoadGeoLite2Dataset(filename, BucketName)
 			if err != nil {
 				log.Println(err)
 				return nil, errors.New("Cannot load historical dataset into memory")
 			}
-			log.Println("Load new GeoLite 2 dataset into memory")
-
+			log.Println("historical dataset loaded " + filename)
+			PendingMutex.Lock()
+			PendingDataset = Deletes(PendingDataset, filename)
+			log.Println(PendingDataset)
+			PendingMutex.Unlock()
 			Geolite2DatasetInMemory.AddDataset(filename, parser)
 			return UseGeoLite2Dataset(request, Geolite2DatasetInMemory.GetDataset(filename))
 		}
 	} else {
 		if parser := LegacyDatasetInMemory.GetLegacyDataset(filename); parser != nil {
-			log.Println("Legacy dataset already in memory")
+			log.Println("Legacy dataset already in memory " + filename)
 			return GetRecordFromLegacyDataset(request.IP, parser), nil
 		} else {
+			PendingMutex.RLock()
+			log.Println(PendingDataset)
+			if Contains(PendingDataset, filename) {
+				// dataset loading, just return.
+				return nil, errors.New("Historical dataset is loading into memory right now " + filename)
+			}
+			PendingMutex.RUnlock()
+			log.Println("Load new legacy dataset into memory " + filename)
+			PendingMutex.Lock()
+			PendingDataset = append(PendingDataset, filename)
+			PendingMutex.Unlock()
 			parser, err := LoadLegacyGeoliteDataset(filename, BucketName)
 			if err != nil {
-				return nil, errors.New("Cannot load historical dataset into memory")
+				return nil, errors.New("Cannot load historical dataset into memory " + filename)
 			}
-			log.Println("Load new legacy dataset into memory")
+			log.Println("historical dataset loaded " + filename)
+			PendingMutex.Lock()
+			PendingDataset = Deletes(PendingDataset, filename)
+			log.Println(PendingDataset)
+			PendingMutex.Unlock()
 			LegacyDatasetInMemory.AddLegacyDataset(filename, parser)
 			return GetRecordFromLegacyDataset(request.IP, LegacyDatasetInMemory.GetLegacyDataset(filename)), nil
 		}

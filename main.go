@@ -29,7 +29,9 @@ func main() {
 	log.Print("Beginning Setup\n")
 	http.HandleFunc("/cron/update_maxmind_datasets", updateMaxmindDatasets)
 
+	handler.UpdateFilenamelist("downloader-" + os.Getenv("GCLOUD_PROJECT"))
 	handler.PopulateLatestData()
+
 	handler.SetupHandlers()
 	metrics.SetupPrometheus()
 	log.Print("Listening on port 8080")
