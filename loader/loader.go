@@ -48,6 +48,7 @@ func CreateZipReader(ctx context.Context, bucket string, bucketObj string) (*zip
 }
 
 // Field "fn" is the filename being searched for within the zip file
+// f should be closed when we move the dataset out of memory.
 func FindFile(fn string, zrdr *zip.Reader) (io.ReadCloser, error) {
 	for _, f := range zrdr.File {
 		if strings.HasSuffix(f.Name, fn) {

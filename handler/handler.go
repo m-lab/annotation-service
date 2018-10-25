@@ -52,7 +52,15 @@ func (d *DatasetInMemory) GetCurrentDataset() *parser.GeoDataset {
 }
 
 func (d *DatasetInMemory) AddDataset(filename string, inputData *parser.GeoDataset) {
+	// Due to memory limit, the length of the map should not exceed 5.
 	d.Lock()
+	if len(d.data) >= 5 {
+		// Remove one entry
+		for key, _ := range d.data {
+			delete(d.data, key)
+			break
+		}
+	}
 	d.data[filename] = inputData
 	d.Unlock()
 }
@@ -71,6 +79,13 @@ func (d *DatasetInMemory) GetLegacyDataset(filename string) *geoip.GeoIP {
 
 func (d *DatasetInMemory) AddLegacyDataset(filename string, inputData *geoip.GeoIP) {
 	d.Lock()
+	if len(d.legacyData) >= 5 {
+		// Remove one entry
+		for key, _ := range d.legacyData {
+			delete(d.legacyData, key)
+			break
+		}
+	}
 	d.legacyData[filename] = inputData
 	d.Unlock()
 }
@@ -87,7 +102,8 @@ var (
 	LegacyDatasetInMemory DatasetInMemory
 
 	// The list of dataset that was loading right now.
-	PendingDataset = make([]string, 5)
+	// Due to memory limits, the length of PendingDataset should not exceed 2.
+	PendingDataset = []string{}
 
 	// mutex to protect PendingDataset
 	PendingMutex = &sync.RWMutex{}
@@ -198,7 +214,7 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	r.Body.Close()
 
 	if err != nil {
-		log.Println(err)
+		//log.Println(err)
 		fmt.Fprintf(w, "Invalid Request!")
 		return
 	}
@@ -208,7 +224,7 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	for _, data := range dataSlice {
 		responseMap[data.IP+strconv.FormatInt(data.Timestamp.Unix(), encodingBase)], err = GetMetadataForSingleIP(&data)
 		if err != nil {
-			log.Println(err)
+			//log.Println(err)
 		}
 	}
 	encodedResult, err := json.Marshal(responseMap)
@@ -290,15 +306,15 @@ func Contains(a []string, x string) bool {
 }
 
 func Deletes(a []string, x string) []string {
-	var na []string
-	for _, v := range a {
+	for i, v := range a {
 		if v == x {
-			continue
-		} else {
-			na = append(na, v)
+			copy(a[i:], a[i+1:])
+			a[len(a)-1] = ""
+			a = a[:len(a)-1]
+			return a
 		}
 	}
-	return na
+	return a
 }
 
 // GetMetadataForSingleIP takes a pointer to a annotation.RequestData
@@ -330,26 +346,32 @@ func GetMetadataForSingleIP(request *annotation.RequestData) (*annotation.GeoDat
 			// It is possible that multiple requests are racing to load the same dataset.
 			// There is a protected var "PendingDataset" to prevent this happending.
 			PendingMutex.RLock()
-			log.Println(PendingDataset)
 			if Contains(PendingDataset, filename) {
 				// dataset loading, just return.
 				return nil, errors.New("Historical dataset is loading into memory right now " + filename)
 			}
+			if len(PendingDataset) >= 2 {
+				return nil, errors.New("Too many pending loading right now, cannot load " + filename)
+			}
 			PendingMutex.RUnlock()
+
 			log.Println("Load new GeoLite 2 dataset into memory " + filename)
 			PendingMutex.Lock()
 			PendingDataset = append(PendingDataset, filename)
 			PendingMutex.Unlock()
+
 			parser, err := LoadGeoLite2Dataset(filename, BucketName)
 			if err != nil {
 				log.Println(err)
 				return nil, errors.New("Cannot load historical dataset into memory")
 			}
 			log.Println("historical dataset loaded " + filename)
+
 			PendingMutex.Lock()
 			PendingDataset = Deletes(PendingDataset, filename)
 			log.Println(PendingDataset)
 			PendingMutex.Unlock()
+
 			Geolite2DatasetInMemory.AddDataset(filename, parser)
 			return UseGeoLite2Dataset(request, Geolite2DatasetInMemory.GetDataset(filename))
 		}
@@ -359,25 +381,30 @@ func GetMetadataForSingleIP(request *annotation.RequestData) (*annotation.GeoDat
 			return GetRecordFromLegacyDataset(request.IP, parser), nil
 		} else {
 			PendingMutex.RLock()
-			log.Println(PendingDataset)
 			if Contains(PendingDataset, filename) {
 				// dataset loading, just return.
 				return nil, errors.New("Historical dataset is loading into memory right now " + filename)
 			}
+			if len(PendingDataset) >= 2 {
+				return nil, errors.New("Too many pending loading right now, cannot load " + filename)
+			}
 			PendingMutex.RUnlock()
+
 			log.Println("Load new legacy dataset into memory " + filename)
 			PendingMutex.Lock()
 			PendingDataset = append(PendingDataset, filename)
 			PendingMutex.Unlock()
+
 			parser, err := LoadLegacyGeoliteDataset(filename, BucketName)
 			if err != nil {
 				return nil, errors.New("Cannot load historical dataset into memory " + filename)
 			}
 			log.Println("historical dataset loaded " + filename)
+
 			PendingMutex.Lock()
 			PendingDataset = Deletes(PendingDataset, filename)
-			log.Println(PendingDataset)
 			PendingMutex.Unlock()
+
 			LegacyDatasetInMemory.AddLegacyDataset(filename, parser)
 			return GetRecordFromLegacyDataset(request.IP, LegacyDatasetInMemory.GetLegacyDataset(filename)), nil
 		}
