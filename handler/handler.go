@@ -29,13 +29,13 @@ type DatasetInMemory struct {
 	sync.RWMutex
 	current    *parser.GeoDataset
 	data       map[string]*parser.GeoDataset
-	legacyData map[string]*geoip.GeoIP
+	LegacyData map[string]*geoip.GeoIP
 }
 
 func (d *DatasetInMemory) Init() {
 	d.current = nil
 	d.data = make(map[string]*parser.GeoDataset)
-	d.legacyData = make(map[string]*geoip.GeoIP)
+	d.LegacyData = make(map[string]*geoip.GeoIP)
 }
 
 // This func will make the data map size to 1 and contains only the current dataset.
@@ -74,19 +74,20 @@ func (d *DatasetInMemory) GetDataset(filename string) *parser.GeoDataset {
 func (d *DatasetInMemory) GetLegacyDataset(filename string) *geoip.GeoIP {
 	d.RLock()
 	defer d.RUnlock()
-	return d.legacyData[filename]
+	return d.LegacyData[filename]
 }
 
 func (d *DatasetInMemory) AddLegacyDataset(filename string, inputData *geoip.GeoIP) {
 	d.Lock()
-	if len(d.legacyData) >= 5 {
+	if len(d.LegacyData) >= 5 {
 		// Remove one entry
-		for key, _ := range d.legacyData {
-			delete(d.legacyData, key)
+		for key, _ := range d.LegacyData {
+			d.LegacyData[key].Free()
+			delete(d.LegacyData, key)
 			break
 		}
 	}
-	d.legacyData[filename] = inputData
+	d.LegacyData[filename] = inputData
 	d.Unlock()
 }
 

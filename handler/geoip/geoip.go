@@ -33,7 +33,7 @@ type GeoIP struct {
 	mu sync.Mutex
 }
 
-func (gi *GeoIP) free() {
+func (gi *GeoIP) Free() {
 	if gi == nil {
 		return
 	}
@@ -56,7 +56,7 @@ func Open(filename string) (*GeoIP, error) {
 // functions to access some of the databases in this API.
 func OpenDb(file string, flag int) (*GeoIP, error) {
 	g := &GeoIP{}
-	runtime.SetFinalizer(g, (*GeoIP).free)
+	runtime.SetFinalizer(g, (*GeoIP).Free)
 
 	var err error
 
@@ -95,7 +95,7 @@ func SetCustomDirectory(dir string) {
 // (for example GEOIP_COUNTRY_EDITION).
 func OpenTypeFlag(dbType int, flag int) (*GeoIP, error) {
 	g := &GeoIP{}
-	runtime.SetFinalizer(g, (*GeoIP).free)
+	runtime.SetFinalizer(g, (*GeoIP).Free)
 
 	var err error
 
