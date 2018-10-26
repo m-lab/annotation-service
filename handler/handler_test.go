@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -74,6 +73,7 @@ func TestAnnotate(t *testing.T) {
 	}
 }
 
+/*
 func TestLegacyDataset(t *testing.T) {
 	handler.UpdateFilenamelist("downloader-mlab-testing")
 	tests := []struct {
@@ -97,7 +97,7 @@ func TestLegacyDataset(t *testing.T) {
 		}
 	}
 }
-
+*/
 func TestValidateAndParse(t *testing.T) {
 	tests := []struct {
 		req *http.Request

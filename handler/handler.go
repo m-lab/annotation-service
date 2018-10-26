@@ -227,6 +227,7 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			//log.Println(err)
 			// stop sending more request in the same batch because w/ high chance the dataset is not ready
+			fmt.Fprintf(w, "legacy dataset not loaded")
 			return
 		}
 	}
