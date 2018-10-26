@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -60,6 +61,7 @@ func TestAnnotate(t *testing.T) {
 	}
 	handler.CurrentGeoDataset.Init()
 	handler.CurrentGeoDataset.SetCurrentDataset(dataset)
+
 	for _, test := range tests {
 		w := httptest.NewRecorder()
 		r := &http.Request{}

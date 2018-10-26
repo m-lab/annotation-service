@@ -197,6 +197,7 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 			if backupIndex, err := lookupGeoId(record[2], idMap); err == nil {
 				index = backupIndex
 			} else {
+                                log.Println(err)
 				log.Println("Couldn't get a valid Geoname id!", record)
 				//TODO: Add a prometheus metric here
 			}

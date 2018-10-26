@@ -5,6 +5,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"time"
 
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/metrics"
@@ -34,6 +35,12 @@ func main() {
 
 	handler.SetupHandlers()
 	metrics.SetupPrometheus()
+
 	log.Print("Listening on port 8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	srv := &http.Server{
+		Addr:         ":8080",
+		ReadTimeout:  2 * time.Second,
+		WriteTimeout: 5 * time.Second,
+	}
+	log.Fatal(srv.ListenAndServe())
 }
