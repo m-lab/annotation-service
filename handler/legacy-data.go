@@ -164,7 +164,7 @@ func SelectGeoLegacyFile(requestDate time.Time, bucketName string, isIP4 bool) (
 	CutOffDate, _ := time.Parse("January 2, 2006", GeoLite2CutOffDate)
 	lastFilename := ""
 	for _, fileName := range DatasetNames {
-		if requestDate.Before(CutOffDate) && GeoLegacyRegex.MatchString(fileName) {
+		if requestDate.Before(CutOffDate) && ((isIP4 && GeoLegacyRegex.MatchString(fileName)) || (!isIP4 && GeoLegacyv6Regex.MatchString(fileName))) {
 			// search legacy dataset
 			fileDate, err := ExtractDateFromFilename(fileName)
 			if err != nil {
@@ -175,8 +175,7 @@ func SelectGeoLegacyFile(requestDate time.Time, bucketName string, isIP4 bool) (
 				return lastFilename, nil
 			}
 			lastFilename = fileName
-		} else if !requestDate.Before(CutOffDate) &&
-			((isIP4 && GeoLite2Regex.MatchString(fileName)) || (!isIP4 && GeoLegacyv6Regex.MatchString(fileName))) {
+		} else if !requestDate.Before(CutOffDate) && GeoLite2Regex.MatchString(fileName) {
 			// Search GeoLite2 dataset
 			fileDate, err := ExtractDateFromFilename(fileName)
 			if err != nil {
@@ -206,7 +205,7 @@ func LoadLegacyGeoliteDataset(filename string, bucketname string) (*geoip.GeoIP,
 	if err != nil {
 		return nil, err
 	}
-	gi, err := geoip.Open(dataFileName)
+	gi, err := geoip.Open(dataFileName, filename)
 	if err != nil {
 		return nil, errors.New("could not open GeoIP database")
 	}
@@ -222,7 +221,10 @@ func LoadGeoLite2Dataset(filename string, bucketname string) (*parser.GeoDataset
 }
 
 func Round(x float32) float64 {
-	i, _ := strconv.ParseFloat(fmt.Sprintf("%.3f", x), 64)
+	i, err := strconv.ParseFloat(fmt.Sprintf("%.3f", x), 64)
+	if err != nil {
+		return float64(0)
+	}
 	return i
 }
 
@@ -231,20 +233,24 @@ func GetRecordFromLegacyDataset(ip string, gi *geoip.GeoIP) *annotation.GeoData 
 		return nil
 	}
 	record := gi.GetRecord(ip)
-	return &annotation.GeoData{
-		Geo: &annotation.GeolocationIP{
-			Continent_code: record.ContinentCode,
-			Country_code:   record.CountryCode,
-			Country_code3:  record.CountryCode3,
-			Country_name:   record.CountryName,
-			Region:         record.Region,
-			Metro_code:     int64(record.MetroCode),
-			City:           record.City,
-			Area_code:      int64(record.AreaCode),
-			Postal_code:    record.PostalCode,
-			Latitude:       Round(record.Latitude),
-			Longitude:      Round(record.Longitude),
-		},
-		ASN: &annotation.IPASNData{},
+	// It is very possible that the record missed some fields in legacy dataset.
+	if record != nil {
+		return &annotation.GeoData{
+			Geo: &annotation.GeolocationIP{
+				Continent_code: record.ContinentCode,
+				Country_code:   record.CountryCode,
+				Country_code3:  record.CountryCode3,
+				Country_name:   record.CountryName,
+				Region:         record.Region,
+				Metro_code:     int64(record.MetroCode),
+				City:           record.City,
+				Area_code:      int64(record.AreaCode),
+				Postal_code:    record.PostalCode,
+				Latitude:       Round(record.Latitude),
+				Longitude:      Round(record.Longitude),
+			},
+			ASN: &annotation.IPASNData{},
+		}
 	}
+	return nil
 }

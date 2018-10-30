@@ -54,15 +54,16 @@ func (d *DatasetInMemory) GetCurrentDataset() *parser.GeoDataset {
 func (d *DatasetInMemory) AddDataset(filename string, inputData *parser.GeoDataset) {
 	// Due to memory limit, the length of the map should not exceed 5.
 	d.Lock()
-	/*if len(d.data) >= 5 {
+	if len(d.data) >= 5 {
+		log.Println(d.data)
 		// Remove one entry
 		for key, _ := range d.data {
 			delete(d.data, key)
 			break
 		}
-	}*/
+	}
 	d.data[filename] = inputData
-        log.Printf("number of dataset in memory: %d ", len(d.data))
+	log.Printf("number of dataset in memory: %d ", len(d.data))
 	d.Unlock()
 }
 
@@ -80,16 +81,20 @@ func (d *DatasetInMemory) GetLegacyDataset(filename string) *geoip.GeoIP {
 
 func (d *DatasetInMemory) AddLegacyDataset(filename string, inputData *geoip.GeoIP) {
 	d.Lock()
-	/*if len(d.legacyData) >= 5 {
+	if len(d.legacyData) >= 5 {
 		// Remove one entry
+		log.Println(d.legacyData)
 		for key, _ := range d.legacyData {
 			d.legacyData[key].Free()
 			delete(d.legacyData, key)
 			break
 		}
-	}*/
+	}
 	d.legacyData[filename] = inputData
-        log.Printf("number of legacy dataset in memory: %d ", len(d.legacyData))
+	for key, _ := range d.legacyData {
+		log.Println(key)
+	}
+	log.Printf("number of legacy dataset in memory: %d ", len(d.legacyData))
 	d.Unlock()
 }
 
@@ -371,14 +376,17 @@ func GetMetadataForSingleIP(request *annotation.RequestData) (*annotation.GeoDat
 
 			PendingDataset = Deletes(PendingDataset, filename)
 			log.Println(PendingDataset)
+			Geolite2DatasetInMemory.AddDataset(filename, parser)
 			PendingMutex.Unlock()
 
-			Geolite2DatasetInMemory.AddDataset(filename, parser)
 			return UseGeoLite2Dataset(request, Geolite2DatasetInMemory.GetDataset(filename))
 		}
 	} else {
 		if parser := LegacyDatasetInMemory.GetLegacyDataset(filename); parser != nil {
-			return GetRecordFromLegacyDataset(request.IP, parser), nil
+			if rec := GetRecordFromLegacyDataset(request.IP, parser); rec != nil {
+				return rec, nil
+			}
+			return nil, errors.New("No legacy record for the request")
 		} else {
 			PendingMutex.RLock()
 			if Contains(PendingDataset, filename) {
@@ -391,7 +399,7 @@ func GetMetadataForSingleIP(request *annotation.RequestData) (*annotation.GeoDat
 			PendingMutex.RUnlock()
 
 			PendingMutex.Lock()
-                        log.Println("Load new legacy dataset into memory " + filename)
+			log.Println("Load new legacy dataset into memory " + filename)
 			PendingDataset = append(PendingDataset, filename)
 
 			parser, err := LoadLegacyGeoliteDataset(filename, BucketName)
@@ -401,10 +409,13 @@ func GetMetadataForSingleIP(request *annotation.RequestData) (*annotation.GeoDat
 			log.Println("historical legacy dataset loaded " + filename)
 
 			PendingDataset = Deletes(PendingDataset, filename)
+			LegacyDatasetInMemory.AddLegacyDataset(filename, parser)
 			PendingMutex.Unlock()
 
-			LegacyDatasetInMemory.AddLegacyDataset(filename, parser)
-			return GetRecordFromLegacyDataset(request.IP, LegacyDatasetInMemory.GetLegacyDataset(filename)), nil
+			if rec := GetRecordFromLegacyDataset(request.IP, LegacyDatasetInMemory.GetLegacyDataset(filename)); rec != nil {
+				return rec, nil
+			}
+			return nil, errors.New("No legacy record for the request")
 		}
 	}
 }
