@@ -6,7 +6,7 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/m-lab/annotation-service/loader"
+	//"github.com/m-lab/annotation-service/loader"
 	"github.com/m-lab/annotation-service/parser"
 
 	"google.golang.org/api/iterator"
@@ -76,9 +76,5 @@ func LoadLatestGeolite2File() (*parser.GeoDataset, error) {
 	if err != nil {
 		return nil, err
 	}
-	zip, err := loader.CreateZipReader(context.Background(), BucketName, filename)
-	if err != nil {
-		return nil, err
-	}
-	return parser.LoadGeoLite2(zip)
+	return LoadGeoLite2Dataset(filename, BucketName)
 }

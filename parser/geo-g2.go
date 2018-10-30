@@ -24,17 +24,17 @@ const (
 
 func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
 	locations, err := loader.FindFile(geoLite2LocationsFilename, zip)
-	defer locations.Close()
 	if err != nil {
 		return nil, err
 	}
 	// geoidMap is just a temporary map that will be discarded once the blocks are parsed
 	locationNode, geoidMap, err := LoadLocListGLite2(locations)
+        locations.Close()
 	if err != nil {
 		return nil, err
 	}
 	blocks4, err := loader.FindFile(geoLite2BlocksFilenameIP4, zip)
-	defer blocks4.Close()
+	
 	if err != nil {
 		return nil, err
 	}
@@ -42,12 +42,14 @@ func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
 	if err != nil {
 		return nil, err
 	}
+        blocks4.Close()
 	blocks6, err := loader.FindFile(geoLite2BlocksFilenameIP6, zip)
-	defer blocks6.Close()
+
 	if err != nil {
 		return nil, err
 	}
 	ipNodes6, err := LoadIPListGLite2(blocks6, geoidMap)
+        blocks6.Close()
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +84,8 @@ func rangeCIDR(cidr string) (net.IP, net.IP, error) {
 // TODO This code is a bit fragile.  Should probably parse the header and
 // use that to guide the parsing of the rows.
 func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
-	idMap := make(map[int]int, mapMax)
+	//idMap := make(map[int]int, mapMax)
+	idMap := make(map[int]int)
 	list := []LocationNode{}
 	r := csv.NewReader(reader)
 	// Skip the first line
@@ -96,7 +99,7 @@ func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 	// TODO - this is a bit hacky.  May want to improve it.
 	// Older geoLite2 have 13 columns, but since 2018/03, they have 14 columns.
 	// This will print a log every time it loads a newer location file.
-	if len(first) != locationNumColumnsGlite2 {
+	if len(first) != locationNumColumnsGlite2 && len(first) != 14 {
 		log.Println("Incorrect number of columns in header, got: ", len(first), " wanted: ", locationNumColumnsGlite2)
 		log.Println(first)
 		if len(first) < locationNumColumnsGlite2 {
@@ -197,7 +200,7 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 			if backupIndex, err := lookupGeoId(record[2], idMap); err == nil {
 				index = backupIndex
 			} else {
-                                log.Println(err)
+				log.Println(err)
 				log.Println("Couldn't get a valid Geoname id!", record)
 				//TODO: Add a prometheus metric here
 			}
