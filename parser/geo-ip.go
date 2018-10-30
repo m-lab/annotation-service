@@ -46,9 +46,9 @@ type GeoDataset struct {
 
 // Release the memory of slices in the struct.
 func (data *GeoDataset) Free() {
-    data.IP4Nodes = nil
-    data.IP6Nodes = nil
-    data.LocationNodes = nil
+	data.IP4Nodes = nil
+	data.IP6Nodes = nil
+	data.LocationNodes = nil
 }
 
 // Verify column length

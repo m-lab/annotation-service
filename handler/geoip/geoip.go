@@ -16,7 +16,7 @@ import "C"
 
 import (
 	"fmt"
-        "log"
+	"log"
 	"os"
 	"runtime"
 	"sync"
@@ -42,7 +42,7 @@ func (gi *GeoIP) Free() {
 		gi = nil
 		return
 	}
-        log.Println("free memory for legacy dataset.")
+	log.Println("free memory for legacy dataset.")
 	C.GeoIP_delete(gi.db)
 	gi = nil
 	return

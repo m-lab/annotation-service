@@ -29,12 +29,11 @@ func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
 	}
 	// geoidMap is just a temporary map that will be discarded once the blocks are parsed
 	locationNode, geoidMap, err := LoadLocListGLite2(locations)
-        locations.Close()
 	if err != nil {
 		return nil, err
 	}
 	blocks4, err := loader.FindFile(geoLite2BlocksFilenameIP4, zip)
-	
+
 	if err != nil {
 		return nil, err
 	}
@@ -42,14 +41,12 @@ func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
 	if err != nil {
 		return nil, err
 	}
-        blocks4.Close()
 	blocks6, err := loader.FindFile(geoLite2BlocksFilenameIP6, zip)
 
 	if err != nil {
 		return nil, err
 	}
 	ipNodes6, err := LoadIPListGLite2(blocks6, geoidMap)
-        blocks6.Close()
 	if err != nil {
 		return nil, err
 	}
@@ -84,8 +81,8 @@ func rangeCIDR(cidr string) (net.IP, net.IP, error) {
 // TODO This code is a bit fragile.  Should probably parse the header and
 // use that to guide the parsing of the rows.
 func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
-	//idMap := make(map[int]int, mapMax)
-	idMap := make(map[int]int)
+	idMap := make(map[int]int, mapMax)
+	//idMap := make(map[int]int)
 	list := []LocationNode{}
 	r := csv.NewReader(reader)
 	// Skip the first line

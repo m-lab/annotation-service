@@ -6,7 +6,6 @@ import (
 	"os"
 	"regexp"
 
-	//"github.com/m-lab/annotation-service/loader"
 	"github.com/m-lab/annotation-service/parser"
 
 	"google.golang.org/api/iterator"
