@@ -176,16 +176,19 @@ func (gi *GeoIP) GetRecord(ip string, isIP4 bool) *GeoIPRecord {
 		return nil
 	}
 
+	if len(ip) == 0 {
+		return nil
+	}
 	cip := C.CString(ip)
 	defer C.free(unsafe.Pointer(cip))
 
-        var record *C.GeoIPRecord
-	gi.mu.Lock()        
-        if isIP4 {
-	    record = C.GeoIP_record_by_addr(gi.db, cip)
-        } else {
-            record = C.GeoIP_record_by_addr_v6(gi.db, cip)
-        }
+	var record *C.GeoIPRecord
+	gi.mu.Lock()
+	if isIP4 {
+		record = C.GeoIP_record_by_addr(gi.db, cip)
+	} else {
+		record = C.GeoIP_record_by_addr_v6(gi.db, cip)
+	}
 	gi.mu.Unlock()
 
 	if record == nil {

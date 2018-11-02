@@ -21,9 +21,12 @@ import (
 )
 
 const (
-	// Maximum number of Geolite2 / Legacy datasets in memory.
-	// There are up to 7 datasets in memory at the same time (1 latest, 3 legacy, 3 Geolite2)
-	MaxHistoricalDataset = 3
+	// Maximum number of Geolite2 datasets in memory.
+	MaxHistoricalGeolite2Dataset = 3
+
+	// Maximum number of legacy datasets in memory.
+	// IPv4 and IPv6 are separated for legacy datasets.
+	MaxHistoricalLegacyDataset = 10
 
 	// Maximum number of pending datasets that can be loaded at the same time.
 	MaxPendingDataset = 2
@@ -63,7 +66,7 @@ func (d *DatasetInMemory) GetCurrentDataset() *parser.GeoDataset {
 func (d *DatasetInMemory) AddDataset(filename string, inputData *parser.GeoDataset) {
 	d.Lock()
 	log.Println(d.data)
-	if len(d.data) >= MaxHistoricalDataset {
+	if len(d.data) >= MaxHistoricalGeolite2Dataset {
 		// Remove one entry
 		for key, _ := range d.data {
 			log.Println("remove Geolite2 dataset " + key)
@@ -92,7 +95,7 @@ func (d *DatasetInMemory) GetLegacyDataset(filename string) *geoip.GeoIP {
 func (d *DatasetInMemory) AddLegacyDataset(filename string, inputData *geoip.GeoIP) {
 	d.Lock()
 	log.Println(d.legacyData)
-	if len(d.legacyData) >= MaxHistoricalDataset {
+	if len(d.legacyData) >= MaxHistoricalLegacyDataset {
 		// Remove one entry
 		for key, _ := range d.legacyData {
 			log.Println("remove legacy dataset " + key)
