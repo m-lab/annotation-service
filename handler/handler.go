@@ -20,6 +20,15 @@ import (
 	"github.com/m-lab/etl/annotation"
 )
 
+const (
+	// Maximum number of Geolite2 / Legacy datasets in memory.
+	// There are up to 7 datasets in memory at the same time (1 latest, 3 legacy, 3 Geolite2)
+	MaxHistoricalDataset = 3
+
+	// Maximum number of pending datasets that can be loaded at the same time.
+	MaxPendingDataset = 2
+)
+
 func init() {
 	// Always prepend the filename and line number.
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
@@ -54,7 +63,7 @@ func (d *DatasetInMemory) GetCurrentDataset() *parser.GeoDataset {
 func (d *DatasetInMemory) AddDataset(filename string, inputData *parser.GeoDataset) {
 	d.Lock()
 	log.Println(d.data)
-	if len(d.data) >= 3 {
+	if len(d.data) >= MaxHistoricalDataset {
 		// Remove one entry
 		for key, _ := range d.data {
 			log.Println("remove Geolite2 dataset " + key)
@@ -83,7 +92,7 @@ func (d *DatasetInMemory) GetLegacyDataset(filename string) *geoip.GeoIP {
 func (d *DatasetInMemory) AddLegacyDataset(filename string, inputData *geoip.GeoIP) {
 	d.Lock()
 	log.Println(d.legacyData)
-	if len(d.legacyData) >= 3 {
+	if len(d.legacyData) >= MaxHistoricalDataset {
 		// Remove one entry
 		for key, _ := range d.legacyData {
 			log.Println("remove legacy dataset " + key)
@@ -360,7 +369,7 @@ func GetMetadataForSingleIP(request *annotation.RequestData) (*annotation.GeoDat
 				// dataset loading, just return.
 				return nil, errors.New("Historical dataset is loading into memory right now " + filename)
 			}
-			if len(PendingDataset) >= 2 {
+			if len(PendingDataset) >= MaxPendingDataset {
 				PendingMutex.Unlock()
 				return nil, errors.New("Too many pending loading right now, cannot load " + filename)
 			}
@@ -402,7 +411,7 @@ func GetMetadataForSingleIP(request *annotation.RequestData) (*annotation.GeoDat
 				// dataset loading, just return.
 				return nil, errors.New("Historical dataset is loading into memory right now " + filename)
 			}
-			if len(PendingDataset) >= 2 {
+			if len(PendingDataset) >= MaxPendingDataset {
 				PendingMutex.Unlock()
 				return nil, errors.New("Too many pending loading right now, cannot load " + filename)
 			}
