@@ -52,12 +52,13 @@ func (d *DatasetInMemory) GetCurrentDataset() *parser.GeoDataset {
 }
 
 func (d *DatasetInMemory) AddDataset(filename string, inputData *parser.GeoDataset) {
-	// Due to memory limit, the length of the map should not exceed 5.
 	d.Lock()
-	if len(d.data) >= 5 {
-		log.Println(d.data)
+	log.Println(d.data)
+	if len(d.data) >= 3 {
 		// Remove one entry
 		for key, _ := range d.data {
+			log.Println("remove Geolite2 dataset " + key)
+			d.data[key].Free()
 			delete(d.data, key)
 			break
 		}
@@ -81,19 +82,17 @@ func (d *DatasetInMemory) GetLegacyDataset(filename string) *geoip.GeoIP {
 
 func (d *DatasetInMemory) AddLegacyDataset(filename string, inputData *geoip.GeoIP) {
 	d.Lock()
-	if len(d.legacyData) >= 5 {
+	log.Println(d.legacyData)
+	if len(d.legacyData) >= 3 {
 		// Remove one entry
-		log.Println(d.legacyData)
 		for key, _ := range d.legacyData {
+			log.Println("remove legacy dataset " + key)
 			d.legacyData[key].Free()
 			delete(d.legacyData, key)
 			break
 		}
 	}
 	d.legacyData[filename] = inputData
-	for key, _ := range d.legacyData {
-		log.Println(key)
-	}
 	log.Printf("number of legacy dataset in memory: %d ", len(d.legacyData))
 	d.Unlock()
 }
@@ -113,7 +112,7 @@ var (
 	// Due to memory limits, the length of PendingDataset should not exceed 2.
 	PendingDataset = []string{}
 
-	// mutex to protect PendingDataset
+	// channel to protect PendingDataset
 	PendingMutex = &sync.RWMutex{}
 )
 
@@ -349,26 +348,29 @@ func GetMetadataForSingleIP(request *annotation.RequestData) (*annotation.GeoDat
 		if parser := Geolite2DatasetInMemory.GetDataset(filename); parser != nil {
 			return UseGeoLite2Dataset(request, parser)
 		} else {
+			PendingMutex.Lock()
+			// check whether loaded again
+			if parser := Geolite2DatasetInMemory.GetDataset(filename); parser != nil {
+				PendingMutex.Unlock()
+				return UseGeoLite2Dataset(request, parser)
+			}
 
-			// It is possible that multiple requests are racing to load the same dataset.
-			// There is a protected var "PendingDataset" to prevent this happending.
-			PendingMutex.RLock()
 			if Contains(PendingDataset, filename) {
+				PendingMutex.Unlock()
 				// dataset loading, just return.
 				return nil, errors.New("Historical dataset is loading into memory right now " + filename)
 			}
 			if len(PendingDataset) >= 2 {
+				PendingMutex.Unlock()
 				return nil, errors.New("Too many pending loading right now, cannot load " + filename)
 			}
-			PendingMutex.RUnlock()
-
-			PendingMutex.Lock()
 			log.Println("Load new GeoLite2 dataset into memory " + filename)
 			PendingDataset = append(PendingDataset, filename)
 			log.Println(PendingDataset)
 
 			parser, err := LoadGeoLite2Dataset(filename, BucketName)
 			if err != nil {
+				PendingMutex.Unlock()
 				log.Println(err)
 				return nil, errors.New("Cannot load historical dataset into memory")
 			}
@@ -380,6 +382,7 @@ func GetMetadataForSingleIP(request *annotation.RequestData) (*annotation.GeoDat
 			PendingMutex.Unlock()
 
 			return UseGeoLite2Dataset(request, Geolite2DatasetInMemory.GetDataset(filename))
+
 		}
 	} else {
 		if parser := LegacyDatasetInMemory.GetLegacyDataset(filename); parser != nil {
@@ -388,17 +391,22 @@ func GetMetadataForSingleIP(request *annotation.RequestData) (*annotation.GeoDat
 			}
 			return nil, errors.New("No legacy record for the request")
 		} else {
-			PendingMutex.RLock()
+			PendingMutex.Lock()
+			// check whether loaded again
+			if parser := LegacyDatasetInMemory.GetLegacyDataset(filename); parser != nil {
+				PendingMutex.Unlock()
+				return GetRecordFromLegacyDataset(request.IP, parser), nil
+			}
 			if Contains(PendingDataset, filename) {
+				PendingMutex.Unlock()
 				// dataset loading, just return.
 				return nil, errors.New("Historical dataset is loading into memory right now " + filename)
 			}
 			if len(PendingDataset) >= 2 {
+				PendingMutex.Unlock()
 				return nil, errors.New("Too many pending loading right now, cannot load " + filename)
 			}
-			PendingMutex.RUnlock()
 
-			PendingMutex.Lock()
 			log.Println("Load new legacy dataset into memory " + filename)
 			PendingDataset = append(PendingDataset, filename)
 

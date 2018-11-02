@@ -29,6 +29,7 @@ func CreateZipReader(ctx context.Context, bucket string, bucketObj string) (*zip
 		log.Println(err)
 		return nil, errors.New("Failed creating new reader")
 	}
+        defer reader.Close()
 	bytesSlice, err := ioutil.ReadAll(reader)
 	if err != nil {
 		log.Println(err)
@@ -37,7 +38,6 @@ func CreateZipReader(ctx context.Context, bucket string, bucketObj string) (*zip
 
 	// Takes byte slice returns Reader
 	r := bytes.NewReader(bytesSlice)
-
 	// Takes r io.ReaderAt(implements Reader) and size of bytes. returns *Reader
 	zipReader, err := zip.NewReader(r, int64(len(bytesSlice)))
 	if err != nil {

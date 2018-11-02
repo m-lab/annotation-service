@@ -149,6 +149,7 @@ func UpdateFilenamelist(bucketName string) error {
 	CurrentGeoDataset.Init()
 	Geolite2DatasetInMemory.Init()
 	LegacyDatasetInMemory.Init()
+
 	return nil
 }
 
@@ -214,6 +215,7 @@ func LoadLegacyGeoliteDataset(filename string, bucketname string) (*geoip.GeoIP,
 
 func LoadGeoLite2Dataset(filename string, bucketname string) (*parser.GeoDataset, error) {
 	zip, err := loader.CreateZipReader(context.Background(), bucketname, filename)
+	log.Println("zip reader created.")
 	if err != nil {
 		return nil, err
 	}

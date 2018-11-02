@@ -32,7 +32,8 @@ func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
 	if err != nil {
 		return nil, err
 	}
-        locations.Close()
+	locations.Close()
+	log.Println("location in memory now")
 	blocks4, err := loader.FindFile(geoLite2BlocksFilenameIP4, zip)
 
 	if err != nil {
@@ -42,7 +43,8 @@ func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
 	if err != nil {
 		return nil, err
 	}
-        blocks4.Close()
+	blocks4.Close()
+	log.Println("block4 in memory now")
 	blocks6, err := loader.FindFile(geoLite2BlocksFilenameIP6, zip)
 
 	if err != nil {
@@ -52,7 +54,8 @@ func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
 	if err != nil {
 		return nil, err
 	}
-        blocks6.Close()
+	blocks6.Close()
+	log.Println("block6 in memory now")
 	return &GeoDataset{IP4Nodes: ipNodes4, IP6Nodes: ipNodes6, LocationNodes: locationNode}, nil
 }
 
@@ -186,11 +189,11 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 		}
 		err = checkNumColumns(record, ipNumColumnsGlite2)
 		if err != nil {
-			return nil, err
+			continue
 		}
 		lowIp, highIp, err := rangeCIDR(record[0])
 		if err != nil {
-			return nil, err
+			continue
 		}
 		newNode.IPAddressLow = lowIp
 		newNode.IPAddressHigh = highIp
@@ -201,8 +204,9 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 				index = backupIndex
 			} else {
 				log.Println(err)
-				log.Println("Couldn't get a valid Geoname id!", record)
+				//log.Println("Couldn't get a valid Geoname id!", record)
 				//TODO: Add a prometheus metric here
+				continue
 			}
 
 		}
@@ -210,11 +214,11 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 		newNode.PostalCode = record[6]
 		newNode.Latitude, err = stringToFloat(record[7], "Latitude")
 		if err != nil {
-			return nil, err
+			continue
 		}
 		newNode.Longitude, err = stringToFloat(record[8], "Longitude")
 		if err != nil {
-			return nil, err
+			continue
 		}
 		stack, list = handleStack(stack, list, newNode)
 	}
