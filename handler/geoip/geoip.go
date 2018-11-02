@@ -171,7 +171,7 @@ type GeoIPRecord struct {
 
 // Returns the "City Record" for an IP address. Requires the GeoCity(Lite)
 // database - http://www.maxmind.com/en/city
-func (gi *GeoIP) GetRecord(ip string) *GeoIPRecord {
+func (gi *GeoIP) GetRecord(ip string, isIP4 bool) *GeoIPRecord {
 	if gi.db == nil {
 		return nil
 	}
@@ -179,8 +179,13 @@ func (gi *GeoIP) GetRecord(ip string) *GeoIPRecord {
 	cip := C.CString(ip)
 	defer C.free(unsafe.Pointer(cip))
 
-	gi.mu.Lock()
-	record := C.GeoIP_record_by_addr(gi.db, cip)
+        var record *C.GeoIPRecord
+	gi.mu.Lock()        
+        if isIP4 {
+	    record = C.GeoIP_record_by_addr(gi.db, cip)
+        } else {
+            record = C.GeoIP_record_by_addr_v6(gi.db, cip)
+        }
 	gi.mu.Unlock()
 
 	if record == nil {

@@ -230,11 +230,11 @@ func Round(x float32) float64 {
 	return i
 }
 
-func GetRecordFromLegacyDataset(ip string, gi *geoip.GeoIP) *annotation.GeoData {
+func GetRecordFromLegacyDataset(ip string, gi *geoip.GeoIP, isIP4 bool) *annotation.GeoData {
 	if gi == nil {
 		return nil
 	}
-	record := gi.GetRecord(ip)
+	record := gi.GetRecord(ip, isIP4)
 	// It is very possible that the record missed some fields in legacy dataset.
 	if record != nil {
 		return &annotation.GeoData{

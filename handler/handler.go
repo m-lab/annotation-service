@@ -386,7 +386,7 @@ func GetMetadataForSingleIP(request *annotation.RequestData) (*annotation.GeoDat
 		}
 	} else {
 		if parser := LegacyDatasetInMemory.GetLegacyDataset(filename); parser != nil {
-			if rec := GetRecordFromLegacyDataset(request.IP, parser); rec != nil {
+			if rec := GetRecordFromLegacyDataset(request.IP, parser, isIP4); rec != nil {
 				return rec, nil
 			}
 			return nil, errors.New("No legacy record for the request")
@@ -395,7 +395,7 @@ func GetMetadataForSingleIP(request *annotation.RequestData) (*annotation.GeoDat
 			// check whether loaded again
 			if parser := LegacyDatasetInMemory.GetLegacyDataset(filename); parser != nil {
 				PendingMutex.Unlock()
-				return GetRecordFromLegacyDataset(request.IP, parser), nil
+				return GetRecordFromLegacyDataset(request.IP, parser, isIP4), nil
 			}
 			if Contains(PendingDataset, filename) {
 				PendingMutex.Unlock()
@@ -420,7 +420,7 @@ func GetMetadataForSingleIP(request *annotation.RequestData) (*annotation.GeoDat
 			LegacyDatasetInMemory.AddLegacyDataset(filename, parser)
 			PendingMutex.Unlock()
 
-			if rec := GetRecordFromLegacyDataset(request.IP, LegacyDatasetInMemory.GetLegacyDataset(filename)); rec != nil {
+			if rec := GetRecordFromLegacyDataset(request.IP, LegacyDatasetInMemory.GetLegacyDataset(filename), isIP4); rec != nil {
 				return rec, nil
 			}
 			return nil, errors.New("No legacy record for the request")

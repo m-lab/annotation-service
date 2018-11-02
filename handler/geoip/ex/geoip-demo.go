@@ -38,7 +38,7 @@ func main() {
 	}
 
 	if gi != nil {
-		record := gi.GetRecord("207.171.7.51")
+		record := gi.GetRecord("207.171.7.51", true)
 		fmt.Printf("%v\n", record)
 	}
 	if gi6 != nil {
