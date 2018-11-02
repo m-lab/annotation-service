@@ -26,7 +26,7 @@ const (
 
 	// Maximum number of legacy datasets in memory.
 	// IPv4 and IPv6 are separated for legacy datasets.
-	MaxHistoricalLegacyDataset = 10
+	MaxHistoricalLegacyDataset = 6
 
 	// Maximum number of pending datasets that can be loaded at the same time.
 	MaxPendingDataset = 2
