@@ -65,7 +65,6 @@ func (d *DatasetInMemory) GetCurrentDataset() *parser.GeoDataset {
 
 func (d *DatasetInMemory) AddDataset(filename string, inputData *parser.GeoDataset) {
 	d.Lock()
-	log.Println(d.data)
 	if len(d.data) >= MaxHistoricalGeolite2Dataset {
 		// Remove one entry
 		for key, _ := range d.data {
@@ -94,7 +93,6 @@ func (d *DatasetInMemory) GetLegacyDataset(filename string) *geoip.GeoIP {
 
 func (d *DatasetInMemory) AddLegacyDataset(filename string, inputData *geoip.GeoIP) {
 	d.Lock()
-	log.Println(d.legacyData)
 	if len(d.legacyData) >= MaxHistoricalLegacyDataset {
 		// Remove one entry
 		for key, _ := range d.legacyData {
@@ -342,7 +340,6 @@ func Deletes(a []string, x string) []string {
 func GetMetadataForSingleIP(request *annotation.RequestData) (*annotation.GeoData, error) {
 	metrics.Metrics_totalLookups.Inc()
 	if request.Timestamp.After(LatestDatasetDate) {
-		//log.Println("Use latest dataset")
 		return UseGeoLite2Dataset(request, CurrentGeoDataset.GetCurrentDataset())
 	}
 	// Check the timestamp of request for correct dataset.
@@ -351,7 +348,6 @@ func GetMetadataForSingleIP(request *annotation.RequestData) (*annotation.GeoDat
 		isIP4 = false
 	}
 	filename, err := SelectGeoLegacyFile(request.Timestamp, BucketName, isIP4)
-	//log.Println("legacy dataset: " + filename)
 
 	if err != nil {
 		return nil, errors.New("Cannot get historical dataset")
@@ -378,7 +374,6 @@ func GetMetadataForSingleIP(request *annotation.RequestData) (*annotation.GeoDat
 			}
 			log.Println("Load new GeoLite2 dataset into memory " + filename)
 			PendingDataset = append(PendingDataset, filename)
-			log.Println(PendingDataset)
 
 			parser, err := LoadGeoLite2Dataset(filename, BucketName)
 			if err != nil {
@@ -389,7 +384,6 @@ func GetMetadataForSingleIP(request *annotation.RequestData) (*annotation.GeoDat
 			log.Println("historical GeoLite2 dataset loaded " + filename)
 
 			PendingDataset = Deletes(PendingDataset, filename)
-			log.Println(PendingDataset)
 			Geolite2DatasetInMemory.AddDataset(filename, parser)
 			PendingMutex.Unlock()
 
