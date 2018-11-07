@@ -17,7 +17,7 @@ resources:
 
 automatic_scaling:
   # We expect negligible load, so this is unlikely to trigger.
-  min_num_instances: 10
+  min_num_instances: 20
   max_num_instances: 40
   cool_down_period_sec: 1800
   cpu_utilization:
