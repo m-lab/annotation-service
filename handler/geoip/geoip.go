@@ -9,15 +9,15 @@ package geoip
 #include <errno.h>
 #include <GeoIP.h>
 #include <GeoIPCity.h>
-
 //typedef GeoIP* GeoIP_pnt
 */
 import "C"
 
 import (
 	"fmt"
+	"log"
 	"os"
-	"runtime"
+	//"runtime"
 	"sync"
 	"unsafe"
 )
@@ -25,6 +25,7 @@ import (
 type GeoIP struct {
 	db *C.GeoIP
 
+	name string
 	// We don't use GeoIP's thread-safe API calls, which means there is a
 	// single global netmask variable that gets clobbered in the main
 	// lookup routine.  Any calls which have _GeoIP_seek_record_gl need to
@@ -33,7 +34,7 @@ type GeoIP struct {
 	mu sync.Mutex
 }
 
-func (gi *GeoIP) free() {
+func (gi *GeoIP) Free() {
 	if gi == nil {
 		return
 	}
@@ -41,22 +42,23 @@ func (gi *GeoIP) free() {
 		gi = nil
 		return
 	}
+	log.Println("free memory for legacy dataset " + gi.name)
 	C.GeoIP_delete(gi.db)
 	gi = nil
 	return
 }
 
 // Default convenience wrapper around OpenDb
-func Open(filename string) (*GeoIP, error) {
-	return OpenDb(filename, GEOIP_MEMORY_CACHE)
+func Open(filename string, datasetName string) (*GeoIP, error) {
+	return OpenDb(filename, GEOIP_MEMORY_CACHE, datasetName)
 }
 
 // Opens a GeoIP database by filename with specified GeoIPOptions flag.
 // All formats supported by libgeoip are supported though there are only
 // functions to access some of the databases in this API.
-func OpenDb(file string, flag int) (*GeoIP, error) {
+func OpenDb(file string, flag int, datasetName string) (*GeoIP, error) {
 	g := &GeoIP{}
-	runtime.SetFinalizer(g, (*GeoIP).free)
+	//runtime.SetFinalizer(g, (*GeoIP).Free)
 
 	var err error
 
@@ -78,6 +80,7 @@ func OpenDb(file string, flag int) (*GeoIP, error) {
 	}
 
 	C.GeoIP_set_charset(g.db, C.GEOIP_CHARSET_UTF8)
+	g.name = datasetName
 	return g, nil
 }
 
@@ -95,7 +98,7 @@ func SetCustomDirectory(dir string) {
 // (for example GEOIP_COUNTRY_EDITION).
 func OpenTypeFlag(dbType int, flag int) (*GeoIP, error) {
 	g := &GeoIP{}
-	runtime.SetFinalizer(g, (*GeoIP).free)
+	//runtime.SetFinalizer(g, (*GeoIP).Free)
 
 	var err error
 
@@ -167,16 +170,24 @@ type GeoIPRecord struct {
 
 // Returns the "City Record" for an IP address. Requires the GeoCity(Lite)
 // database - http://www.maxmind.com/en/city
-func (gi *GeoIP) GetRecord(ip string) *GeoIPRecord {
+func (gi *GeoIP) GetRecord(ip string, isIP4 bool) *GeoIPRecord {
 	if gi.db == nil {
 		return nil
 	}
 
+	if len(ip) == 0 {
+		return nil
+	}
 	cip := C.CString(ip)
 	defer C.free(unsafe.Pointer(cip))
 
+	var record *C.GeoIPRecord
 	gi.mu.Lock()
-	record := C.GeoIP_record_by_addr(gi.db, cip)
+	if isIP4 {
+		record = C.GeoIP_record_by_addr(gi.db, cip)
+	} else {
+		record = C.GeoIP_record_by_addr_v6(gi.db, cip)
+	}
 	gi.mu.Unlock()
 
 	if record == nil {
