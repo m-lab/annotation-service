@@ -228,9 +228,37 @@ func LoadGeoLite2Dataset(requestDate time.Time, bucketName string) (*parser.GeoD
 	return nil, errors.New("should call LoadLegacyGeoliteDataset with input date")
 }
 
-func GetRecordFromLegacyDataset(gi *geoip.GeoIP, ip string) {
-	if gi != nil {
-		record := gi.GetRecord(ip)
-		fmt.Printf("%v\n", record)
+func Round(x float32) float64 {
+	i, err := strconv.ParseFloat(fmt.Sprintf("%.3f", x), 64)
+	if err != nil {
+		return float64(0)
 	}
+	return i
+}
+
+func GetRecordFromLegacyDataset(ip string, gi *geoip.GeoIP, isIP4 bool) *annotation.GeoData {
+	if gi == nil {
+		return nil
+	}
+	record := gi.GetRecord(ip, isIP4)
+	// It is very possible that the record missed some fields in legacy dataset.
+	if record != nil {
+		return &annotation.GeoData{
+			Geo: &annotation.GeolocationIP{
+				Continent_code: record.ContinentCode,
+				Country_code:   record.CountryCode,
+				Country_code3:  record.CountryCode3,
+				Country_name:   record.CountryName,
+				Region:         record.Region,
+				Metro_code:     int64(record.MetroCode),
+				City:           record.City,
+				Area_code:      int64(record.AreaCode),
+				Postal_code:    record.PostalCode,
+				Latitude:       Round(record.Latitude),
+				Longitude:      Round(record.Longitude),
+			},
+			ASN: &annotation.IPASNData{},
+		}
+	}
+	return nil
 }
