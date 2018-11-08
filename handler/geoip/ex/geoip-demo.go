@@ -10,22 +10,22 @@ func main() {
 
 	file6 := "./GeoIPv6.dat"
 
-	gi6, err := geoip.Open(file6)
+	gi6, err := geoip.Open(file6, "default")
 	if err != nil {
 		fmt.Printf("Could not open GeoIPv6 database: %s\n", err)
 	}
 
-	gi, err := geoip.Open("./GeoLiteCity.dat")
+	gi, err := geoip.Open("./GeoLiteCity.dat", "default")
 	if err != nil {
 		fmt.Printf("Could not open GeoIP database: %s\n", err)
 	}
 
-	giasn, err := geoip.Open("./GeoIPASNum.dat")
+	giasn, err := geoip.Open("./GeoIPASNum.dat", "default")
 	if err != nil {
 		fmt.Printf("Could not open GeoIPASN database: %s\n", err)
 	}
 
-	giasn6, err := geoip.Open("./GeoIPASNumv6.dat")
+	giasn6, err := geoip.Open("./GeoIPASNumv6.dat", "default")
 	if err != nil {
 		fmt.Printf("Could not open GeoIPASN database: %s\n", err)
 	}
@@ -38,7 +38,7 @@ func main() {
 	}
 
 	if gi != nil {
-		record := gi.GetRecord("207.171.7.51")
+		record := gi.GetRecord("207.171.7.51", true)
 		fmt.Printf("%v\n", record)
 	}
 	if gi6 != nil {
