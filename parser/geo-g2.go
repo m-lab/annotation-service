@@ -33,7 +33,6 @@ func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
 		return nil, err
 	}
 	locations.Close()
-	log.Println("location in memory now")
 	blocks4, err := loader.FindFile(geoLite2BlocksFilenameIP4, zip)
 
 	if err != nil {
@@ -44,7 +43,6 @@ func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
 		return nil, err
 	}
 	blocks4.Close()
-	log.Println("block4 in memory now")
 	blocks6, err := loader.FindFile(geoLite2BlocksFilenameIP6, zip)
 
 	if err != nil {
@@ -55,7 +53,6 @@ func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
 		return nil, err
 	}
 	blocks6.Close()
-	log.Println("block6 in memory now")
 	return &GeoDataset{IP4Nodes: ipNodes4, IP6Nodes: ipNodes6, LocationNodes: locationNode}, nil
 }
 

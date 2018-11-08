@@ -1,0 +1,38 @@
+runtime: custom
+env: flex
+service: annotatorss
+
+# Resource and scaling options. For more background, see:
+#   https://cloud.google.com/appengine/docs/flexible/go/configuring-your-app-with-app-yaml
+
+# TODO(dev): adjust CPU and memory based on actual requirements.
+resources:
+  cpu: 10
+  # Instances support between [(cpu * 0.9) - 0.4, (cpu * 6.5) - 0.4]
+  # Actual memory available is exposed via GAE_MEMORY_MB environment variable.
+  memory_gb: 60
+
+  # TODO - Do we need any disk? Adjust once we understand requirements.
+  disk_size_gb: 10
+
+automatic_scaling:
+  # We expect negligible load, so this is unlikely to trigger.
+  min_num_instances: 20
+  max_num_instances: 40
+  cool_down_period_sec: 1800
+  cpu_utilization:
+    target_utilization: 0.60
+
+# Note: add a public port for GCE auto discovery by prometheus.
+# TODO(dev): are any values redundant or irrelevant?
+network:
+  instance_tag: annotator
+  name: default
+  # Forward port 9090 on the GCE instance address to the same port in the
+  # container address. Only forward TCP traffic.
+  # Note: the default AppEngine container port 8080 cannot be forwarded.
+  forwarded_ports:
+    - 9090/tcp
+
+env_variables:
+  # TODO add custom service-account, instead of using default credentials.

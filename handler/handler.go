@@ -22,7 +22,7 @@ import (
 
 const (
 	// Maximum number of Geolite2 datasets in memory.
-	MaxHistoricalGeolite2Dataset = 3
+	MaxHistoricalGeolite2Dataset = 5
 
 	// Maximum number of legacy datasets in memory.
 	// IPv4 and IPv6 are separated for legacy datasets.
@@ -75,6 +75,7 @@ func (d *DatasetInMemory) AddDataset(filename string, inputData *parser.GeoDatas
 		}
 	}
 	d.data[filename] = inputData
+	log.Println(d.data)
 	log.Printf("number of dataset in memory: %d ", len(d.data))
 	d.Unlock()
 }
