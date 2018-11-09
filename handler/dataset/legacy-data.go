@@ -83,6 +83,7 @@ gs://downloader-mlab-oti/Maxmind/2018/02/08/20180208T013555Z-GeoLite2-City-CSV.z
 
 
 */
+// TODO: remove dataset package and move this file to handler package to avoid circular dependancy.
 import (
 	"context"
 	"errors"
@@ -92,11 +93,11 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
+	"github.com/m-lab/annotation-service/common"
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/handler/geoip"
 	"github.com/m-lab/annotation-service/loader"
 	"github.com/m-lab/annotation-service/parser"
-	"github.com/m-lab/etl/annotation"
 	"google.golang.org/api/iterator"
 )
 
@@ -230,14 +231,14 @@ func round(x float32) float64 {
 	return i
 }
 
-func GetRecordFromLegacyDataset(ip string, gi *geoip.GeoIP, isIP4 bool) *annotation.GeoData {
+func GetRecordFromLegacyDataset(ip string, gi *geoip.GeoIP, isIP4 bool) *common.GeoData {
 	if gi == nil {
 		return nil
 	}
 	record := gi.GetRecord(ip, isIP4)
 	// It is very possible that the record missed some fields in legacy dataset.
 	if record != nil {
-		return &annotation.GeoData{
+		return &common.GeoData{
 			Geo: &annotation.GeolocationIP{
 				Continent_code: record.ContinentCode,
 				Country_code:   record.CountryCode,

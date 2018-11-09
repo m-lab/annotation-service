@@ -50,15 +50,15 @@ func (gi *GeoIP) Free() {
 	return
 }
 
-// Default convenience wrapper around OpenDb
+// Open opens a DB. It is a default convenience wrapper around OpenDb
 func Open(filename string, datasetName string) (*GeoIP, error) {
-	return OpenDb(filename, GEOIP_MEMORY_CACHE, datasetName)
+	return OpenDB(filename, GEOIP_MEMORY_CACHE, datasetName)
 }
 
 // Opens a GeoIP database by filename with specified GeoIPOptions flag.
 // All formats supported by libgeoip are supported though there are only
 // functions to access some of the databases in this API.
-func OpenDb(file string, flag int, datasetName string) (*GeoIP, error) {
+func OpenDB(file string, flag int, datasetName string) (*GeoIP, error) {
 	g := &GeoIP{}
 
 	var err error
