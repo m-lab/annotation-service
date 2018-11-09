@@ -191,26 +191,18 @@ func SelectGeoLegacyFile(requestDate time.Time, bucketName string) (string, erro
 // LoadGeoliteDataset will check GCS for the matching dataset, download
 // it, process it, and load it into memory so that it can be easily
 // searched, then it will return a pointer to that GeoDataset or an error.
-func LoadLegacyGeoliteDataset(requestDate time.Time, bucketName string) (*geoip.GeoIP, error) {
-	CutOffDate, _ := time.Parse("January 2, 2006", GeoLite2CutOffDate)
-	if requestDate.Before(CutOffDate) {
-		filename, err := SelectGeoLegacyFile(requestDate, bucketName)
-		if err != nil {
-			return nil, err
-		}
-		// load the legacy binary dataset
-		dataFileName := "GeoLiteCity.dat"
-		err = loader.UncompressGzFile(context.Background(), bucketName, filename, dataFileName)
-		if err != nil {
-			return nil, err
-		}
-		gi, err := geoip.Open(dataFileName, filename)
-		if err != nil {
-			return nil, errors.New("could not open GeoIP database")
-		}
-		return gi, nil
+func LoadLegacyGeoliteDataset(filename string, bucketname string) (*geoip.GeoIP, error) {
+	// load the legacy binary dataset
+	dataFileName := "GeoLiteCity.dat"
+	err := loader.UncompressGzFile(context.Background(), bucketname, filename, dataFileName)
+	if err != nil {
+		return nil, err
 	}
-	return nil, errors.New("should call LoadGeoLite2Dataset with input date")
+	gi, err := geoip.Open(dataFileName, filename)
+	if err != nil {
+		return nil, errors.New("could not open GeoIP database")
+	}
+	return gi, nil
 }
 
 func LoadGeoLite2Dataset(requestDate time.Time, bucketName string) (*parser.GeoDataset, error) {
