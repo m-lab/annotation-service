@@ -42,11 +42,11 @@ func (gi *GeoIP) Free() {
 		gi = nil
 		return
 	}
-	mu.Lock()
+	gi.mu.Lock()
 	log.Println("free memory for legacy dataset " + gi.name)
 	C.GeoIP_delete(gi.db)
+	gi.mu.Unlock()
 	gi = nil
-	mu.Unlock()
 	return
 }
 
