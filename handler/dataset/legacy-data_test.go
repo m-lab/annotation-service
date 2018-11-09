@@ -1,7 +1,6 @@
 package dataset_test
 
 import (
-	"fmt"
 	"log"
 	"testing"
 	"time"
@@ -83,7 +82,7 @@ type GeoIPSuite struct {
 var _ = check.Suite(&GeoIPSuite{})
 
 func (s *GeoIPSuite) TestLoadLegacyGeoliteDataset(c *check.C) {
-	gi, err := handler.LoadLegacyGeoliteDataset("Maxmind/2014/03/07/20140307T160000Z-GeoLiteCity.dat.gz", "downloader-mlab-testing")
+	gi, err := dataset.LoadLegacyGeoliteDataset("Maxmind/2014/03/07/20140307T160000Z-GeoLiteCity.dat.gz", "downloader-mlab-testing")
 	if err != nil {
 		log.Printf("Did not load legacy dataset correctly %v", err)
 	}
@@ -112,7 +111,7 @@ func (s *GeoIPSuite) TestLoadLegacyGeoliteDataset(c *check.C) {
 }
 
 func (s *GeoIPSuite) TestLoadLegacyGeoliteV6Dataset(c *check.C) {
-	gi, err := handler.LoadLegacyGeoliteDataset("Maxmind/2014/03/07/20140307T160000Z-GeoLiteCityv6.dat.gz", "downloader-mlab-testing")
+	gi, err := dataset.LoadLegacyGeoliteDataset("Maxmind/2014/03/07/20140307T160000Z-GeoLiteCityv6.dat.gz", "downloader-mlab-testing")
 	if err != nil {
 		log.Printf("Did not load legacy dataset correctly %v", err)
 	}
