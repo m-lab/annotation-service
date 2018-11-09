@@ -88,6 +88,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strconv"
 	"time"
 
 	"cloud.google.com/go/storage"
@@ -202,7 +203,7 @@ func LoadLegacyGeoliteDataset(requestDate time.Time, bucketName string) (*geoip.
 		if err != nil {
 			return nil, err
 		}
-		gi, err := geoip.Open(dataFileName)
+		gi, err := geoip.Open(dataFileName, filename)
 		if err != nil {
 			return nil, errors.New("could not open GeoIP database")
 		}
@@ -228,7 +229,7 @@ func LoadGeoLite2Dataset(requestDate time.Time, bucketName string) (*parser.GeoD
 	return nil, errors.New("should call LoadLegacyGeoliteDataset with input date")
 }
 
-func Round(x float32) float64 {
+func round(x float32) float64 {
 	i, err := strconv.ParseFloat(fmt.Sprintf("%.3f", x), 64)
 	if err != nil {
 		return float64(0)
@@ -254,8 +255,8 @@ func GetRecordFromLegacyDataset(ip string, gi *geoip.GeoIP, isIP4 bool) *annotat
 				City:           record.City,
 				Area_code:      int64(record.AreaCode),
 				Postal_code:    record.PostalCode,
-				Latitude:       Round(record.Latitude),
-				Longitude:      Round(record.Longitude),
+				Latitude:       round(record.Latitude),
+				Longitude:      round(record.Longitude),
 			},
 			ASN: &annotation.IPASNData{},
 		}
