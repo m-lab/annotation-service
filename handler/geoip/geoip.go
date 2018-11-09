@@ -25,14 +25,15 @@ type GeoIP struct {
 	db *C.GeoIP
 
 	name string
+	
 	// We don't use GeoIP's thread-safe API calls, which means there is a
 	// single global netmask variable that gets clobbered in the main
 	// lookup routine.  Any calls which have _GeoIP_seek_record_gl need to
 	// be wrapped in this mutex.
-
 	mu sync.Mutex
 }
 
+// Free the memory hold by GeoIP dataset. Mutex should be held for this operation.
 func (gi *GeoIP) Free() {
 	if gi == nil {
 		return
@@ -41,9 +42,11 @@ func (gi *GeoIP) Free() {
 		gi = nil
 		return
 	}
+	mu.Lock()
 	log.Println("free memory for legacy dataset " + gi.name)
 	C.GeoIP_delete(gi.db)
 	gi = nil
+	mu.Unlock()
 	return
 }
 
