@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	//"runtime"
 	"sync"
 	"unsafe"
 )
@@ -58,7 +57,6 @@ func Open(filename string, datasetName string) (*GeoIP, error) {
 // functions to access some of the databases in this API.
 func OpenDb(file string, flag int, datasetName string) (*GeoIP, error) {
 	g := &GeoIP{}
-	//runtime.SetFinalizer(g, (*GeoIP).Free)
 
 	var err error
 
