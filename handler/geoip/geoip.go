@@ -47,11 +47,11 @@ func (gi *GeoIP) Free() {
 	C.GeoIP_delete(gi.db)
 	log.Println("here")
 	gi = nil
-	if gi != nil {
-		log.Println("gi is not nil")
+	if gi.db != nil {
+		log.Println("gi.db is not nil")
 	}
-	if gi == nil {
-		log.Println("gi is nil")
+	if gi.db == nil {
+		log.Println("gi.db is nil")
 	}
 	log.Println(gi)
 	return
