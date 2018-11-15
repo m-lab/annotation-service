@@ -1,3 +1,6 @@
+/* demo code to show how to use the C-Wrapper of legacy Maxmind API.
+   originally forked from github.com/abh/geoip
+*/
 package main
 
 import (

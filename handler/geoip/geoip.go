@@ -42,20 +42,18 @@ func (gi *GeoIP) Free() {
 		gi = nil
 		return
 	}
-	gi.mu.Lock()
 	log.Println("free memory for legacy dataset " + gi.name)
 	C.GeoIP_delete(gi.db)
-	gi.mu.Unlock()
 	gi = nil
 	return
 }
 
-// Open opens a DB. It is a default convenience wrapper around OpenDb
+// Open opens a DB. It is a default convenience wrapper around OpenDB.
 func Open(filename string, datasetName string) (*GeoIP, error) {
 	return OpenDB(filename, GEOIP_MEMORY_CACHE, datasetName)
 }
 
-// Opens a GeoIP database by filename with specified GeoIPOptions flag.
+// OpenDB opens a GeoIP database by filename with specified GeoIPOptions flag.
 // All formats supported by libgeoip are supported though there are only
 // functions to access some of the databases in this API.
 func OpenDB(file string, flag int, datasetName string) (*GeoIP, error) {
@@ -94,12 +92,11 @@ func SetCustomDirectory(dir string) {
 	C.GeoIP_setup_custom_directory(cdir)
 }
 
-// OpenType opens a specified GeoIP database type in the default location with the
+// OpenTypeFlag opens a specified GeoIP database type in the default location with the
 // specified GeoIPOptions flag. Constants are defined for each database type
 // (for example GEOIP_COUNTRY_EDITION).
 func OpenTypeFlag(dbType int, flag int) (*GeoIP, error) {
 	g := &GeoIP{}
-	//runtime.SetFinalizer(g, (*GeoIP).Free)
 
 	var err error
 
@@ -130,7 +127,7 @@ func (gi *GeoIP) GetOrg(ip string) string {
 	return name
 }
 
-// Works on the ASN, Netspeed, Organization and probably other
+// GetName works on the ASN, Netspeed, Organization and probably other
 // databases, takes and IP string and returns a "name" and the
 // netmask.
 func (gi *GeoIP) GetName(ip string) (name string, netmask int) {
@@ -169,7 +166,7 @@ type GeoIPRecord struct {
 	ContinentCode string
 }
 
-// Returns the "City Record" for an IP address. Requires the GeoCity(Lite)
+// GetRecord returns the "City Record" for an IP address. Requires the GeoCity(Lite)
 // database - http://www.maxmind.com/en/city
 func (gi *GeoIP) GetRecord(ip string, isIP4 bool) *GeoIPRecord {
 	if gi.db == nil {
@@ -221,7 +218,7 @@ func (gi *GeoIP) GetRecord(ip string, isIP4 bool) *GeoIPRecord {
 	return rec
 }
 
-// Returns the country code and region code for an IP address. Requires
+// GetRegion returns the country code and region code for an IP address. Requires
 // the GeoIP Region database.
 func (gi *GeoIP) GetRegion(ip string) (string, string) {
 	if gi.db == nil {
@@ -246,7 +243,7 @@ func (gi *GeoIP) GetRegion(ip string) (string, string) {
 	return countryCode, regionCode
 }
 
-// Returns the region name given a country code and region code
+// GetRegionName returns the region name given a country code and region code
 func GetRegionName(countryCode, regionCode string) string {
 
 	cc := C.CString(countryCode)
@@ -266,7 +263,7 @@ func GetRegionName(countryCode, regionCode string) string {
 	return regionName
 }
 
-// Same as GetName() but for IPv6 addresses.
+// GetNameV6 is same as GetName() but for IPv6 addresses.
 func (gi *GeoIP) GetNameV6(ip string) (name string, netmask int) {
 	if gi.db == nil {
 		return
