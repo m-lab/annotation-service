@@ -1,7 +1,6 @@
 package geoip_test
 
 import (
-	"fmt"
 	"testing"
 
 	. "gopkg.in/check.v1"
@@ -25,9 +24,6 @@ func (s *GeoIPSuite) TestOpenAndFree(c *C) {
 	c.Check(gi, NotNil)
 	c.Check(err, IsNil)
 	gi.Free()
-	if gi != nil {
-		fmt.Printf("Free() did not release memory correctly.")
-	}
 
-	c.Check(gi, IsNil)
+	c.Check(gi.Check(), Equals, false)
 }

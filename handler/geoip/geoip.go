@@ -35,26 +35,20 @@ type GeoIP struct {
 
 // Free the memory hold by GeoIP dataset. Mutex should be held for this operation.
 func (gi *GeoIP) Free() {
-	if gi == nil {
+	if gi == nil || gi.db == nil {
 		return
 	}
-	if gi.db == nil {
-		gi = nil
-		return
-	}
-	log.Println("!!!free memory for legacy dataset:! " + gi.name)
-	log.Println("here2")
+	log.Println("free memory for legacy dataset: " + gi.name)
 	C.GeoIP_delete(gi.db)
-	log.Println("here")
-	gi = nil
-	if gi.db != nil {
-		log.Println("gi.db is not nil")
-	}
-	if gi.db == nil {
-		log.Println("gi.db is nil")
-	}
-	log.Println(gi)
 	return
+}
+
+// Check returns true if gi.db is not freed.
+func (gi *GeoIP) Check() bool {
+	if gi.db.GeoIPDatabase == nil {
+		return false
+	}
+	return true
 }
 
 // Open opens a DB. It is a default convenience wrapper around OpenDB.
