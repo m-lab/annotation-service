@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	//"runtime"
 	"sync"
 	"unsafe"
 )
@@ -49,7 +48,7 @@ func (gi *GeoIP) Free() {
 	return
 }
 
-// Default convenience wrapper around OpenDb
+// Open is a default convenience wrapper around OpenDb
 func Open(filename string, datasetName string) (*GeoIP, error) {
 	return OpenDb(filename, GEOIP_MEMORY_CACHE, datasetName)
 }
