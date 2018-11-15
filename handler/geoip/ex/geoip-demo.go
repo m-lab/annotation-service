@@ -55,4 +55,10 @@ func main() {
 		fmt.Printf("%s: %s/%d %s/%d\n", ip, country, netmask, asn, asn_netmask)
 	}
 
+	gi6.Free()
+
+	if gi6 != nil {
+		fmt.Printf("Free() did not release memory correctly.")
+	}
+
 }

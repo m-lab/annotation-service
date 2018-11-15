@@ -58,6 +58,9 @@ func Open(filename string, datasetName string) (*GeoIP, error) {
 // functions to access some of the databases in this API.
 func OpenDB(file string, flag int, datasetName string) (*GeoIP, error) {
 	g := &GeoIP{}
+	// Original code has "runtime.SetFinalizer(g, (*GeoIP).Free)" here
+	// But it caused the loaded DB kicked out from memory immediately and
+	// has to be loaded again. So we remove it for now.
 
 	var err error
 
@@ -97,6 +100,8 @@ func SetCustomDirectory(dir string) {
 // (for example GEOIP_COUNTRY_EDITION).
 func OpenTypeFlag(dbType int, flag int) (*GeoIP, error) {
 	g := &GeoIP{}
+	// Original code has "runtime.SetFinalizer(g, (*GeoIP).Free)" here
+	// removed for the same reason above.
 
 	var err error
 
