@@ -45,6 +45,8 @@ func (gi *GeoIP) Free() {
 
 // Check returns true if gi.db is not freed.
 func (gi *GeoIP) Check() bool {
+	// The proto definition can be found at
+	// https://github.com/maxmind/geoip-api-c/blob/master/libGeoIP/GeoIP.h#L77
 	if gi.db.GeoIPDatabase == nil {
 		return false
 	}
