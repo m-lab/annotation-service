@@ -58,7 +58,7 @@ func main() {
 	gi6.Free()
 
 	if gi6 != nil {
-		fmt.Printf("Free() did not release memory correctly.")
+		fmt.Printf("Free() did not release memory correctly.\n")
 	}
 
 }
