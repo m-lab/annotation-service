@@ -239,7 +239,7 @@ func GetRecordFromLegacyDataset(ip string, gi *geoip.GeoIP, isIP4 bool) *common.
 	// It is very possible that the record missed some fields in legacy dataset.
 	if record != nil {
 		return &common.GeoData{
-			Geo: &annotation.GeolocationIP{
+			Geo: &common.GeolocationIP{
 				Continent_code: record.ContinentCode,
 				Country_code:   record.CountryCode,
 				Country_code3:  record.CountryCode3,
@@ -252,7 +252,7 @@ func GetRecordFromLegacyDataset(ip string, gi *geoip.GeoIP, isIP4 bool) *common.
 				Latitude:       round(record.Latitude),
 				Longitude:      round(record.Longitude),
 			},
-			ASN: &annotation.IPASNData{},
+			ASN: &common.IPASNData{},
 		}
 	}
 	return nil
