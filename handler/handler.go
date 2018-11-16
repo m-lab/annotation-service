@@ -143,7 +143,7 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 		responseMap[data.IP+strconv.FormatInt(data.Timestamp.Unix(), encodingBase)], err = GetMetadataForSingleIP(&data)
 		if err != nil {
 			// stop sending more request in the same batch because w/ high chance the dataset is not ready
-			fmt.Fprintf(w, "legacy dataset not loaded")
+			fmt.Fprintf(w, "Batch Request Error")
 			return
 		}
 	}
