@@ -2,26 +2,17 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"log"
-	"os"
-	"regexp"
+	"time"
 
+	"github.com/m-lab/annotation-service/common"
 	"github.com/m-lab/annotation-service/loader"
 	"github.com/m-lab/annotation-service/parser"
 
 	"google.golang.org/api/iterator"
 
 	"cloud.google.com/go/storage"
-)
-
-// This is the regex used to filter for which files we want to consider acceptable for using with Geolite2
-var GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
-
-var BucketName = "downloader-" + os.Getenv("GCLOUD_PROJECT") // This is the bucket containing maxmind files
-
-const (
-	MaxmindPrefix = "Maxmind/" // Folder containing the maxmind files
-
 )
 
 // PopulateLatestData will search to the latest Geolite2 files
@@ -62,6 +53,23 @@ func DetermineFilenameOfLatestGeolite2File() (string, error) {
 	return filename, nil
 }
 
+func LoadGeoLite2Dataset(requestDate time.Time, bucketName string) (*parser.GeoDataset, error) {
+	CutOffDate, _ := time.Parse("January 2, 2006", GeoLite2CutOffDate)
+	if !requestDate.Before(CutOffDate) {
+		filename, err := SelectGeoLegacyFile(requestDate, bucketName)
+		if err != nil {
+			return nil, err
+		}
+		// load GeoLite2 dataset
+		zip, err := loader.CreateZipReader(context.Background(), bucketName, filename)
+		if err != nil {
+			return nil, err
+		}
+		return parser.LoadGeoLite2(zip)
+	}
+	return nil, errors.New("should call LoadLegacyGeoliteDataset with input date")
+}
+
 // LoadLatestGeolite2File will check GCS for the latest file, download
 // it, process it, and load it into memory so that it can be easily
 // searched, then it will return a pointer to that GeoDataset or an error.
@@ -75,4 +83,31 @@ func LoadLatestGeolite2File() (*parser.GeoDataset, error) {
 		return nil, err
 	}
 	return parser.LoadGeoLite2(zip)
+}
+
+// ConvertIPNodeToGeoData takes a parser.IPNode, plus a list of
+// locationNodes. It will then use that data to fill in a GeoData
+// struct and return its pointer.
+func ConvertIPNodeToGeoData(ipNode parser.IPNode, locationNodes []parser.LocationNode) *common.GeoData {
+	locNode := parser.LocationNode{}
+	if ipNode.LocationIndex >= 0 {
+		locNode = locationNodes[ipNode.LocationIndex]
+	}
+	return &common.GeoData{
+		Geo: &common.GeolocationIP{
+			Continent_code: locNode.ContinentCode,
+			Country_code:   locNode.CountryCode,
+			Country_code3:  "", // missing from geoLite2 ?
+			Country_name:   locNode.CountryName,
+			Region:         locNode.RegionCode,
+			Metro_code:     locNode.MetroCode,
+			City:           locNode.CityName,
+			Area_code:      0, // new geoLite2 does not have area code.
+			Postal_code:    ipNode.PostalCode,
+			Latitude:       ipNode.Latitude,
+			Longitude:      ipNode.Longitude,
+		},
+		ASN: &common.IPASNData{},
+	}
+
 }

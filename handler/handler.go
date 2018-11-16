@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"regexp"
 	"strconv"
 	"sync"
 	"time"
@@ -18,11 +19,6 @@ import (
 	"github.com/m-lab/annotation-service/parser"
 	"github.com/m-lab/annotation-service/search"
 )
-
-func init() {
-	// Always prepend the filename and line number.
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-}
 
 var (
 	// A mutex to make sure that we are not reading from the dataset
@@ -34,11 +30,10 @@ var (
 	CurrentGeoDataset *parser.GeoDataset = nil
 )
 
-const (
-	// This is the base in which we should encode the timestamp when we
-	// are creating the keys for the mapt to return for batch requests
-	encodingBase = 36
-)
+func init() {
+	// Always prepend the filename and line number.
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+}
 
 // A function to set up any handlers that are needed, including url
 // handlers and pubsub handlers
@@ -219,29 +214,13 @@ func GetMetadataForSingleIP(request *common.RequestData) *common.GeoData {
 	return ConvertIPNodeToGeoData(node, CurrentGeoDataset.LocationNodes)
 }
 
-// ConvertIPNodeToGeoData takes a parser.IPNode, plus a list of
-// locationNodes. It will then use that data to fill in a GeoData
-// struct and return its pointer.
-func ConvertIPNodeToGeoData(ipNode parser.IPNode, locationNodes []parser.LocationNode) *common.GeoData {
-	locNode := parser.LocationNode{}
-	if ipNode.LocationIndex >= 0 {
-		locNode = locationNodes[ipNode.LocationIndex]
+// ExtractDateFromFilename return the date for a filename like
+// gs://downloader-mlab-oti/Maxmind/2017/05/08/20170508T080000Z-GeoLiteCity.dat.gz
+func ExtractDateFromFilename(filename string) (time.Time, error) {
+	re := regexp.MustCompile(`[0-9]{8}T`)
+	filedate := re.FindAllString(filename, -1)
+	if len(filedate) != 1 {
+		return time.Time{}, errors.New("cannot extract date from input filename")
 	}
-	return &common.GeoData{
-		Geo: &common.GeolocationIP{
-			Continent_code: locNode.ContinentCode,
-			Country_code:   locNode.CountryCode,
-			Country_code3:  "", // missing from geoLite2 ?
-			Country_name:   locNode.CountryName,
-			Region:         locNode.RegionCode,
-			Metro_code:     locNode.MetroCode,
-			City:           locNode.CityName,
-			Area_code:      0, // new geoLite2 does not have area code.
-			Postal_code:    ipNode.PostalCode,
-			Latitude:       ipNode.Latitude,
-			Longitude:      ipNode.Longitude,
-		},
-		ASN: &common.IPASNData{},
-	}
-
+	return time.Parse(time.RFC3339, filedate[0][0:4]+"-"+filedate[0][4:6]+"-"+filedate[0][6:8]+"T00:00:00Z")
 }
