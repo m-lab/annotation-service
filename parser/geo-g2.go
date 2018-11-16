@@ -9,17 +9,19 @@ import (
 	"net"
 	"regexp"
 	"strconv"
-
 	"github.com/m-lab/annotation-service/loader"
 )
 
 const (
 	ipNumColumnsGlite2        = 10
 	locationNumColumnsGlite2  = 13
+	asnNumColumnsGlite2       = 3
 	gLite2Prefix              = "GeoLite2-City"
 	geoLite2BlocksFilenameIP4 = "GeoLite2-City-Blocks-IPv4.csv"  // Filename of ipv4 blocks file
 	geoLite2BlocksFilenameIP6 = "GeoLite2-City-Blocks-IPv6.csv"  // Filename of ipv6 blocks file
 	geoLite2LocationsFilename = "GeoLite2-City-Locations-en.csv" // Filename of locations file
+        geoLite2ASNFilenameIP4    = "GeoLite2-ASN-Blocks-IPv4.csv"   // Filename of ipv4 asn file
+        geoLite2ASNFilenameIP6    = "GeoLite2-ASN-Blocks-IPv6.csv"   // Filename of ipv4 asn file
 )
 
 func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
@@ -32,6 +34,7 @@ func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
 	if err != nil {
 		return nil, err
 	}
+        // NEED TO UPDATE geoidMap with the ASN info
 	blocks4, err := loader.FindFile(geoLite2BlocksFilenameIP4, zip)
 	if err != nil {
 		return nil, err
@@ -48,7 +51,16 @@ func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &GeoDataset{IP4Nodes: ipNodes4, IP6Nodes: ipNodes6, LocationNodes: locationNode}, nil
+	asns4, err := loader.FindFile(geoLite2ASNFilenameIP4, zip)
+	if err != nil {
+		return nil, err
+	}
+	asnNodes4, err := LoadASN4ListGLite2(asns4)
+	if err != nil {
+		return nil, err
+	}
+	// TODO: Add asnNodes4 to the return
+	return &GeoDataset{IP4Nodes: ipNodes4, IP6Nodes: ipNodes6, LocationNodes: locationNode, ASN4Nodes: asnNodes4}, nil
 }
 
 // Finds the smallest and largest net.IP from a CIDR range
@@ -219,4 +231,58 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 		list = append(list, peek)
 	}
 	return list, nil
+}
+
+
+func LoadASN4ListGLite2(reader io.Reader) ([]ASNNode, error) {
+	//
+	list := []ASNNode{}
+	r := csv.NewReader(reader)
+	stack := []ASNNode{}
+	// Skip first line
+	_, err := r.Read()
+	if err == io.EOF {
+		log.Println("Empty input data")
+		return nil, errors.New("Empty input data")
+	}
+	for {
+		var newNode ASNNode
+		// Example GLite2 record: [1.0.0.0/24,13335,"Cloudflare Inc"]
+		record, err := r.Read()
+		if err == io.EOF {
+			break
+		}
+		err = checkNumColumns(record, asnNumColumnsGlite2)
+		if err != nil {
+			return nil, err
+		}
+		lowIp, highIp, err := rangeCIDR(record[0])
+		if err != nil {
+			return nil, err
+		}
+		newNode.IPAddressLow = lowIp
+		newNode.IPAddressHigh = highIp
+		newNode.ASN, err = strconv.Atoi(record[1])
+		if err != nil {
+			return nil, err
+		}
+		newNode.ASN_org = record[2]
+		// Need to relook this function.  It takes in IPNodes
+		stack, list = handleStackASN(stack, list, newNode)
+	}
+	var pop ASNNode
+	pop, stack = stack[len(stack)-1], stack[:len(stack)-1]
+	for ; len(stack) > 0; pop, stack = stack[len(stack)-1], stack[:len(stack)-1] {
+		peek := stack[len(stack)-1]
+		peek.IPAddressLow = PlusOne(pop.IPAddressHigh)
+		list = append(list, peek)
+	}
+	
+	
+	return list, nil
+}
+
+
+func main(){
+	
 }

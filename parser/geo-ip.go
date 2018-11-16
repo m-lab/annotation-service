@@ -36,12 +36,22 @@ type LocationNode struct {
 	CityName      string
 }
 
+
+// ASN data
+type ASNNode struct {
+	IPAddressLow  net.IP
+	IPAddressHigh net.IP
+	ASN           int
+	ASN_org       string
+}
+
 // The GeoDataset struct bundles all the data needed to search and
 // find data into one common structure
 type GeoDataset struct {
 	IP4Nodes      []IPNode       // The IPNode list containing IP4Nodes
 	IP6Nodes      []IPNode       // The IPNode list containing IP6Nodes
 	LocationNodes []LocationNode // The location nodes corresponding to the IPNodes
+	ASN4Nodes     []ASNNode      // The ASNNode list containing all IPv4 ASN data
 }
 
 // Verify column length
@@ -175,6 +185,43 @@ func handleStack(stack, list []IPNode, newNode IPNode) ([]IPNode, []IPNode) {
 	list = append(list, newNode)
 	return stack, list
 }
+
+// To avoid changing the entire process, binary search, etc., this
+// function had to be replicated in order to support 
+func handleStackASN(stack, list []ASNNode, newNode ASNNode) ([]ASNNode, []ASNNode) {
+	// Stack is not empty aka we're in a nested IP
+	if len(stack) != 0 {
+		// newNode is no longer inside stack's nested IP's
+		if lessThan(stack[len(stack)-1].IPAddressHigh, newNode.IPAddressLow) {
+			// while closing nested IP's
+			var pop ASNNode
+			pop, stack = stack[len(stack)-1], stack[:len(stack)-1]
+			for ; len(stack) > 0; pop, stack = stack[len(stack)-1], stack[:len(stack)-1] {
+				peek := stack[len(stack)-1]
+				if lessThan(newNode.IPAddressLow, peek.IPAddressHigh) {
+					// if there's a gap in between adjacent nested IP's,
+					// complete the gap
+					peek.IPAddressLow = PlusOne(pop.IPAddressHigh)
+					peek.IPAddressHigh = minusOne(newNode.IPAddressLow)
+					list = append(list, peek)
+					break
+				}
+				peek.IPAddressLow = PlusOne(pop.IPAddressHigh)
+				list = append(list, peek)
+			}
+		} else {
+			// if we're nesting IP's
+			// create begnning bounds
+			lastListNode := &list[len(list)-1]
+			lastListNode.IPAddressHigh = minusOne(newNode.IPAddressLow)
+
+		}
+	}
+	stack = append(stack, newNode)
+	list = append(list, newNode)
+	return stack, list
+}
+
 
 func moreThan(a, b net.IP) bool {
 	return bytes.Compare(a, b) > 0

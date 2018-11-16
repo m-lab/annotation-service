@@ -198,10 +198,13 @@ func GetMetadataForSingleIP(request *common.RequestData) *common.GeoData {
 	// TODO(gfr) release lock sooner?
 	defer currentDataMutex.RUnlock()
 	var node parser.IPNode
+	var asNode parser.ASNNode
 	// TODO: Push this logic down to searchlist (after binary search is implemented)
 	if request.IPFormat == 4 {
 		node, err = search.SearchBinary(
 			CurrentGeoDataset.IP4Nodes, request.IP)
+		asNode, err = search.SearchBinaryASN(
+			CurrentGeoDataset.ASN4Nodes, request.IP)
 	} else if request.IPFormat == 6 {
 		node, err = search.SearchBinary(
 			CurrentGeoDataset.IP6Nodes, request.IP)
@@ -216,17 +219,18 @@ func GetMetadataForSingleIP(request *common.RequestData) *common.GeoData {
 		return nil
 	}
 
-	return ConvertIPNodeToGeoData(node, CurrentGeoDataset.LocationNodes)
+	return ConvertIPNodeToGeoData(node, CurrentGeoDataset.LocationNodes, asNode)
 }
 
 // ConvertIPNodeToGeoData takes a parser.IPNode, plus a list of
 // locationNodes. It will then use that data to fill in a GeoData
 // struct and return its pointer.
-func ConvertIPNodeToGeoData(ipNode parser.IPNode, locationNodes []parser.LocationNode) *common.GeoData {
+func ConvertIPNodeToGeoData(ipNode parser.IPNode, locationNodes []parser.LocationNode, asnNode parser.ASNNode) *common.GeoData {
 	locNode := parser.LocationNode{}
 	if ipNode.LocationIndex >= 0 {
 		locNode = locationNodes[ipNode.LocationIndex]
 	}
+	
 	return &common.GeoData{
 		Geo: &common.GeolocationIP{
 			Continent_code: locNode.ContinentCode,
@@ -241,7 +245,10 @@ func ConvertIPNodeToGeoData(ipNode parser.IPNode, locationNodes []parser.Locatio
 			Latitude:       ipNode.Latitude,
 			Longitude:      ipNode.Longitude,
 		},
-		ASN: &common.IPASNData{},
+		ASN: &common.IPASNData{
+                        ASN:            asnNode.ASN,
+                        ASN_org:        asnNode.ASN_org,
+                },
 	}
 
 }
