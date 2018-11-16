@@ -17,7 +17,6 @@ import (
 	"github.com/m-lab/annotation-service/common"
 	"github.com/m-lab/annotation-service/metrics"
 	"github.com/m-lab/annotation-service/parser"
-	"github.com/m-lab/annotation-service/search"
 )
 
 var (
