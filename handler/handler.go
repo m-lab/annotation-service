@@ -193,34 +193,8 @@ func BatchValidateAndParse(source io.Reader) ([]common.RequestData, error) {
 // pointer, even if it cannot find the appropriate metadata.
 func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error) {
 	metrics.Metrics_totalLookups.Inc()
-	if CurrentGeoDataset == nil {
-		return nil, errors.New("CurrentGeoDataset not ready")
-	}
-	// TODO: Figure out which table to use based on time
-	err := errors.New("unknown IP format")
-	currentDataMutex.RLock()
-	// TODO(gfr) release lock sooner?
-	defer currentDataMutex.RUnlock()
-	var node parser.IPNode
-	// TODO: Push this logic down to searchlist (after binary search is implemented)
-	if request.IPFormat == 4 {
-		node, err = search.SearchBinary(
-			CurrentGeoDataset.IP4Nodes, request.IP)
-	} else if request.IPFormat == 6 {
-		node, err = search.SearchBinary(
-			CurrentGeoDataset.IP6Nodes, request.IP)
-	}
 
-	if err != nil {
-		// ErrNodeNotFound is super spammy - 10% of requests, so suppress those.
-		if err != search.ErrNodeNotFound {
-			log.Println(err, request.IP)
-		}
-		//TODO metric here
-		return nil, err
-	}
-
-	return ConvertIPNodeToGeoData(node, CurrentGeoDataset.LocationNodes), nil
+	return UseGeoLite2Dataset(request, CurrentGeoDataset)
 }
 
 // ExtractDateFromFilename return the date for a filename like
