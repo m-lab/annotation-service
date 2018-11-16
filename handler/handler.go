@@ -61,7 +61,12 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := GetMetadataForSingleIP(data)
+	result, err := GetMetadataForSingleIP(data)
+	if err != nil {
+		fmt.Fprintf(w, "Cannot get meta data")
+		return
+	}
+
 	encodedResult, err := json.Marshal(result)
 	if err != nil {
 		fmt.Fprintf(w, "Unknown JSON Encoding Error")
@@ -135,7 +140,12 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 
 	responseMap := make(map[string]*common.GeoData)
 	for _, data := range dataSlice {
-		responseMap[data.IP+strconv.FormatInt(data.Timestamp.Unix(), encodingBase)] = GetMetadataForSingleIP(&data)
+		responseMap[data.IP+strconv.FormatInt(data.Timestamp.Unix(), encodingBase)], err = GetMetadataForSingleIP(&data)
+		if err != nil {
+			// stop sending more request in the same batch because w/ high chance the dataset is not ready
+			fmt.Fprintf(w, "legacy dataset not loaded")
+			return
+		}
 	}
 	encodedResult, err := json.Marshal(responseMap)
 	if err != nil {
@@ -181,11 +191,10 @@ func BatchValidateAndParse(source io.Reader) ([]common.RequestData, error) {
 // struct and will use it to fetch the appropriate associated
 // metadata, returning a pointer. It is gaurenteed to return a non-nil
 // pointer, even if it cannot find the appropriate metadata.
-func GetMetadataForSingleIP(request *common.RequestData) *common.GeoData {
+func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error) {
 	metrics.Metrics_totalLookups.Inc()
 	if CurrentGeoDataset == nil {
-		// TODO: Block until the value is not nil
-		return nil
+		return nil, errors.New("CurrentGeoDataset not ready")
 	}
 	// TODO: Figure out which table to use based on time
 	err := errors.New("unknown IP format")
@@ -208,10 +217,10 @@ func GetMetadataForSingleIP(request *common.RequestData) *common.GeoData {
 			log.Println(err, request.IP)
 		}
 		//TODO metric here
-		return nil
+		return nil, err
 	}
 
-	return ConvertIPNodeToGeoData(node, CurrentGeoDataset.LocationNodes)
+	return ConvertIPNodeToGeoData(node, CurrentGeoDataset.LocationNodes), nil
 }
 
 // ExtractDateFromFilename return the date for a filename like

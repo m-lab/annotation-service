@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"log"
-	"time"
 
 	"github.com/m-lab/annotation-service/common"
 	"github.com/m-lab/annotation-service/loader"
 	"github.com/m-lab/annotation-service/parser"
+	"github.com/m-lab/annotation-service/search"
 
 	"google.golang.org/api/iterator"
 
@@ -53,21 +53,13 @@ func DetermineFilenameOfLatestGeolite2File() (string, error) {
 	return filename, nil
 }
 
-func LoadGeoLite2Dataset(requestDate time.Time, bucketName string) (*parser.GeoDataset, error) {
-	CutOffDate, _ := time.Parse("January 2, 2006", GeoLite2CutOffDate)
-	if !requestDate.Before(CutOffDate) {
-		filename, err := SelectGeoLegacyFile(requestDate, bucketName)
-		if err != nil {
-			return nil, err
-		}
-		// load GeoLite2 dataset
-		zip, err := loader.CreateZipReader(context.Background(), bucketName, filename)
-		if err != nil {
-			return nil, err
-		}
-		return parser.LoadGeoLite2(zip)
+// LoadGeoLite2Dataset load the Geolite2 dataset with filename from bucket.
+func LoadGeoLite2Dataset(filename string, bucketname string) (*parser.GeoDataset, error) {
+	zip, err := loader.CreateZipReader(context.Background(), bucketname, filename)
+	if err != nil {
+		return nil, err
 	}
-	return nil, errors.New("should call LoadLegacyGeoliteDataset with input date")
+	return parser.LoadGeoLite2(zip)
 }
 
 // LoadLatestGeolite2File will check GCS for the latest file, download
@@ -78,11 +70,7 @@ func LoadLatestGeolite2File() (*parser.GeoDataset, error) {
 	if err != nil {
 		return nil, err
 	}
-	zip, err := loader.CreateZipReader(context.Background(), BucketName, filename)
-	if err != nil {
-		return nil, err
-	}
-	return parser.LoadGeoLite2(zip)
+	return LoadGeoLite2Dataset(filename, BucketName)
 }
 
 // ConvertIPNodeToGeoData takes a parser.IPNode, plus a list of
@@ -110,4 +98,34 @@ func ConvertIPNodeToGeoData(ipNode parser.IPNode, locationNodes []parser.Locatio
 		ASN: &common.IPASNData{},
 	}
 
+}
+
+// UseGeoLite2Dataset return annotation for a request from a given Geolite2 dataset.
+func UseGeoLite2Dataset(request *common.RequestData, dataset *parser.GeoDataset) (*common.GeoData, error) {
+	if dataset == nil {
+		// TODO: Block until the value is not nil
+		return nil, errors.New("Dataset is not ready")
+	}
+
+	err := errors.New("unknown IP format")
+	var node parser.IPNode
+	// TODO: Push this logic down to searchlist (after binary search is implemented)
+	if request.IPFormat == 4 {
+		node, err = search.SearchBinary(
+			dataset.IP4Nodes, request.IP)
+	} else if request.IPFormat == 6 {
+		node, err = search.SearchBinary(
+			dataset.IP6Nodes, request.IP)
+	}
+
+	if err != nil {
+		// ErrNodeNotFound is super spammy - 10% of requests, so suppress those.
+		if err != search.ErrNodeNotFound {
+			log.Println(err, request.IP)
+		}
+		//TODO metric here
+		return nil, err
+	}
+
+	return ConvertIPNodeToGeoData(node, dataset.LocationNodes), nil
 }

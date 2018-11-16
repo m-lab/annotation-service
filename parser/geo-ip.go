@@ -44,6 +44,13 @@ type GeoDataset struct {
 	LocationNodes []LocationNode // The location nodes corresponding to the IPNodes
 }
 
+// Free the memory used by GeoDataset.
+func (data *GeoDataset) Free() {
+	data.IP4Nodes = nil
+	data.IP6Nodes = nil
+	data.LocationNodes = nil
+}
+
 // Verify column length
 func checkNumColumns(record []string, size int) error {
 	if len(record) != size {
