@@ -29,14 +29,4 @@ const (
 	// This is the base in which we should encode the timestamp when we
 	// are creating the keys for the mapt to return for batch requests
 	encodingBase = 36
-
-	// Maximum number of Geolite2 datasets in memory.
-	MaxHistoricalGeolite2Dataset = 5
-
-	// Maximum number of legacy datasets in memory.
-	// IPv4 and IPv6 are separated for legacy datasets.
-	MaxHistoricalLegacyDataset = 6
-
-	// Maximum number of pending datasets that can be loaded at the same time.
-	MaxPendingDataset = 2
 )
