@@ -1,4 +1,4 @@
-package dataset
+package handler
 
 /* From 2013/08/28 - 2017/08/08, Maxmind provide GeoLite dataset in legacy format
 
@@ -94,7 +94,6 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/m-lab/annotation-service/common"
-	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/handler/geoip"
 	"github.com/m-lab/annotation-service/loader"
 	"github.com/m-lab/annotation-service/parser"
@@ -108,7 +107,6 @@ var GeoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
 var DatasetNames []string
 
 const (
-	MaxmindPrefix = "Maxmind/" // Folder containing the maxmind files
 	// This is the date we have the first GeoLite2 dataset.
 	// Any request earlier than this date using legacy binary datasets
 	// later than this date using GeoLite2 datasets
@@ -169,7 +167,7 @@ func SelectGeoLegacyFile(requestDate time.Time, bucketName string) (string, erro
 				return lastFilename, nil
 			}
 			lastFilename = fileName
-		} else if !requestDate.Before(CutOffDate) && handler.GeoLite2Regex.MatchString(fileName) {
+		} else if !requestDate.Before(CutOffDate) && GeoLite2Regex.MatchString(fileName) {
 			// Search GeoLite2 dataset
 			fileDate, err := ExtractDateFromFilename(fileName)
 			if err != nil {
