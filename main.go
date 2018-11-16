@@ -7,7 +7,6 @@ import (
 	_ "net/http/pprof"
 
 	"github.com/m-lab/annotation-service/handler"
-	"github.com/m-lab/annotation-service/handler/dataset"
 	"github.com/m-lab/annotation-service/metrics"
 )
 
@@ -15,7 +14,7 @@ import (
 func updateMaxmindDatasets(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Update the list of maxmind datasets.\n")
 
-	err := dataset.UpdateFilenamelist("downloader-" + os.Getenv("GCLOUD_PROJECT"))
+	err := handler.UpdateFilenamelist("downloader-" + os.Getenv("GCLOUD_PROJECT"))
 	if err != nil {
 		log.Print(err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
