@@ -29,14 +29,17 @@ func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
 	}
 	// geoidMap is just a temporary map that will be discarded once the blocks are parsed
 	locationNode, geoidMap, err := LoadLocListGLite2(locations)
+	locations.Close()
 	if err != nil {
 		return nil, err
 	}
+
 	blocks4, err := loader.FindFile(geoLite2BlocksFilenameIP4, zip)
 	if err != nil {
 		return nil, err
 	}
 	ipNodes4, err := LoadIPListGLite2(blocks4, geoidMap)
+	blocks4.Close()
 	if err != nil {
 		return nil, err
 	}
@@ -45,6 +48,7 @@ func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
 		return nil, err
 	}
 	ipNodes6, err := LoadIPListGLite2(blocks6, geoidMap)
+	blocks6.Close()
 	if err != nil {
 		return nil, err
 	}
@@ -128,11 +132,11 @@ func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		}
 		lNode.ContinentCode, err = checkCaps(record[2], "Continent code")
 		if err != nil {
-			return nil, nil, err
+			continue
 		}
 		lNode.CountryCode, err = checkCaps(record[4], "Country code")
 		if err != nil {
-			return nil, nil, err
+			continue
 		}
 		match, _ := regexp.MatchString(`^[^0-9]*$`, record[5])
 		if match {
@@ -148,7 +152,7 @@ func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		if err != nil {
 			if len(record[11]) > 0 {
 				log.Println("MetroCode should be a number")
-				return nil, nil, errors.New("Corrupted Data: metrocode should be a number")
+				continue
 			}
 		}
 		lNode.CityName = record[10]
@@ -180,11 +184,11 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 		}
 		err = checkNumColumns(record, ipNumColumnsGlite2)
 		if err != nil {
-			return nil, err
+			continue
 		}
 		lowIp, highIp, err := rangeCIDR(record[0])
 		if err != nil {
-			return nil, err
+			continue
 		}
 		newNode.IPAddressLow = lowIp
 		newNode.IPAddressHigh = highIp
