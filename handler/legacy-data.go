@@ -117,11 +117,11 @@ func UpdateFilenamelist(bucketName string) error {
 	return nil
 }
 
-// SelectGeoLegacyFile return the legacy GelLiteCity.data filename given a date in format yyyymmdd.
+// SelectGeoLegacyFile returns the legacy GelLiteCity.data filename given a date in format yyyymmdd.
 // For any input date earlier than 2013/08/28, we will return 2013/08/28 dataset.
 // For any input date later than latest available dataset, we will return the latest dataset
 // Otherwise, we return the last dataset before the input date.
-func SelectGeoLegacyFile(requestDate time.Time, bucketName string) (string, error) {
+func SelectGeoLegacyFile(requestDate time.Time, bucketName string, isIP4 bool) (string, error) {
 	earliestArchiveDate, _ := time.Parse("January 2, 2006", "August 28, 2013")
 	if requestDate.Before(earliestArchiveDate) {
 		return "Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz", nil
@@ -129,7 +129,7 @@ func SelectGeoLegacyFile(requestDate time.Time, bucketName string) (string, erro
 	CutOffDate, _ := time.Parse("January 2, 2006", GeoLite2CutOffDate)
 	lastFilename := ""
 	for _, fileName := range DatasetNames {
-		if requestDate.Before(CutOffDate) && GeoLegacyRegex.MatchString(fileName) {
+		if requestDate.Before(CutOffDate) && ((isIP4 && GeoLegacyRegex.MatchString(fileName)) || (!isIP4 && GeoLegacyv6Regex.MatchString(fileName))) {
 			// search legacy dataset
 			fileDate, err := ExtractDateFromFilename(fileName)
 			if err != nil {
