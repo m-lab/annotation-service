@@ -83,14 +83,17 @@ gs://downloader-mlab-oti/Maxmind/2018/02/08/20180208T013555Z-GeoLite2-City-CSV.z
 
 
 */
+// TODO: remove dataset package and move this file to handler package to avoid circular dependancy.
 import (
 	"context"
 	"errors"
 	"fmt"
 	"regexp"
+	"strconv"
 	"time"
 
 	"cloud.google.com/go/storage"
+	"github.com/m-lab/annotation-service/common"
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/handler/geoip"
 	"github.com/m-lab/annotation-service/loader"
@@ -189,26 +192,18 @@ func SelectGeoLegacyFile(requestDate time.Time, bucketName string) (string, erro
 // LoadGeoliteDataset will check GCS for the matching dataset, download
 // it, process it, and load it into memory so that it can be easily
 // searched, then it will return a pointer to that GeoDataset or an error.
-func LoadLegacyGeoliteDataset(requestDate time.Time, bucketName string) (*geoip.GeoIP, error) {
-	CutOffDate, _ := time.Parse("January 2, 2006", GeoLite2CutOffDate)
-	if requestDate.Before(CutOffDate) {
-		filename, err := SelectGeoLegacyFile(requestDate, bucketName)
-		if err != nil {
-			return nil, err
-		}
-		// load the legacy binary dataset
-		dataFileName := "GeoLiteCity.dat"
-		err = loader.UncompressGzFile(context.Background(), bucketName, filename, dataFileName)
-		if err != nil {
-			return nil, err
-		}
-		gi, err := geoip.Open(dataFileName)
-		if err != nil {
-			return nil, errors.New("could not open GeoIP database")
-		}
-		return gi, nil
+func LoadLegacyGeoliteDataset(filename string, bucketname string) (*geoip.GeoIP, error) {
+	// load the legacy binary dataset
+	dataFileName := "GeoLiteCity.dat"
+	err := loader.UncompressGzFile(context.Background(), bucketname, filename, dataFileName)
+	if err != nil {
+		return nil, err
 	}
-	return nil, errors.New("should call LoadGeoLite2Dataset with input date")
+	gi, err := geoip.Open(dataFileName, filename)
+	if err != nil {
+		return nil, errors.New("could not open GeoIP database")
+	}
+	return gi, nil
 }
 
 func LoadGeoLite2Dataset(requestDate time.Time, bucketName string) (*parser.GeoDataset, error) {
@@ -228,9 +223,37 @@ func LoadGeoLite2Dataset(requestDate time.Time, bucketName string) (*parser.GeoD
 	return nil, errors.New("should call LoadLegacyGeoliteDataset with input date")
 }
 
-func GetRecordFromLegacyDataset(gi *geoip.GeoIP, ip string) {
-	if gi != nil {
-		record := gi.GetRecord(ip)
-		fmt.Printf("%v\n", record)
+func round(x float32) float64 {
+	i, err := strconv.ParseFloat(fmt.Sprintf("%.3f", x), 64)
+	if err != nil {
+		return float64(0)
 	}
+	return i
+}
+
+func GetRecordFromLegacyDataset(ip string, gi *geoip.GeoIP, isIP4 bool) *common.GeoData {
+	if gi == nil {
+		return nil
+	}
+	record := gi.GetRecord(ip, isIP4)
+	// It is very possible that the record missed some fields in legacy dataset.
+	if record != nil {
+		return &common.GeoData{
+			Geo: &common.GeolocationIP{
+				Continent_code: record.ContinentCode,
+				Country_code:   record.CountryCode,
+				Country_code3:  record.CountryCode3,
+				Country_name:   record.CountryName,
+				Region:         record.Region,
+				Metro_code:     int64(record.MetroCode),
+				City:           record.City,
+				Area_code:      int64(record.AreaCode),
+				Postal_code:    record.PostalCode,
+				Latitude:       round(record.Latitude),
+				Longitude:      round(record.Longitude),
+			},
+			ASN: &common.IPASNData{},
+		}
+	}
+	return nil
 }

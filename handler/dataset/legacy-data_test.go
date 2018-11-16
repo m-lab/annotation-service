@@ -1,7 +1,6 @@
 package dataset_test
 
 import (
-	"fmt"
 	"log"
 	"testing"
 	"time"
@@ -64,7 +63,15 @@ func TestSelectGeoLegacyFile(t *testing.T) {
 		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
 			"Maxmind/2017/08/15/20170815T200946Z-GeoLite2-City-CSV.zip", filename4, err)
 	}
-
+	/*
+		// before the cutoff date, IPv6
+		date6, _ := time.Parse("January 2, 2006", "April 4, 2016")
+		filename6, err := dataset.SelectGeoLegacyFile(date6, testBucket, false)
+		if filename6 != "Maxmind/2016/03/08/20160308T080000Z-GeoLiteCityv6.dat.gz" || err != nil {
+			t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
+				"Maxmind/2016/03/08/20160308T080000Z-GeoLiteCityv6.dat.gz", filename6, err)
+		}
+	*/
 	// return the latest available dataset.
 	date5, _ := time.Parse("January 2, 2006", "August 15, 2037")
 	filename5, err := dataset.SelectGeoLegacyFile(date5, testBucket)
@@ -83,11 +90,12 @@ type GeoIPSuite struct {
 var _ = check.Suite(&GeoIPSuite{})
 
 func (s *GeoIPSuite) TestLoadLegacyGeoliteDataset(c *check.C) {
-	date1, _ := time.Parse("January 2, 2006", "February 3, 2014")
-	gi, err := dataset.LoadLegacyGeoliteDataset(date1, "downloader-mlab-testing")
-	fmt.Printf("%v", err)
+	gi, err := dataset.LoadLegacyGeoliteDataset("Maxmind/2014/03/07/20140307T160000Z-GeoLiteCity.dat.gz", "downloader-mlab-testing")
+	if err != nil {
+		log.Printf("Did not load legacy dataset correctly %v", err)
+	}
 	if gi != nil {
-		record := gi.GetRecord("207.171.7.51")
+		record := gi.GetRecord("207.171.7.51", true)
 		c.Assert(record, check.NotNil)
 		c.Check(
 			*record,
@@ -103,6 +111,35 @@ func (s *GeoIPSuite) TestLoadLegacyGeoliteDataset(c *check.C) {
 				Longitude:     -118.4041,
 				AreaCode:      310,
 				MetroCode:     803,
+				CharSet:       1,
+				ContinentCode: "NA",
+			},
+		)
+	}
+}
+
+func (s *GeoIPSuite) TestLoadLegacyGeoliteV6Dataset(c *check.C) {
+	gi, err := dataset.LoadLegacyGeoliteDataset("Maxmind/2014/03/07/20140307T160000Z-GeoLiteCityv6.dat.gz", "downloader-mlab-testing")
+	if err != nil {
+		log.Printf("Did not load legacy dataset correctly %v", err)
+	}
+	if gi != nil {
+		record := gi.GetRecord("2620:0:1003:415:fa1e:73f3:ec68:7709", false)
+		c.Assert(record, check.NotNil)
+		c.Check(
+			*record,
+			check.Equals,
+			geoip.GeoIPRecord{
+				CountryCode:   "US",
+				CountryCode3:  "USA",
+				CountryName:   "United States",
+				Region:        "",
+				City:          "",
+				PostalCode:    "",
+				Latitude:      38,
+				Longitude:     -97,
+				AreaCode:      00,
+				MetroCode:     0,
 				CharSet:       1,
 				ContinentCode: "NA",
 			},
