@@ -87,6 +87,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -95,6 +96,20 @@ import (
 	"github.com/m-lab/annotation-service/handler/geoip"
 	"github.com/m-lab/annotation-service/loader"
 	"google.golang.org/api/iterator"
+)
+
+// This is the regex used to filter for which files we want to consider acceptable for using with legacy dataset
+var GeoLegacyRegex = regexp.MustCompile(`.*-GeoLiteCity.dat.*`)
+var GeoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
+
+// DatasetNames are list of datasets sorted in lexographical order in downloader bucket.
+var DatasetNames []string
+
+const (
+	// This is the date we have the first GeoLite2 dataset.
+	// Any request earlier than this date using legacy binary datasets
+	// later than this date using GeoLite2 datasets
+	GeoLite2CutOffDate = "August 15, 2017"
 )
 
 // UpdateFilenamelist extract the filenames from downloader bucket.

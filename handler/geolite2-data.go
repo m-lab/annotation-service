@@ -30,10 +30,10 @@ func PopulateLatestData() {
 	currentDataMutex.Unlock()
 }
 
-// DetermineFilenameOfLatestGeolite2File will get a list of filenames
+// determineFilenameOfLatestGeolite2File will get a list of filenames
 // from GCS and search through them, eventually returing either the
 // latest filename or an error.
-func DetermineFilenameOfLatestGeolite2File() (string, error) {
+func determineFilenameOfLatestGeolite2File() (string, error) {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	if err != nil {
@@ -66,7 +66,7 @@ func LoadGeoLite2Dataset(filename string, bucketname string) (*parser.GeoDataset
 // it, process it, and load it into memory so that it can be easily
 // searched, then it will return a pointer to that GeoDataset or an error.
 func LoadLatestGeolite2File() (*parser.GeoDataset, error) {
-	filename, err := DetermineFilenameOfLatestGeolite2File()
+	filename, err := determineFilenameOfLatestGeolite2File()
 	if err != nil {
 		return nil, err
 	}

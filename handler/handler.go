@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"regexp"
@@ -29,10 +28,11 @@ var (
 	CurrentGeoDataset *parser.GeoDataset = nil
 )
 
-func init() {
-	// Always prepend the filename and line number.
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-}
+const (
+	// This is the base in which we should encode the timestamp when we
+	// are creating the keys for the mapt to return for batch requests
+	encodingBase = 36
+)
 
 // A function to set up any handlers that are needed, including url
 // handlers and pubsub handlers
