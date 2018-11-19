@@ -87,6 +87,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"regexp"
 	"strconv"
 	"time"
@@ -112,7 +113,7 @@ const (
 	GeoLite2CutOffDate = "August 15, 2017"
 )
 
-// UpdateFilenamelist extract the filenames from downloader bucket.
+// UpdateFilenamelist extracts the filenames from downloader bucket.
 // DatasetNames are sorted in lexographical order.
 func UpdateFilenamelist(bucketName string) error {
 	ctx := context.Background()
@@ -121,14 +122,26 @@ func UpdateFilenamelist(bucketName string) error {
 		return err
 	}
 	prospectiveFiles := client.Bucket(bucketName).Objects(ctx, &storage.Query{Prefix: MaxmindPrefix})
-	DatasetNames = make([]string, 0)
 
+	lastestFileName := ""
 	for file, err := prospectiveFiles.Next(); err != iterator.Done; file, err = prospectiveFiles.Next() {
 		if err != nil {
 			return err
 		}
 		DatasetNames = append(DatasetNames, file.Name)
+		if GeoLite2Regex.MatchString(file.Name) {
+			lastestFileName = file.Name
+		}
 	}
+
+	LatestDatasetDate, err = ExtractDateFromFilename(lastestFileName)
+	if err != nil {
+		log.Println(err)
+	}
+	currentGeoDataset.Init()
+	geolite2DatasetInMemory.Init()
+	legacyDatasetInMemory.Init()
+
 	return nil
 }
 

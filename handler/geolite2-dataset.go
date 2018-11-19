@@ -21,13 +21,14 @@ import (
 // do so safely with use of the currentDataMutex RW mutex. It it
 // encounters an error, it will halt the program.
 func PopulateLatestData() {
-	data, err := LoadLatestGeolite2File()
+	filename, err := determineFilenameOfLatestGeolite2File()
 	if err != nil {
 		log.Fatal(err)
 	}
-	currentDataMutex.Lock()
-	CurrentGeoDataset = data
-	currentDataMutex.Unlock()
+
+	currentGeoDataset.AddDataset(filename)
+	geolite2DatasetInMemory.Init()
+	legacyDatasetInMemory.Init()
 }
 
 // determineFilenameOfLatestGeolite2File will get a list of filenames
@@ -60,17 +61,6 @@ func LoadGeoLite2Dataset(filename string, bucketname string) (*parser.GeoDataset
 		return nil, err
 	}
 	return parser.LoadGeoLite2(zip)
-}
-
-// LoadLatestGeolite2File will check GCS for the latest file, download
-// it, process it, and load it into memory so that it can be easily
-// searched, then it will return a pointer to that GeoDataset or an error.
-func LoadLatestGeolite2File() (*parser.GeoDataset, error) {
-	filename, err := determineFilenameOfLatestGeolite2File()
-	if err != nil {
-		return nil, err
-	}
-	return LoadGeoLite2Dataset(filename, BucketName)
 }
 
 // ConvertIPNodeToGeoData takes a parser.IPNode, plus a list of

@@ -10,28 +10,28 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/m-lab/annotation-service/common"
 	"github.com/m-lab/annotation-service/metrics"
-	"github.com/m-lab/annotation-service/parser"
-)
-
-var (
-	// A mutex to make sure that we are not reading from the dataset
-	// pointer while trying to update it
-	currentDataMutex = &sync.RWMutex{}
-
-	// This is a pointer to a GeoDataset struct containing the absolute
-	// latest data for the annotator to search and reply with
-	CurrentGeoDataset *parser.GeoDataset = nil
 )
 
 const (
 	// This is the base in which we should encode the timestamp when we
 	// are creating the keys for the mapt to return for batch requests
 	encodingBase = 36
+)
+
+var (
+	// This is a struct containing the latest data for the annotator to search
+	// and reply with. The size of data map inside is 1.
+	currentGeoDataset CurrentDatasetInMemory
+
+	// The GeoLite2 datasets (except the current one) that are already in memory.
+	geolite2DatasetInMemory Geolite2DatasetInMemory
+
+	// The legacy datasets that are already in memory.
+	legacyDatasetInMemory LegacyDatasetInMemory
 )
 
 // A function to set up any handlers that are needed, including url
@@ -193,7 +193,25 @@ func BatchValidateAndParse(source io.Reader) ([]common.RequestData, error) {
 func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error) {
 	metrics.Metrics_totalLookups.Inc()
 
-	return UseGeoLite2Dataset(request, CurrentGeoDataset)
+	if request.Timestamp.After(LatestDatasetDate) {
+		return currentGeoDataset.GetGeoLocationForSingleIP(request, "")
+	}
+
+	isIP4 := true
+	if request.IPFormat == 6 {
+		isIP4 = false
+	}
+
+	filename, err := SelectGeoLegacyFile(request.Timestamp, BucketName, isIP4)
+
+	if err != nil {
+		return nil, errors.New("Cannot get historical dataset")
+	}
+	if GeoLite2Regex.MatchString(filename) {
+		return geolite2DatasetInMemory.GetGeoLocationForSingleIP(request, filename)
+	} else {
+		return legacyDatasetInMemory.GetGeoLocationForSingleIP(request, filename)
+	}
 }
 
 // ExtractDateFromFilename return the date for a filename like

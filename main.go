@@ -34,6 +34,7 @@ func main() {
 	log.Print("Beginning Setup\n")
 	http.HandleFunc("/cron/update_maxmind_datasets", updateMaxmindDatasets)
 
+        handler.UpdateFilenamelist(handler.BucketName)
 	handler.PopulateLatestData()
 	handler.SetupHandlers()
 	metrics.SetupPrometheus()
