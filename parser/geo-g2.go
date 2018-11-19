@@ -29,14 +29,17 @@ func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
 	}
 	// geoidMap is just a temporary map that will be discarded once the blocks are parsed
 	locationNode, geoidMap, err := LoadLocListGLite2(locations)
+	locations.Close()
 	if err != nil {
 		return nil, err
 	}
+
 	blocks4, err := loader.FindFile(geoLite2BlocksFilenameIP4, zip)
 	if err != nil {
 		return nil, err
 	}
 	ipNodes4, err := LoadIPListGLite2(blocks4, geoidMap)
+	blocks4.Close()
 	if err != nil {
 		return nil, err
 	}
@@ -45,6 +48,7 @@ func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
 		return nil, err
 	}
 	ipNodes6, err := LoadIPListGLite2(blocks6, geoidMap)
+	blocks6.Close()
 	if err != nil {
 		return nil, err
 	}
@@ -102,6 +106,8 @@ func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 	}
 	// FieldsPerRecord is the expected column length
 	// r.FieldsPerRecord = locationNumColumnsGlite2
+	errorCount := 0
+	maxErrorCount := 50
 	for {
 		record, err := r.Read()
 		if err != nil {
@@ -128,11 +134,21 @@ func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		}
 		lNode.ContinentCode, err = checkCaps(record[2], "Continent code")
 		if err != nil {
-			return nil, nil, err
+			log.Println(err)
+			errorCount += 1
+			if errorCount > maxErrorCount {
+				return nil, nil, errors.New("Too many errors during loading the dataset location list")
+			}
+			continue
 		}
 		lNode.CountryCode, err = checkCaps(record[4], "Country code")
 		if err != nil {
-			return nil, nil, err
+			log.Println(err)
+			errorCount += 1
+			if errorCount > maxErrorCount {
+				return nil, nil, errors.New("Too many errors during loading the dataset location list")
+			}
+			continue
 		}
 		match, _ := regexp.MatchString(`^[^0-9]*$`, record[5])
 		if match {
@@ -148,7 +164,11 @@ func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		if err != nil {
 			if len(record[11]) > 0 {
 				log.Println("MetroCode should be a number")
-				return nil, nil, errors.New("Corrupted Data: metrocode should be a number")
+				errorCount += 1
+				if errorCount > maxErrorCount {
+					return nil, nil, errors.New("Too many errors during loading the dataset location list")
+				}
+				continue
 			}
 		}
 		lNode.CityName = record[10]
@@ -170,6 +190,8 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 		log.Println("Empty input data")
 		return nil, errors.New("Empty input data")
 	}
+	errorCount := 0
+	maxErrorCount := 50
 	for {
 		var newNode IPNode
 		// Example:
@@ -180,11 +202,21 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 		}
 		err = checkNumColumns(record, ipNumColumnsGlite2)
 		if err != nil {
-			return nil, err
+			log.Println(err)
+			errorCount += 1
+			if errorCount > maxErrorCount {
+				return nil, errors.New("Too many errors during loading the dataset IP list.")
+			}
+			continue
 		}
 		lowIp, highIp, err := rangeCIDR(record[0])
 		if err != nil {
-			return nil, err
+			log.Println(err)
+			errorCount += 1
+			if errorCount > maxErrorCount {
+				return nil, errors.New("Too many errors during loading the dataset IP list")
+			}
+			continue
 		}
 		newNode.IPAddressLow = lowIp
 		newNode.IPAddressHigh = highIp
@@ -203,11 +235,21 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 		newNode.PostalCode = record[6]
 		newNode.Latitude, err = stringToFloat(record[7], "Latitude")
 		if err != nil {
-			return nil, err
+			log.Println(err)
+			errorCount += 1
+			if errorCount > maxErrorCount {
+				return nil, errors.New("Too many errors during loading the dataset IP list")
+			}
+			continue
 		}
 		newNode.Longitude, err = stringToFloat(record[8], "Longitude")
 		if err != nil {
-			return nil, err
+			log.Println(err)
+			errorCount += 1
+			if errorCount > maxErrorCount {
+				return nil, errors.New("Too many errors during loading the dataset IP list")
+			}
+			continue
 		}
 		stack, list = handleStack(stack, list, newNode)
 	}
