@@ -82,6 +82,8 @@ func rangeCIDR(cidr string) (net.IP, net.IP, error) {
 // Create Location list for GLite2 databases
 // TODO This code is a bit fragile.  Should probably parse the header and
 // use that to guide the parsing of the rows.
+// TODO(yachang) If a database fails to load, the cache should mark it as unloadable,
+// the error message should indicate that we need a different dataset for that date range.
 func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 	idMap := make(map[int]int, mapMax)
 	list := []LocationNode{}
@@ -180,6 +182,8 @@ func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 
 // LoadIPListGLite2 creates a List of IPNodes from a GeoLite2 reader.
 // TODO(gfr) Update to use recursion instead of stack.
+// TODO(yachang) If a database fails to load, the cache should mark it as unloadable,
+// the error message should indicate that we need a different dataset for that date range.
 func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 	list := []IPNode{}
 	r := csv.NewReader(reader)
