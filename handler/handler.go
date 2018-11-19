@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
+	"regexp"
 	"strconv"
 	"sync"
 	"time"
@@ -16,13 +16,7 @@ import (
 	"github.com/m-lab/annotation-service/common"
 	"github.com/m-lab/annotation-service/metrics"
 	"github.com/m-lab/annotation-service/parser"
-	"github.com/m-lab/annotation-service/search"
 )
-
-func init() {
-	// Always prepend the filename and line number.
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-}
 
 var (
 	// A mutex to make sure that we are not reading from the dataset
@@ -66,7 +60,12 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := GetMetadataForSingleIP(data)
+	result, err := GetMetadataForSingleIP(data)
+	if err != nil {
+		fmt.Fprintf(w, "Cannot get meta data")
+		return
+	}
+
 	encodedResult, err := json.Marshal(result)
 	if err != nil {
 		fmt.Fprintf(w, "Unknown JSON Encoding Error")
@@ -140,7 +139,12 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 
 	responseMap := make(map[string]*common.GeoData)
 	for _, data := range dataSlice {
-		responseMap[data.IP+strconv.FormatInt(data.Timestamp.Unix(), encodingBase)] = GetMetadataForSingleIP(&data)
+		responseMap[data.IP+strconv.FormatInt(data.Timestamp.Unix(), encodingBase)], err = GetMetadataForSingleIP(&data)
+		if err != nil {
+			// stop sending more request in the same batch because w/ high chance the dataset is not ready
+			fmt.Fprintf(w, "Batch Request Error")
+			return
+		}
 	}
 	encodedResult, err := json.Marshal(responseMap)
 	if err != nil {
@@ -186,62 +190,19 @@ func BatchValidateAndParse(source io.Reader) ([]common.RequestData, error) {
 // struct and will use it to fetch the appropriate associated
 // metadata, returning a pointer. It is gaurenteed to return a non-nil
 // pointer, even if it cannot find the appropriate metadata.
-func GetMetadataForSingleIP(request *common.RequestData) *common.GeoData {
+func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error) {
 	metrics.Metrics_totalLookups.Inc()
-	if CurrentGeoDataset == nil {
-		// TODO: Block until the value is not nil
-		return nil
-	}
-	// TODO: Figure out which table to use based on time
-	err := errors.New("unknown IP format")
-	currentDataMutex.RLock()
-	// TODO(gfr) release lock sooner?
-	defer currentDataMutex.RUnlock()
-	var node parser.IPNode
-	// TODO: Push this logic down to searchlist (after binary search is implemented)
-	if request.IPFormat == 4 {
-		node, err = search.SearchBinary(
-			CurrentGeoDataset.IP4Nodes, request.IP)
-	} else if request.IPFormat == 6 {
-		node, err = search.SearchBinary(
-			CurrentGeoDataset.IP6Nodes, request.IP)
-	}
 
-	if err != nil {
-		// ErrNodeNotFound is super spammy - 10% of requests, so suppress those.
-		if err != search.ErrNodeNotFound {
-			log.Println(err, request.IP)
-		}
-		//TODO metric here
-		return nil
-	}
-
-	return ConvertIPNodeToGeoData(node, CurrentGeoDataset.LocationNodes)
+	return UseGeoLite2Dataset(request, CurrentGeoDataset)
 }
 
-// ConvertIPNodeToGeoData takes a parser.IPNode, plus a list of
-// locationNodes. It will then use that data to fill in a GeoData
-// struct and return its pointer.
-func ConvertIPNodeToGeoData(ipNode parser.IPNode, locationNodes []parser.LocationNode) *common.GeoData {
-	locNode := parser.LocationNode{}
-	if ipNode.LocationIndex >= 0 {
-		locNode = locationNodes[ipNode.LocationIndex]
+// ExtractDateFromFilename return the date for a filename like
+// gs://downloader-mlab-oti/Maxmind/2017/05/08/20170508T080000Z-GeoLiteCity.dat.gz
+func ExtractDateFromFilename(filename string) (time.Time, error) {
+	re := regexp.MustCompile(`[0-9]{8}T`)
+	filedate := re.FindAllString(filename, -1)
+	if len(filedate) != 1 {
+		return time.Time{}, errors.New("cannot extract date from input filename")
 	}
-	return &common.GeoData{
-		Geo: &common.GeolocationIP{
-			Continent_code: locNode.ContinentCode,
-			Country_code:   locNode.CountryCode,
-			Country_code3:  "", // missing from geoLite2 ?
-			Country_name:   locNode.CountryName,
-			Region:         locNode.RegionCode,
-			Metro_code:     locNode.MetroCode,
-			City:           locNode.CityName,
-			Area_code:      0, // new geoLite2 does not have area code.
-			Postal_code:    ipNode.PostalCode,
-			Latitude:       ipNode.Latitude,
-			Longitude:      ipNode.Longitude,
-		},
-		ASN: &common.IPASNData{},
-	}
-
+	return time.Parse(time.RFC3339, filedate[0][0:4]+"-"+filedate[0][4:6]+"-"+filedate[0][6:8]+"T00:00:00Z")
 }

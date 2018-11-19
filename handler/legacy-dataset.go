@@ -83,7 +83,6 @@ gs://downloader-mlab-oti/Maxmind/2018/02/08/20180208T013555Z-GeoLite2-City-CSV.z
 
 
 */
-// TODO: remove dataset package and move this file to handler package to avoid circular dependancy.
 import (
 	"context"
 	"errors"
@@ -96,14 +95,14 @@ import (
 	"github.com/m-lab/annotation-service/common"
 	"github.com/m-lab/annotation-service/handler/geoip"
 	"github.com/m-lab/annotation-service/loader"
-	"github.com/m-lab/annotation-service/parser"
 	"google.golang.org/api/iterator"
 )
 
-// This is the regex used to filter for which files we want to consider acceptable for using with Geolite2
+// This is the regex used to filter for which files we want to consider acceptable for using with legacy dataset
 var GeoLegacyRegex = regexp.MustCompile(`.*-GeoLiteCity.dat.*`)
 var GeoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
 
+// DatasetNames are list of datasets sorted in lexographical order in downloader bucket.
 var DatasetNames []string
 
 const (
@@ -112,17 +111,6 @@ const (
 	// later than this date using GeoLite2 datasets
 	GeoLite2CutOffDate = "August 15, 2017"
 )
-
-// ExtractDateFromFilename return the date for a filename like
-// gs://downloader-mlab-oti/Maxmind/2017/05/08/20170508T080000Z-GeoLiteCity.dat.gz
-func ExtractDateFromFilename(filename string) (time.Time, error) {
-	re := regexp.MustCompile(`[0-9]{8}T`)
-	filedate := re.FindAllString(filename, -1)
-	if len(filedate) != 1 {
-		return time.Time{}, errors.New("cannot extract date from input filename")
-	}
-	return time.Parse(time.RFC3339, filedate[0][0:4]+"-"+filedate[0][4:6]+"-"+filedate[0][6:8]+"T00:00:00Z")
-}
 
 // UpdateFilenamelist extract the filenames from downloader bucket.
 // DatasetNames are sorted in lexographical order.
@@ -144,11 +132,11 @@ func UpdateFilenamelist(bucketName string) error {
 	return nil
 }
 
-// SelectGeoLegacyFile return the legacy GelLiteCity.data filename given a date in format yyyymmdd.
+// SelectGeoLegacyFile returns the legacy GelLiteCity.data filename given a date in format yyyymmdd.
 // For any input date earlier than 2013/08/28, we will return 2013/08/28 dataset.
 // For any input date later than latest available dataset, we will return the latest dataset
 // Otherwise, we return the last dataset before the input date.
-func SelectGeoLegacyFile(requestDate time.Time, bucketName string) (string, error) {
+func SelectGeoLegacyFile(requestDate time.Time, bucketName string, isIP4 bool) (string, error) {
 	earliestArchiveDate, _ := time.Parse("January 2, 2006", "August 28, 2013")
 	if requestDate.Before(earliestArchiveDate) {
 		return "Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz", nil
@@ -156,7 +144,7 @@ func SelectGeoLegacyFile(requestDate time.Time, bucketName string) (string, erro
 	CutOffDate, _ := time.Parse("January 2, 2006", GeoLite2CutOffDate)
 	lastFilename := ""
 	for _, fileName := range DatasetNames {
-		if requestDate.Before(CutOffDate) && GeoLegacyRegex.MatchString(fileName) {
+		if requestDate.Before(CutOffDate) && ((isIP4 && GeoLegacyRegex.MatchString(fileName)) || (!isIP4 && GeoLegacyv6Regex.MatchString(fileName))) {
 			// search legacy dataset
 			fileDate, err := ExtractDateFromFilename(fileName)
 			if err != nil {
@@ -202,23 +190,6 @@ func LoadLegacyGeoliteDataset(filename string, bucketname string) (*geoip.GeoIP,
 		return nil, errors.New("could not open GeoIP database")
 	}
 	return gi, nil
-}
-
-func LoadGeoLite2Dataset(requestDate time.Time, bucketName string) (*parser.GeoDataset, error) {
-	CutOffDate, _ := time.Parse("January 2, 2006", GeoLite2CutOffDate)
-	if !requestDate.Before(CutOffDate) {
-		filename, err := SelectGeoLegacyFile(requestDate, bucketName)
-		if err != nil {
-			return nil, err
-		}
-		// load GeoLite2 dataset
-		zip, err := loader.CreateZipReader(context.Background(), bucketName, filename)
-		if err != nil {
-			return nil, err
-		}
-		return parser.LoadGeoLite2(zip)
-	}
-	return nil, errors.New("should call LoadLegacyGeoliteDataset with input date")
 }
 
 func round(x float32) float64 {
