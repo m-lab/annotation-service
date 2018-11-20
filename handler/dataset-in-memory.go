@@ -90,6 +90,12 @@ func (d *CurrentDatasetInMemory) GetGeoLocationForSingleIP(request *common.Reque
 	return UseGeoLite2Dataset(request, d.GetDataset(""))
 }
 
+func (d *CurrentDatasetInMemory) SetDataset(p *parser.GeoDataset) {
+	d.Lock()
+	d.current = p
+	d.Unlock()
+}
+
 //======================= funcs for LegacyDatasetInMemory
 
 type LegacyDatasetInMemory struct {

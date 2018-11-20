@@ -26,9 +26,9 @@ func PopulateLatestData() {
 		log.Fatal(err)
 	}
 
-	currentGeoDataset.AddDataset(filename)
-	geolite2DatasetInMemory.Init()
-	legacyDatasetInMemory.Init()
+	CurrentGeoDataset.AddDataset(filename)
+	Geolite2Dataset.Init()
+	LegacyDataset.Init()
 }
 
 // determineFilenameOfLatestGeolite2File will get a list of filenames

@@ -25,13 +25,13 @@ const (
 var (
 	// This is a struct containing the latest data for the annotator to search
 	// and reply with. The size of data map inside is 1.
-	currentGeoDataset CurrentDatasetInMemory
+	CurrentGeoDataset CurrentDatasetInMemory
 
 	// The GeoLite2 datasets (except the current one) that are already in memory.
-	geolite2DatasetInMemory Geolite2DatasetInMemory
+	Geolite2Dataset Geolite2DatasetInMemory
 
 	// The legacy datasets that are already in memory.
-	legacyDatasetInMemory LegacyDatasetInMemory
+	LegacyDataset LegacyDatasetInMemory
 )
 
 // A function to set up any handlers that are needed, including url
@@ -194,7 +194,7 @@ func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error
 	metrics.Metrics_totalLookups.Inc()
 
 	if request.Timestamp.After(LatestDatasetDate) {
-		return currentGeoDataset.GetGeoLocationForSingleIP(request, "")
+		return CurrentGeoDataset.GetGeoLocationForSingleIP(request, "")
 	}
 
 	isIP4 := true
@@ -208,9 +208,9 @@ func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error
 		return nil, errors.New("Cannot get historical dataset")
 	}
 	if GeoLite2Regex.MatchString(filename) {
-		return geolite2DatasetInMemory.GetGeoLocationForSingleIP(request, filename)
+		return Geolite2Dataset.GetGeoLocationForSingleIP(request, filename)
 	} else {
-		return legacyDatasetInMemory.GetGeoLocationForSingleIP(request, filename)
+		return LegacyDataset.GetGeoLocationForSingleIP(request, filename)
 	}
 }
 

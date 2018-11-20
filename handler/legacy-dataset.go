@@ -138,9 +138,9 @@ func UpdateFilenamelist(bucketName string) error {
 	if err != nil {
 		log.Println(err)
 	}
-	currentGeoDataset.Init()
-	geolite2DatasetInMemory.Init()
-	legacyDatasetInMemory.Init()
+	CurrentGeoDataset.Init()
+	Geolite2Dataset.Init()
+	LegacyDataset.Init()
 
 	return nil
 }
