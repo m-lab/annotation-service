@@ -1,8 +1,9 @@
-package handler
+package dataset
 
 import (
 	"errors"
 	"log"
+	"os"
 	"sync"
 
 	"github.com/m-lab/annotation-service/common"
@@ -21,6 +22,10 @@ const (
 )
 
 var (
+
+	// This is the bucket containing maxmind files.
+	BucketName = "downloader-" + os.Getenv("GCLOUD_PROJECT")
+
 	// The list of dataset that was loading right now.
 	// Due to memory limits, the length of PendingDataset should not exceed 2.
 	PendingDataset = []string{}

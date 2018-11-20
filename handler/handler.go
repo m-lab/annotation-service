@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/m-lab/annotation-service/common"
+	"github.com/m-lab/annotation-service/handler/dataset"
 	"github.com/m-lab/annotation-service/metrics"
 )
 
@@ -20,19 +21,31 @@ const (
 	// This is the base in which we should encode the timestamp when we
 	// are creating the keys for the mapt to return for batch requests
 	encodingBase = 36
+
+	// This is the date we have the first GeoLite2 dataset.
+	// Any request earlier than this date using legacy binary datasets
+	// later than this date using GeoLite2 datasets
+	GeoLite2CutOffDate = "August 15, 2017"
 )
 
 var (
 	// This is a struct containing the latest data for the annotator to search
 	// and reply with. The size of data map inside is 1.
-	CurrentGeoDataset CurrentDatasetInMemory
+	CurrentGeoDataset dataset.CurrentDatasetInMemory
 
 	// The GeoLite2 datasets (except the current one) that are already in memory.
-	Geolite2Dataset Geolite2DatasetInMemory
+	Geolite2Dataset dataset.Geolite2DatasetInMemory
 
 	// The legacy datasets that are already in memory.
-	LegacyDataset LegacyDatasetInMemory
+	LegacyDataset dataset.LegacyDatasetInMemory
 )
+
+// This is the regex used to filter for which files we want to consider acceptable for using with legacy dataset
+var GeoLegacyRegex = regexp.MustCompile(`.*-GeoLiteCity.dat.*`)
+var GeoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
+
+// This is the regex used to filter for which files we want to consider acceptable for using with Geolite2
+var GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
 
 // A function to set up any handlers that are needed, including url
 // handlers and pubsub handlers
@@ -202,7 +215,7 @@ func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error
 		isIP4 = false
 	}
 
-	filename, err := SelectGeoLegacyFile(request.Timestamp, BucketName, isIP4)
+	filename, err := SelectGeoLegacyFile(request.Timestamp, dataset.BucketName, isIP4)
 
 	if err != nil {
 		return nil, errors.New("Cannot get historical dataset")
@@ -214,13 +227,45 @@ func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error
 	}
 }
 
-// ExtractDateFromFilename return the date for a filename like
-// gs://downloader-mlab-oti/Maxmind/2017/05/08/20170508T080000Z-GeoLiteCity.dat.gz
-func ExtractDateFromFilename(filename string) (time.Time, error) {
-	re := regexp.MustCompile(`[0-9]{8}T`)
-	filedate := re.FindAllString(filename, -1)
-	if len(filedate) != 1 {
-		return time.Time{}, errors.New("cannot extract date from input filename")
+// SelectGeoLegacyFile returns the legacy GelLiteCity.data filename given a date.
+// For any input date earlier than 2013/08/28, we will return 2013/08/28 dataset.
+// For any input date later than latest available dataset, we will return the latest dataset
+// Otherwise, we return the last dataset before the input date.
+func SelectGeoLegacyFile(requestDate time.Time, bucketName string, isIP4 bool) (string, error) {
+	earliestArchiveDate, _ := time.Parse("January 2, 2006", "August 28, 2013")
+	if requestDate.Before(earliestArchiveDate) {
+		return "Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz", nil
 	}
-	return time.Parse(time.RFC3339, filedate[0][0:4]+"-"+filedate[0][4:6]+"-"+filedate[0][6:8]+"T00:00:00Z")
+	CutOffDate, _ := time.Parse("January 2, 2006", GeoLite2CutOffDate)
+	lastFilename := ""
+	for _, fileName := range DatasetNames {
+		if requestDate.Before(CutOffDate) && ((isIP4 && GeoLegacyRegex.MatchString(fileName)) || (!isIP4 && GeoLegacyv6Regex.MatchString(fileName))) {
+			// search legacy dataset
+			fileDate, err := ExtractDateFromFilename(fileName)
+			if err != nil {
+				continue
+			}
+			// return the last dataset that is earlier than requestDate
+			if fileDate.After(requestDate) {
+				return lastFilename, nil
+			}
+			lastFilename = fileName
+		} else if !requestDate.Before(CutOffDate) && GeoLite2Regex.MatchString(fileName) {
+			// Search GeoLite2 dataset
+			fileDate, err := ExtractDateFromFilename(fileName)
+			if err != nil {
+				continue
+			}
+			// return the last dataset that is earlier than requestDate
+			if fileDate.After(requestDate) {
+				return lastFilename, nil
+			}
+			lastFilename = fileName
+		}
+	}
+	// If there is no filename selected, return the latest dataset
+	if lastFilename == "" {
+		return "", errors.New("cannot find proper dataset")
+	}
+	return lastFilename, nil
 }

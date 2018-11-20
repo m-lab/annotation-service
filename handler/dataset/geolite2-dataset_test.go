@@ -1,11 +1,11 @@
-package handler_test
+package dataset_test
 
 import (
 	"reflect"
 	"testing"
 
 	"github.com/m-lab/annotation-service/common"
-	"github.com/m-lab/annotation-service/handler"
+	"github.com/m-lab/annotation-service/handler/dataset"
 	"github.com/m-lab/annotation-service/parser"
 )
 
@@ -31,7 +31,7 @@ func TestConvertIPNodeToGeoData(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		res := handler.ConvertIPNodeToGeoData(test.node, test.locs)
+		res := dataset.ConvertIPNodeToGeoData(test.node, test.locs)
 		if !reflect.DeepEqual(res, test.res) {
 			t.Errorf("Expected %v, got %v", test.res, res)
 		}
