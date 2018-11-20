@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"regexp"
@@ -205,7 +206,7 @@ func BatchValidateAndParse(source io.Reader) ([]common.RequestData, error) {
 // pointer, even if it cannot find the appropriate metadata.
 func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error) {
 	metrics.Metrics_totalLookups.Inc()
-
+	log.Println(LatestDatasetDate)
 	if request.Timestamp.After(LatestDatasetDate) {
 		return CurrentGeoDataset.GetGeoLocationForSingleIP(request, "")
 	}
@@ -217,6 +218,7 @@ func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error
 
 	filename, err := SelectGeoLegacyFile(request.Timestamp, dataset.BucketName, isIP4)
 
+	log.Println(filename)
 	if err != nil {
 		return nil, errors.New("Cannot get historical dataset")
 	}

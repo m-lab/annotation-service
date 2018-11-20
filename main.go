@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/m-lab/annotation-service/handler"
+	"github.com/m-lab/annotation-service/handler/dataset"
 	"github.com/m-lab/annotation-service/metrics"
 )
 
@@ -34,7 +35,7 @@ func main() {
 	log.Print("Beginning Setup\n")
 	http.HandleFunc("/cron/update_maxmind_datasets", updateMaxmindDatasets)
 
-	handler.UpdateFilenamelist(handler.BucketName)
+	handler.UpdateFilenamelist(dataset.BucketName)
 	handler.PopulateLatestData()
 	handler.SetupHandlers()
 	metrics.SetupPrometheus()

@@ -66,8 +66,6 @@ func PopulateLatestData() {
 	LatestDatasetDate, err = ExtractDateFromFilename(filename)
 
 	CurrentGeoDataset.AddDataset(filename)
-	Geolite2Dataset.Init()
-	LegacyDataset.Init()
 }
 
 // UpdateFilenamelist extracts the filenames from downloader bucket.

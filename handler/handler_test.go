@@ -165,31 +165,7 @@ func TestBatchValidateAndParse(t *testing.T) {
 	}
 
 }
-/*
-func TestLegacyDataset(t *testing.T) {
-	handler.UpdateFilenamelist("downloader-mlab-testing")
-	tests := []struct {
-		ip   string
-		time string
-		res  string
-	}{
-		{"1.4.128.0", "1199145600", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"ASN":{}}`},
-		{"1.5.190.1", "1420070400", `{"Geo":{"continent_code":"AS","country_code":"JP","country_code3":"JPN","country_name":"Japan","region":"40","city":"Tokyo","latitude":35.685,"longitude":139.751},"ASN":{}}`},
-		{"1.9.128.0", "1512086400", `{"Geo":{"continent_code":"AS","country_code":"MY","country_name":"Malaysia","region":"14","city":"Kuala Lumpur","postal_code":"50400","latitude":3.149,"longitude":101.697},"ASN":{}}`},
-		{"1.22.128.0", "1512086400", `{"Geo":{"continent_code":"AS","country_code":"IN","country_name":"India","region":"DL","city":"Delhi","postal_code":"110062","latitude":28.6667,"longitude":77.2167},"ASN":{}}`},
-	}
-	for _, test := range tests {
-		w := httptest.NewRecorder()
-		r := &http.Request{}
-		r.URL, _ = url.Parse("/annotate?ip_addr=" + url.QueryEscape(test.ip) + "&since_epoch=" + url.QueryEscape(test.time))
-		handler.Annotate(w, r)
-		body := w.Body.String()
-		if string(body) != test.res {
-			t.Errorf("\nGot\n__%s__\nexpected\n__%s__\n", body, test.res)
-		}
-	}
-}
-*/
+
 func TestBatchAnnotate(t *testing.T) {
 	tests := []struct {
 		body string
@@ -291,18 +267,6 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 	}
 }
 
-func TestExtractDateFromFilename(t *testing.T) {
-	date, err := handler.ExtractDateFromFilename("Maxmind/2017/05/08/20170508T080000Z-GeoLiteCity.dat.gz")
-	if date.Year() != 2017 || date.Month() != 5 || date.Day() != 8 || err != nil {
-		t.Errorf("Did not extract data correctly. Expected %d, got %v, %+v.", 20170508, date, err)
-	}
-
-	date2, err := handler.ExtractDateFromFilename("Maxmind/2017/10/05/20171005T033334Z-GeoLite2-City-CSV.zip")
-	if date2.Year() != 2017 || date2.Month() != 10 || date2.Day() != 5 || err != nil {
-		t.Errorf("Did not extract data correctly. Expected %d, got %v, %+v.", 20171005, date2, err)
-	}
-}
-
 func TestSelectGeoLegacyFile(t *testing.T) {
 	testBucket := "downloader-mlab-testing"
 	err := handler.UpdateFilenamelist(testBucket)
@@ -359,5 +323,30 @@ func TestSelectGeoLegacyFile(t *testing.T) {
 	if filename6 != "Maxmind/2016/03/08/20160308T080000Z-GeoLiteCityv6.dat.gz" || err != nil {
 		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
 			"Maxmind/2016/03/08/20160308T080000Z-GeoLiteCityv6.dat.gz", filename6, err)
+	}
+}
+
+func TestE2ELoadMultipleDataset(t *testing.T) {
+	handler.UpdateFilenamelist("downloader-mlab-testing")
+	handler.PopulateLatestData()
+	tests := []struct {
+		ip   string
+		time string
+		res  string
+	}{
+		{"1.4.128.0", "1199145600", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"ASN":{}}`},
+		{"1.5.190.1", "1420070400", `{"Geo":{"continent_code":"AS","country_code":"JP","country_code3":"JPN","country_name":"Japan","region":"40","city":"Tokyo","latitude":35.685,"longitude":139.751},"ASN":{}}`},
+		{"1.9.128.0", "1512086400", `{"Geo":{"continent_code":"AS","country_code":"MY","country_name":"Malaysia","region":"14","city":"Kuala Lumpur","postal_code":"50400","latitude":3.149,"longitude":101.697},"ASN":{}}`},
+		{"1.22.128.0", "1512086400", `{"Geo":{"continent_code":"AS","country_code":"IN","country_name":"India","region":"DL","city":"Delhi","postal_code":"110062","latitude":28.6667,"longitude":77.2167},"ASN":{}}`},
+	}
+	for _, test := range tests {
+		w := httptest.NewRecorder()
+		r := &http.Request{}
+		r.URL, _ = url.Parse("/annotate?ip_addr=" + url.QueryEscape(test.ip) + "&since_epoch=" + url.QueryEscape(test.time))
+		handler.Annotate(w, r)
+		body := w.Body.String()
+		if string(body) != test.res {
+			t.Errorf("\nGot\n__%s__\nexpected\n__%s__\n", body, test.res)
+		}
 	}
 }
