@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
+	//"log"
 	"net"
 	"net/http"
 	"regexp"
@@ -206,7 +206,7 @@ func BatchValidateAndParse(source io.Reader) ([]common.RequestData, error) {
 // pointer, even if it cannot find the appropriate metadata.
 func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error) {
 	metrics.Metrics_totalLookups.Inc()
-	log.Println(LatestDatasetDate)
+
 	if request.Timestamp.After(LatestDatasetDate) {
 		return CurrentGeoDataset.GetGeoLocationForSingleIP(request, "")
 	}
@@ -216,9 +216,9 @@ func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error
 		isIP4 = false
 	}
 
-	filename, err := SelectGeoLegacyFile(request.Timestamp, dataset.BucketName, isIP4)
+	filename, err := SelectArchivedDataset(request.Timestamp, dataset.BucketName, isIP4)
 
-	log.Println(filename)
+	//log.Println(filename)
 	if err != nil {
 		return nil, errors.New("Cannot get historical dataset")
 	}
@@ -229,11 +229,11 @@ func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error
 	}
 }
 
-// SelectGeoLegacyFile returns the legacy GelLiteCity.data filename given a date.
+// SelectArchivedDataset returns the archived GelLite dataset filename given a date.
 // For any input date earlier than 2013/08/28, we will return 2013/08/28 dataset.
 // For any input date later than latest available dataset, we will return the latest dataset
 // Otherwise, we return the last dataset before the input date.
-func SelectGeoLegacyFile(requestDate time.Time, bucketName string, isIP4 bool) (string, error) {
+func SelectArchivedDataset(requestDate time.Time, bucketName string, isIP4 bool) (string, error) {
 	earliestArchiveDate, _ := time.Parse("January 2, 2006", "August 28, 2013")
 	if requestDate.Before(earliestArchiveDate) {
 		return "Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz", nil
