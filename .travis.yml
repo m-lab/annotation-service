@@ -61,12 +61,12 @@ script:
 
 # First run all tests, to ensure that we don't miss any new tests not included in
 # the coverage collection.
-- go test ./...
+- GCLOUD_PROJECT=mlab-testing go test ./...
 # Also run benchmarks
 - go test -bench . ./search/...
 
 # Run all tests, collecting coverage data.
-- go test -covermode=count -coverprofile=handler.cov -v github.com/m-lab/annotation-service/handler
+- GCLOUD_PROJECT=mlab-testing go test -covermode=count -coverprofile=handler.cov -v github.com/m-lab/annotation-service/handler
 - go test -covermode=count -coverprofile=geoip.cov -v github.com/m-lab/annotation-service/handler/geoip
 - go test -covermode=count -coverprofile=loader.cov -v github.com/m-lab/annotation-service/loader
 - go test -covermode=count -coverprofile=metrics.cov -v github.com/m-lab/annotation-service/metrics
