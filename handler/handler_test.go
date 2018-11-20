@@ -290,35 +290,6 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 	}
 }
 
-func TestConvertIPNodeToGeoData(t *testing.T) {
-	tests := []struct {
-		node parser.IPNode
-		locs []parser.LocationNode
-		res  *common.GeoData
-	}{
-		{
-			node: parser.IPNode{LocationIndex: 0, PostalCode: "10583"},
-			locs: []parser.LocationNode{{CityName: "Not A Real City", RegionCode: "ME"}},
-			res: &common.GeoData{
-				Geo: &common.GeolocationIP{City: "Not A Real City", Postal_code: "10583", Region: "ME"},
-				ASN: &common.IPASNData{}},
-		},
-		{
-			node: parser.IPNode{LocationIndex: -1, PostalCode: "10583"},
-			locs: nil,
-			res: &common.GeoData{
-				Geo: &common.GeolocationIP{Postal_code: "10583"},
-				ASN: &common.IPASNData{}},
-		},
-	}
-	for _, test := range tests {
-		res := handler.ConvertIPNodeToGeoData(test.node, test.locs)
-		if !reflect.DeepEqual(res, test.res) {
-			t.Errorf("Expected %v, got %v", test.res, res)
-		}
-	}
-}
-
 func TestExtractDateFromFilename(t *testing.T) {
 	date, err := handler.ExtractDateFromFilename("Maxmind/2017/05/08/20170508T080000Z-GeoLiteCity.dat.gz")
 	if date.Year() != 2017 || date.Month() != 5 || date.Day() != 8 || err != nil {
