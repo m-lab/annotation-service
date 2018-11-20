@@ -55,8 +55,7 @@ func Deletes(a []string, x string) []string {
 	return a
 }
 
-// ======================== interface
-
+// searchGeoLocation is interface that handle the dataset related operations
 type searchGeoLocation interface {
 	GetGeoLocationForSingleIP(request *common.RequestData, filename string) (*common.GeoData, error)
 	AddDataset(filename string)
@@ -64,8 +63,7 @@ type searchGeoLocation interface {
 	Init()
 }
 
-//============ funcs for CurrentDatasetInMemory
-
+// CurrentDatasetInMemory is struct that handling the latest dataset in memory.
 type CurrentDatasetInMemory struct {
 	sync.RWMutex
 	current *parser.GeoDataset
@@ -101,8 +99,7 @@ func (d *CurrentDatasetInMemory) SetDataset(p *parser.GeoDataset) {
 	d.Unlock()
 }
 
-//======================= funcs for LegacyDatasetInMemory
-
+// LegacyDatasetInMemory handles all legacy datasets in memory.
 type LegacyDatasetInMemory struct {
 	sync.RWMutex
 	legacyData map[string]*geoip.GeoIP
@@ -175,8 +172,7 @@ func (d *LegacyDatasetInMemory) GetGeoLocationForSingleIP(request *common.Reques
 	return GetRecordFromLegacyDataset(request.IP, d.GetDataset(filename), isIP4), nil
 }
 
-//====================
-
+// Geolite2DatasetInMemory handles all Geolite2 datasets in memory.
 type Geolite2DatasetInMemory struct {
 	sync.RWMutex
 	geolite2Data map[string]*parser.GeoDataset
