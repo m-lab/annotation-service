@@ -4,7 +4,7 @@ import (
 	"log"
 	"testing"
 
-	"github.com/m-lab/annotation-service/handler/dataset"
+	"github.com/m-lab/annotation-service/dataset"
 	"github.com/m-lab/annotation-service/handler/geoip"
 	check "gopkg.in/check.v1"
 )

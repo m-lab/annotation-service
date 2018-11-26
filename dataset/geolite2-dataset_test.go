@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/m-lab/annotation-service/common"
-	"github.com/m-lab/annotation-service/handler/dataset"
+	"github.com/m-lab/annotation-service/dataset"
 	"github.com/m-lab/annotation-service/parser"
 )
 
