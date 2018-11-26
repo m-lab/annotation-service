@@ -66,7 +66,7 @@ script:
 - GCLOUD_PROJECT=mlab-testing go test -bench . ./search/...
 
 # Run all tests, collecting coverage data.
-- go test -covermode=count -coverprofile=dataset.cov -v github.com/m-lab/annotation-service/dataset
+- GCLOUD_PROJECT=mlab-testing go test -covermode=count -coverprofile=dataset.cov -v github.com/m-lab/annotation-service/dataset
 - GCLOUD_PROJECT=mlab-testing go test -covermode=count -coverprofile=handler.cov -v github.com/m-lab/annotation-service/handler
 - go test -covermode=count -coverprofile=geoip.cov -v github.com/m-lab/annotation-service/handler/geoip
 - go test -covermode=count -coverprofile=loader.cov -v github.com/m-lab/annotation-service/loader
