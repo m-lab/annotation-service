@@ -75,7 +75,7 @@ script:
 - go test -covermode=count -coverprofile=search.cov -v github.com/m-lab/annotation-service/search
 
 # Coveralls
-- $HOME/gopath/bin/gocovmerge dataset.gov handler.cov geoip.cov loader.cov parser.cov search.cov > merge.cov
+- $HOME/gopath/bin/gocovmerge dataset.cov handler.cov geoip.cov loader.cov parser.cov search.cov > merge.cov
 - $HOME/gopath/bin/goveralls -coverprofile=merge.cov -service=travis-ci
 
 # Build and prepare for deployment
