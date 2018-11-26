@@ -7,18 +7,18 @@ service: annotator
 
 # TODO(dev): adjust CPU and memory based on actual requirements.
 resources:
-  cpu: 2
+  cpu: 10
   # Instances support between [(cpu * 0.9) - 0.4, (cpu * 6.5) - 0.4]
   # Actual memory available is exposed via GAE_MEMORY_MB environment variable.
-  memory_gb: 6
+  memory_gb: 60
 
   # TODO - Do we need any disk? Adjust once we understand requirements.
   disk_size_gb: 10
 
 automatic_scaling:
   # We expect negligible load, so this is unlikely to trigger.
-  min_num_instances: 2
-  max_num_instances: 20
+  min_num_instances: 20
+  max_num_instances: 40
   cool_down_period_sec: 1800
   cpu_utilization:
     target_utilization: 0.60

@@ -133,9 +133,10 @@ func (d *LegacyDatasetInMemory) AddDataset(filename string) {
 		//return nil, errors.New("Cannot load historical dataset into memory " + filename)
 		return
 	}
-	log.Println("historical legacy dataset loaded " + filename)
+        log.Println("historical legacy dataset loaded " + filename)
 	d.legacyData[filename] = parser
 	log.Printf("number of legacy dataset in memory: %d ", len(d.legacyData))
+        log.Println(d.legacyData)
 	d.Unlock()
 }
 
@@ -209,6 +210,7 @@ func (d *Geolite2DatasetInMemory) AddDataset(filename string) {
 	log.Println("historical Geolite2 dataset loaded " + filename)
 	d.geolite2Data[filename] = parser
 	log.Printf("number of Geolite2 dataset in memory: %d ", len(d.geolite2Data))
+        log.Println(d.geolite2Data)
 	d.Unlock()
 }
 
