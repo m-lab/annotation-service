@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -27,7 +28,7 @@ func TestAnnotate(t *testing.T) {
 		{"1.4.128.0", "625600", `{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":42.1,"longitude":-73.1},"ASN":{}}`},
 		{"This will be an error.", "1000", "Invalid request"},
 	}
-	handler.CurrentGeoDataset = &parser.GeoDataset{
+	handler.CurrentGeoDataset.SetDataset(&parser.GeoDataset{
 		IP4Nodes: []parser.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),
@@ -53,7 +54,8 @@ func TestAnnotate(t *testing.T) {
 				CityName: "Not A Real City", RegionCode: "ME",
 			},
 		},
-	}
+	})
+
 	for _, test := range tests {
 		w := httptest.NewRecorder()
 		r := &http.Request{}
@@ -176,14 +178,14 @@ func TestBatchAnnotate(t *testing.T) {
 			alt:  "",
 		},
 		{
-			body: `[{"ip": "127.0.0.1", "timestamp": "2017-08-25T13:31:12.149678161-04:00"},
-                               {"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "timestamp": "2017-08-25T13:31:12.149678161-04:00"}]`,
-			res: `{"127.0.0.1ov94o0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583"},"ASN":{}},"2620:0:1003:1008:5179:57e3:3c75:1886ov94o0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583"},"ASN":{}}}`,
+			body: `[{"ip": "127.0.0.1", "timestamp": "2018-12-25T13:31:12.149678161-04:00"},
+                               {"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "timestamp": "2018-12-25T13:31:12.149678161-04:00"}]`,
+			res: `{"127.0.0.1pkazc0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583"},"ASN":{}},"2620:0:1003:1008:5179:57e3:3c75:1886pkazc0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583"},"ASN":{}}}`,
 			// TODO - remove alt after updating json annotations to omitempty.
-			alt: `{"127.0.0.1ov94o0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}},"2620:0:1003:1008:5179:57e3:3c75:1886ov94o0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}}}`,
+			alt: `{"127.0.0.1pkazc0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}},"2620:0:1003:1008:5179:57e3:3c75:1886pkazc0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}}}`,
 		},
 	}
-	handler.CurrentGeoDataset = &parser.GeoDataset{
+	handler.CurrentGeoDataset.SetDataset(&parser.GeoDataset{
 		IP4Nodes: []parser.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),
@@ -205,7 +207,7 @@ func TestBatchAnnotate(t *testing.T) {
 				CityName: "Not A Real City", RegionCode: "ME",
 			},
 		},
-	}
+	})
 	for _, test := range tests {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("POST", "/batch_annotate", strings.NewReader(test.body))
@@ -225,13 +227,13 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 		res *common.GeoData
 	}{
 		{
-			req: &common.RequestData{"127.0.0.1", 4, time.Unix(0, 0)},
+			req: &common.RequestData{"127.0.0.1", 4, time.Now()},
 			res: &common.GeoData{
 				Geo: &common.GeolocationIP{City: "Not A Real City", Postal_code: "10583"},
 				ASN: &common.IPASNData{}},
 		},
 	}
-	handler.CurrentGeoDataset = &parser.GeoDataset{
+	handler.CurrentGeoDataset.SetDataset(&parser.GeoDataset{
 		IP4Nodes: []parser.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),
@@ -253,52 +255,98 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 				CityName: "Not A Real City",
 			},
 		},
-	}
+	})
 	for _, test := range tests {
-		res, _ := handler.GetMetadataForSingleIP(test.req)
+		res, err := handler.GetMetadataForSingleIP(test.req)
+		if err != nil {
+			t.Errorf("Unexpected error: %v", err)
+		}
 		if !reflect.DeepEqual(res, test.res) {
 			t.Errorf("Expected %v, got %v", test.res, res)
 		}
 	}
 }
 
-func TestConvertIPNodeToGeoData(t *testing.T) {
+func TestSelectArchivedDataset(t *testing.T) {
+	testBucket := "downloader-mlab-testing"
+	err := handler.UpdateFilenamelist(testBucket)
+	if err != nil {
+		// TODO: make dataset produce rich error types to allow us to
+		// distinguish between auth error (which should cause us to
+		// skip the rest of the tests) and all other error types (which
+		// should properly be errors and cause the test to fail).
+		log.Println("cannot load test datasets")
+		log.Println("This can happen when running tests from branches outside of github.com/m-lab/annotation-server.  The rest of this test is being skipped.")
+		return
+	}
+	date1, _ := time.Parse("January 2, 2006", "January 3, 2011")
+	filename, err := handler.SelectArchivedDataset(date1, testBucket, true)
+	if filename != "Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz" || err != nil {
+		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
+			"Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz", filename, err)
+	}
+
+	date2, _ := time.Parse("January 2, 2006", "March 7, 2014")
+	filename2, err := handler.SelectArchivedDataset(date2, testBucket, true)
+	if filename2 != "Maxmind/2014/03/07/20140307T160000Z-GeoLiteCity.dat.gz" || err != nil {
+		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
+			"Maxmind/2014/03/07/20140307T160000Z-GeoLiteCity.dat.gz", filename2, err)
+	}
+
+	// before the cutoff date.
+	date3, _ := time.Parse("January 2, 2006", "August 14, 2017")
+	filename3, err := handler.SelectArchivedDataset(date3, testBucket, true)
+	if filename3 != "Maxmind/2017/08/08/20170808T080000Z-GeoLiteCity.dat.gz" || err != nil {
+		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
+			"Maxmind/2017/08/08/20170808T080000Z-GeoLiteCity.dat.gz", filename3, err)
+	}
+
+	// after the cutoff date.
+	date4, _ := time.Parse("January 2, 2006", "August 15, 2017")
+	filename4, err := handler.SelectArchivedDataset(date4, testBucket, true)
+	if filename4 != "Maxmind/2017/08/15/20170815T200946Z-GeoLite2-City-CSV.zip" || err != nil {
+		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
+			"Maxmind/2017/08/15/20170815T200946Z-GeoLite2-City-CSV.zip", filename4, err)
+	}
+
+	// return the latest available dataset.
+	date5, _ := time.Parse("January 2, 2006", "August 15, 2037")
+	filename5, err := handler.SelectArchivedDataset(date5, testBucket, true)
+	if filename5 != "Maxmind/2018/09/12/20180912T054119Z-GeoLite2-City-CSV.zip" || err != nil {
+		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
+			"Maxmind/2018/09/12/20180912T054119Z-GeoLite2-City-CSV.zip", filename5, err)
+	}
+
+	// before the cutoff date, IPv6
+	date6, _ := time.Parse("January 2, 2006", "April 4, 2016")
+	filename6, err := handler.SelectArchivedDataset(date6, testBucket, false)
+	if filename6 != "Maxmind/2016/03/08/20160308T080000Z-GeoLiteCityv6.dat.gz" || err != nil {
+		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
+			"Maxmind/2016/03/08/20160308T080000Z-GeoLiteCityv6.dat.gz", filename6, err)
+	}
+}
+
+func TestE2ELoadMultipleDataset(t *testing.T) {
+	handler.UpdateFilenamelist("downloader-mlab-testing")
+	handler.PopulateLatestData()
 	tests := []struct {
-		node parser.IPNode
-		locs []parser.LocationNode
-		res  *common.GeoData
+		ip   string
+		time string
+		res  string
 	}{
-		{
-			node: parser.IPNode{LocationIndex: 0, PostalCode: "10583"},
-			locs: []parser.LocationNode{{CityName: "Not A Real City", RegionCode: "ME"}},
-			res: &common.GeoData{
-				Geo: &common.GeolocationIP{City: "Not A Real City", Postal_code: "10583", Region: "ME"},
-				ASN: &common.IPASNData{}},
-		},
-		{
-			node: parser.IPNode{LocationIndex: -1, PostalCode: "10583"},
-			locs: nil,
-			res: &common.GeoData{
-				Geo: &common.GeolocationIP{Postal_code: "10583"},
-				ASN: &common.IPASNData{}},
-		},
+		{"1.4.128.0", "1199145600", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"ASN":{}}`},
+		{"1.5.190.1", "1420070400", `{"Geo":{"continent_code":"AS","country_code":"JP","country_code3":"JPN","country_name":"Japan","region":"40","city":"Tokyo","latitude":35.685,"longitude":139.751},"ASN":{}}`},
+		{"1.9.128.0", "1512086400", `{"Geo":{"continent_code":"AS","country_code":"MY","country_name":"Malaysia","region":"14","city":"Kuala Lumpur","postal_code":"50400","latitude":3.149,"longitude":101.697},"ASN":{}}`},
+		{"1.22.128.0", "1512086400", `{"Geo":{"continent_code":"AS","country_code":"IN","country_name":"India","region":"DL","city":"Delhi","postal_code":"110062","latitude":28.6667,"longitude":77.2167},"ASN":{}}`},
 	}
 	for _, test := range tests {
-		res := handler.ConvertIPNodeToGeoData(test.node, test.locs)
-		if !reflect.DeepEqual(res, test.res) {
-			t.Errorf("Expected %v, got %v", test.res, res)
+		w := httptest.NewRecorder()
+		r := &http.Request{}
+		r.URL, _ = url.Parse("/annotate?ip_addr=" + url.QueryEscape(test.ip) + "&since_epoch=" + url.QueryEscape(test.time))
+		handler.Annotate(w, r)
+		body := w.Body.String()
+		if string(body) != test.res {
+			t.Errorf("\nGot\n__%s__\nexpected\n__%s__\n", body, test.res)
 		}
-	}
-}
-
-func TestExtractDateFromFilename(t *testing.T) {
-	date, err := handler.ExtractDateFromFilename("Maxmind/2017/05/08/20170508T080000Z-GeoLiteCity.dat.gz")
-	if date.Year() != 2017 || date.Month() != 5 || date.Day() != 8 || err != nil {
-		t.Errorf("Did not extract data correctly. Expected %d, got %v, %+v.", 20170508, date, err)
-	}
-
-	date2, err := handler.ExtractDateFromFilename("Maxmind/2017/10/05/20171005T033334Z-GeoLite2-City-CSV.zip")
-	if date2.Year() != 2017 || date2.Month() != 10 || date2.Day() != 5 || err != nil {
-		t.Errorf("Did not extract data correctly. Expected %d, got %v, %+v.", 20171005, date2, err)
 	}
 }

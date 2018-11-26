@@ -1,4 +1,4 @@
-package handler
+package dataset
 
 /* From 2013/08/28 - 2017/08/08, Maxmind provide GeoLite dataset in legacy format
 
@@ -87,93 +87,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"regexp"
 	"strconv"
-	"time"
 
-	"cloud.google.com/go/storage"
 	"github.com/m-lab/annotation-service/common"
 	"github.com/m-lab/annotation-service/handler/geoip"
 	"github.com/m-lab/annotation-service/loader"
-	"google.golang.org/api/iterator"
 )
-
-// This is the regex used to filter for which files we want to consider acceptable for using with legacy dataset
-var GeoLegacyRegex = regexp.MustCompile(`.*-GeoLiteCity.dat.*`)
-var GeoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
-
-// DatasetNames are list of datasets sorted in lexographical order in downloader bucket.
-var DatasetNames []string
-
-const (
-	// This is the date we have the first GeoLite2 dataset.
-	// Any request earlier than this date using legacy binary datasets
-	// later than this date using GeoLite2 datasets
-	GeoLite2CutOffDate = "August 15, 2017"
-)
-
-// UpdateFilenamelist extract the filenames from downloader bucket.
-// DatasetNames are sorted in lexographical order.
-func UpdateFilenamelist(bucketName string) error {
-	ctx := context.Background()
-	client, err := storage.NewClient(ctx)
-	if err != nil {
-		return err
-	}
-	prospectiveFiles := client.Bucket(bucketName).Objects(ctx, &storage.Query{Prefix: MaxmindPrefix})
-	DatasetNames = make([]string, 0)
-
-	for file, err := prospectiveFiles.Next(); err != iterator.Done; file, err = prospectiveFiles.Next() {
-		if err != nil {
-			return err
-		}
-		DatasetNames = append(DatasetNames, file.Name)
-	}
-	return nil
-}
-
-// SelectGeoLegacyFile returns the legacy GelLiteCity.data filename given a date in format yyyymmdd.
-// For any input date earlier than 2013/08/28, we will return 2013/08/28 dataset.
-// For any input date later than latest available dataset, we will return the latest dataset
-// Otherwise, we return the last dataset before the input date.
-func SelectGeoLegacyFile(requestDate time.Time, bucketName string, isIP4 bool) (string, error) {
-	earliestArchiveDate, _ := time.Parse("January 2, 2006", "August 28, 2013")
-	if requestDate.Before(earliestArchiveDate) {
-		return "Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz", nil
-	}
-	CutOffDate, _ := time.Parse("January 2, 2006", GeoLite2CutOffDate)
-	lastFilename := ""
-	for _, fileName := range DatasetNames {
-		if requestDate.Before(CutOffDate) && ((isIP4 && GeoLegacyRegex.MatchString(fileName)) || (!isIP4 && GeoLegacyv6Regex.MatchString(fileName))) {
-			// search legacy dataset
-			fileDate, err := ExtractDateFromFilename(fileName)
-			if err != nil {
-				continue
-			}
-			// return the last dataset that is earlier than requestDate
-			if fileDate.After(requestDate) {
-				return lastFilename, nil
-			}
-			lastFilename = fileName
-		} else if !requestDate.Before(CutOffDate) && GeoLite2Regex.MatchString(fileName) {
-			// Search GeoLite2 dataset
-			fileDate, err := ExtractDateFromFilename(fileName)
-			if err != nil {
-				continue
-			}
-			// return the last dataset that is earlier than requestDate
-			if fileDate.After(requestDate) {
-				return lastFilename, nil
-			}
-			lastFilename = fileName
-		}
-	}
-	// If there is no filename selected, return the latest dataset
-	if lastFilename == "" {
-		return "", errors.New("cannot find proper dataset")
-	}
-	return lastFilename, nil
-}
 
 // LoadGeoliteDataset will check GCS for the matching dataset, download
 // it, process it, and load it into memory so that it can be easily
