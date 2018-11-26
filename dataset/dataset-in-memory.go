@@ -59,7 +59,6 @@ func Deletes(a []string, x string) []string {
 type searchGeoLocation interface {
 	GetGeoLocationForSingleIP(request *common.RequestData, filename string) (*common.GeoData, error)
 	AddDataset(filename string)
-	GetDataset(filename string)
 	Init()
 }
 
