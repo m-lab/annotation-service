@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/m-lab/annotation-service/common"
-	"github.com/m-lab/annotation-service/handler/geoip"
+	"github.com/m-lab/annotation-service/geoip"
 	"github.com/m-lab/annotation-service/parser"
 )
 
