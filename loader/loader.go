@@ -1,3 +1,5 @@
+// Package loader has tools for finding, reading, and uncompressing gzip files.
+// The UncompressGzFile is required for legacy MaxMind data used by the external MaxMind library.
 package loader
 
 import (

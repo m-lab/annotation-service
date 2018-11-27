@@ -1,6 +1,9 @@
+// Package common contains interfaces and low level structs required across
+// multiple packages or repositories.
 package common
 
 import (
+	"errors"
 	"os"
 	"regexp"
 	"time"
@@ -21,6 +24,7 @@ const (
 // geolocation data that will be inserted into big query. The fiels are
 // capitalized for exporting, although the originals in the DB schema
 // are not.
+// TODO update these to proper camelCase.
 type GeolocationIP struct {
 	Continent_code string  `json:"continent_code,,omitempty"` // Gives a shorthand for the continent
 	Country_code   string  `json:"country_code,,omitempty"`   // Gives a shorthand for the country
@@ -55,4 +59,32 @@ type RequestData struct {
 	IP        string    // Holds the IP from an incoming request
 	IPFormat  int       // Holds the ip format, 4 or 6
 	Timestamp time.Time // Holds the timestamp from an incoming request
+}
+
+// Annotator provides the GetAnnotation method, which retrieves the annotation for a given IP address.
+type Annotator interface {
+	// TODO use net.IP, and drop the bool
+	// TODO return struct instead of pointer.
+	GetAnnotation(request *RequestData) (*GeoData, error)
+	// These return the date range covered by the annotator.
+	// TODO GetStartDate() time.Time
+	// TODO GetEndDate() time.Time
+}
+
+// AnnotationLoader provides the Load function, which loads an annotator.
+// TODO - do we really need this, or should we just have a single maxmind.Load function.
+type AnnotationLoader interface {
+	Load(date time.Time) (Annotator, error)
+}
+
+// ExtractDateFromFilename return the date for a filename like
+// gs://downloader-mlab-oti/Maxmind/2017/05/08/20170508T080000Z-GeoLiteCity.dat.gz
+// TODO move this to maxmind package
+func ExtractDateFromFilename(filename string) (time.Time, error) {
+	re := regexp.MustCompile(`[0-9]{8}T`)
+	filedate := re.FindAllString(filename, -1)
+	if len(filedate) != 1 {
+		return time.Time{}, errors.New("cannot extract date from input filename")
+	}
+	return time.Parse(time.RFC3339, filedate[0][0:4]+"-"+filedate[0][4:6]+"-"+filedate[0][6:8]+"T00:00:00Z")
 }
