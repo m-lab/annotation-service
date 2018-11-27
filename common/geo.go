@@ -1,3 +1,5 @@
+// Package common contains interfaces and low level structs required across
+// multiple packages or repositories.
 package common
 
 import (
@@ -22,6 +24,7 @@ const (
 // geolocation data that will be inserted into big query. The fiels are
 // capitalized for exporting, although the originals in the DB schema
 // are not.
+// TODO update these to proper camelCase.
 type GeolocationIP struct {
 	Continent_code string  `json:"continent_code,,omitempty"` // Gives a shorthand for the continent
 	Country_code   string  `json:"country_code,,omitempty"`   // Gives a shorthand for the country
@@ -50,6 +53,8 @@ type GeoData struct {
 
 // The RequestData schema is the schema for the json that we will send
 // down the pipe to the annotation service.
+// DEPRECATED
+// TODO - remove this, and just use net.IP
 type RequestData struct {
 	IP        string    // Holds the IP from an incoming request
 	IPFormat  int       // Holds the ip format, 4 or 6
@@ -60,7 +65,7 @@ type RequestData struct {
 type Annotator interface {
 	// TODO use net.IP, and drop the bool
 	// TODO return struct instead of pointer.
-	GetAnnotation(request RequestData) (*GeoData, error)
+	GetAnnotation(request *RequestData) (*GeoData, error)
 	// These return the date range covered by the annotator.
 	// TODO GetStartDate() time.Time
 	// TODO GetEndDate() time.Time
