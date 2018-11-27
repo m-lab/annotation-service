@@ -66,6 +66,7 @@ script:
 - go test -bench . ./search/...
 
 # Run all tests, collecting coverage data.
+- GCLOUD_PROJECT=mlab-testing go test -covermode=count -coverprofile=cache.cov -v github.com/m-lab/annotation-service/cache
 - GCLOUD_PROJECT=mlab-testing go test -covermode=count -coverprofile=dataset.cov -v github.com/m-lab/annotation-service/dataset
 - go test -covermode=count -coverprofile=geoip.cov -v github.com/m-lab/annotation-service/geoip
 - GCLOUD_PROJECT=mlab-testing go test -covermode=count -coverprofile=handler.cov -v github.com/m-lab/annotation-service/handler
@@ -75,7 +76,7 @@ script:
 - go test -covermode=count -coverprofile=search.cov -v github.com/m-lab/annotation-service/search
 
 # Coveralls
-- $HOME/gopath/bin/gocovmerge dataset.cov handler.cov geoip.cov loader.cov parser.cov search.cov > merge.cov
+- $HOME/gopath/bin/gocovmerge cache.cov dataset.cov handler.cov geoip.cov loader.cov parser.cov search.cov > merge.cov
 - $HOME/gopath/bin/goveralls -coverprofile=merge.cov -service=travis-ci
 
 # Build and prepare for deployment
