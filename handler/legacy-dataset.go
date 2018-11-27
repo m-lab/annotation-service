@@ -93,7 +93,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/m-lab/annotation-service/common"
-	"github.com/m-lab/annotation-service/handler/geoip"
+	"github.com/m-lab/annotation-service/geoip"
 	"github.com/m-lab/annotation-service/loader"
 	"google.golang.org/api/iterator"
 )

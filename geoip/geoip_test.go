@@ -5,7 +5,7 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/m-lab/annotation-service/handler/geoip"
+	"github.com/m-lab/annotation-service/geoip"
 )
 
 // Hook up gocheck into the gotest runner.
