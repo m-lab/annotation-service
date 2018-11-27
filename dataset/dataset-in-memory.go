@@ -54,9 +54,9 @@ func Deletes(a []string, x string) []string {
 	return a
 }
 
-// searchGeoLocation is interface that handle the dataset related operations
-type searchGeoLocation interface {
-	GetGeoLocationForSingleIP(request *common.RequestData, filename string) (*common.GeoData, error)
+// SearchGeoLocation is an interface that handle the dataset related operations
+type SearchGeoLocation interface {
+	AnnotateSingleIP(request *common.RequestData, filename string) (*common.GeoData, error)
 	AddDataset(filename string)
 	Init()
 }
@@ -87,7 +87,7 @@ func (d *CurrentDatasetInMemory) GetDataset(filename string) *parser.GeoDataset 
 	return d.current
 }
 
-func (d *CurrentDatasetInMemory) GetGeoLocationForSingleIP(request *common.RequestData, filename string) (*common.GeoData, error) {
+func (d *CurrentDatasetInMemory) AnnotateSingleIP(request *common.RequestData, filename string) (*common.GeoData, error) {
 	return UseGeoLite2Dataset(request, d.GetDataset(""))
 }
 
@@ -144,7 +144,7 @@ func (d *LegacyDatasetInMemory) GetDataset(filename string) *geoip.GeoIP {
 	return d.legacyData[filename]
 }
 
-func (d *LegacyDatasetInMemory) GetGeoLocationForSingleIP(request *common.RequestData, filename string) (*common.GeoData, error) {
+func (d *LegacyDatasetInMemory) AnnotateSingleIP(request *common.RequestData, filename string) (*common.GeoData, error) {
 	isIP4 := true
 	if request.IPFormat == 6 {
 		isIP4 = false
@@ -218,7 +218,7 @@ func (d *Geolite2DatasetInMemory) GetDataset(filename string) *parser.GeoDataset
 	return d.geolite2Data[filename]
 }
 
-func (d *Geolite2DatasetInMemory) GetGeoLocationForSingleIP(request *common.RequestData, filename string) (*common.GeoData, error) {
+func (d *Geolite2DatasetInMemory) AnnotateSingleIP(request *common.RequestData, filename string) (*common.GeoData, error) {
 	if parser := d.GetDataset(filename); parser != nil {
 		return UseGeoLite2Dataset(request, parser)
 	}

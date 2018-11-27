@@ -65,7 +65,7 @@ func Annotate(request *common.RequestData) (*common.GeoData, error) {
 	metrics.Metrics_totalLookups.Inc()
 
 	if request.Timestamp.After(LatestDatasetDate) {
-		return CurrentGeoDataset.GetGeoLocationForSingleIP(request, "")
+		return GetGeoLocationForSingleIP(&CurrentGeoDataset, request, "")
 	}
 
 	isIP4 := true
@@ -80,10 +80,14 @@ func Annotate(request *common.RequestData) (*common.GeoData, error) {
 		return nil, errors.New("Cannot get historical dataset")
 	}
 	if GeoLite2Regex.MatchString(filename) {
-		return Geolite2Dataset.GetGeoLocationForSingleIP(request, filename)
+		return GetGeoLocationForSingleIP(&Geolite2Dataset, request, filename)
 	} else {
-		return LegacyDataset.GetGeoLocationForSingleIP(request, filename)
+		return GetGeoLocationForSingleIP(&LegacyDataset, request, filename)
 	}
+}
+
+func GetGeoLocationForSingleIP(ds dataset.SearchGeoLocation, request *common.RequestData, filename string) (*common.GeoData, error) {
+	return ds.AnnotateSingleIP(request, filename)
 }
 
 // SelectArchivedDataset returns the archived GelLite dataset filename given a date.
