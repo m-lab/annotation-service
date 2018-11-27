@@ -27,32 +27,11 @@ var (
 
 	// The list of dataset that was loading right now.
 	// Due to memory limits, the length of PendingDataset should not exceed 2.
-	PendingDataset = []string{}
+	PendingDataset = make(map[string]bool)
 
 	// channel to protect PendingDataset
 	PendingMutex = &sync.RWMutex{}
 )
-
-func Contains(a []string, x string) bool {
-	for _, n := range a {
-		if x == n {
-			return true
-		}
-	}
-	return false
-}
-
-func Deletes(a []string, x string) []string {
-	for i, v := range a {
-		if v == x {
-			copy(a[i:], a[i+1:])
-			a[len(a)-1] = ""
-			a = a[:len(a)-1]
-			return a
-		}
-	}
-	return a
-}
 
 // SearchGeoLocation is an interface that handle the dataset related operations
 type SearchGeoLocation interface {
@@ -154,7 +133,7 @@ func (d *LegacyDatasetInMemory) AnnotateSingleIP(request *common.RequestData, fi
 		return GetRecordFromLegacyDataset(request.IP, parser, isIP4), nil
 	}
 	PendingMutex.Lock()
-	if Contains(PendingDataset, filename) {
+	if _, ok := PendingDataset[filename]; ok {
 		PendingMutex.Unlock()
 		// dataset loading, just return.
 		return nil, errors.New("Historical dataset is loading into memory right now " + filename)
@@ -163,9 +142,9 @@ func (d *LegacyDatasetInMemory) AnnotateSingleIP(request *common.RequestData, fi
 		PendingMutex.Unlock()
 		return nil, errors.New("Too many pending loading right now, cannot load " + filename)
 	}
-	PendingDataset = append(PendingDataset, filename)
+	PendingDataset[filename] = true
 	d.AddDataset(filename)
-	PendingDataset = Deletes(PendingDataset, filename)
+	delete(PendingDataset, filename)
 	PendingMutex.Unlock()
 
 	return GetRecordFromLegacyDataset(request.IP, d.GetDataset(filename), isIP4), nil
@@ -223,7 +202,7 @@ func (d *Geolite2DatasetInMemory) AnnotateSingleIP(request *common.RequestData, 
 		return UseGeoLite2Dataset(request, parser)
 	}
 	PendingMutex.Lock()
-	if Contains(PendingDataset, filename) {
+	if _, ok := PendingDataset[filename]; ok {
 		PendingMutex.Unlock()
 		// dataset loading, just return.
 		return nil, errors.New("Historical dataset is loading into memory right now " + filename)
@@ -232,9 +211,9 @@ func (d *Geolite2DatasetInMemory) AnnotateSingleIP(request *common.RequestData, 
 		PendingMutex.Unlock()
 		return nil, errors.New("Too many pending loading right now, cannot load " + filename)
 	}
-	PendingDataset = append(PendingDataset, filename)
+	PendingDataset[filename] = true
 	d.AddDataset(filename)
-	PendingDataset = Deletes(PendingDataset, filename)
+	delete(PendingDataset, filename)
 	PendingMutex.Unlock()
 
 	return UseGeoLite2Dataset(request, d.GetDataset(filename))
