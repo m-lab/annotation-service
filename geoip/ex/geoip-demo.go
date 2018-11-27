@@ -6,7 +6,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/m-lab/annotation-service/handler/geoip"
+	"github.com/m-lab/annotation-service/geoip"
 )
 
 func main() {

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/m-lab/annotation-service/handler"
-	"github.com/m-lab/annotation-service/handler/geoip"
+	"github.com/m-lab/annotation-service/geoip"
 	check "gopkg.in/check.v1"
 )
 
