@@ -1,3 +1,6 @@
+// Package handler provides functions for handling incoming requests.
+// It should only include top level code for parsing the request and assembling
+// the response.
 package handler
 
 import (
@@ -8,24 +11,25 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
-	"regexp"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/m-lab/annotation-service/common"
 	"github.com/m-lab/annotation-service/metrics"
-	"github.com/m-lab/annotation-service/parser"
 )
 
 var (
-	// A mutex to make sure that we are not reading from the dataset
+	// ErrNilDataset is returned when CurrentAnnotator is nil.
+	ErrNilDataset = errors.New("CurrentAnnotator is nil")
+
+	// A mutex to make sure that we are not reading from the CurrentAnnotator
 	// pointer while trying to update it
 	currentDataMutex = &sync.RWMutex{}
 
-	// This is a pointer to a GeoDataset struct containing the absolute
+	// CurrentAnnotator points to a GeoDataset struct containing the absolute
 	// latest data for the annotator to search and reply with
-	CurrentGeoDataset *parser.GeoDataset = nil
+	CurrentAnnotator common.Annotator
 )
 
 const (
@@ -34,7 +38,7 @@ const (
 	encodingBase = 36
 )
 
-// A function to set up any handlers that are needed, including url
+// SetupHandlers sets up any handlers that are needed, including url
 // handlers and pubsub handlers
 func SetupHandlers() {
 	http.HandleFunc("/annotate", Annotate)
@@ -146,6 +150,7 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
 	encodedResult, err := json.Marshal(responseMap)
 	if err != nil {
 		fmt.Fprintf(w, "Unknown JSON Encoding Error")
@@ -175,6 +180,7 @@ func BatchValidateAndParse(source io.Reader) ([]common.RequestData, error) {
 	for _, data := range uncheckedData {
 		newIP := net.ParseIP(data.IP)
 		if newIP == nil {
+			// TODO - shouldn't bail out because of a single error.
 			return nil, errors.New("invalid IP address")
 		}
 		ipType := 6
@@ -192,17 +198,12 @@ func BatchValidateAndParse(source io.Reader) ([]common.RequestData, error) {
 // pointer, even if it cannot find the appropriate metadata.
 func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error) {
 	metrics.Metrics_totalLookups.Inc()
-
-	return UseGeoLite2Dataset(request, CurrentGeoDataset)
-}
-
-// ExtractDateFromFilename return the date for a filename like
-// gs://downloader-mlab-oti/Maxmind/2017/05/08/20170508T080000Z-GeoLiteCity.dat.gz
-func ExtractDateFromFilename(filename string) (time.Time, error) {
-	re := regexp.MustCompile(`[0-9]{8}T`)
-	filedate := re.FindAllString(filename, -1)
-	if len(filedate) != 1 {
-		return time.Time{}, errors.New("cannot extract date from input filename")
+	currentDataMutex.Lock()
+	ann := CurrentAnnotator
+	currentDataMutex.Unlock()
+	if ann == nil {
+		return nil, ErrNilDataset
 	}
-	return time.Parse(time.RFC3339, filedate[0][0:4]+"-"+filedate[0][4:6]+"-"+filedate[0][6:8]+"T00:00:00Z")
+
+	return ann.GetAnnotation(request)
 }
