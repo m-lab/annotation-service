@@ -28,8 +28,8 @@ const (
 // it will place into the global scope as the latest version.
 // If it encounters an error, it will halt the program.
 // It will also set LatestDatasetDate as the date of lastest dataset.
-func InitDatasets() {
-	cache.Init()
+func InitDatasets() error {
+	return cache.Init()
 }
 
 func Init() {
