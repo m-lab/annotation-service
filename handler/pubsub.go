@@ -35,7 +35,7 @@ func waitForDownloaderMessages() {
 	}
 	// Block forever to listen for new messages and run the refresh dataset callbacks when a new message arrives
 	log.Fatal(sub.Receive(context.Background(), func(ctx context.Context, m *pubsub.Message) {
-		PopulateLatestData()
+		InitDatasets()
 		m.Ack()
 	}))
 

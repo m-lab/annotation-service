@@ -22,7 +22,6 @@ const (
 )
 
 var (
-
 	// This is the bucket containing maxmind files.
 	BucketName = "downloader-" + os.Getenv("GCLOUD_PROJECT")
 

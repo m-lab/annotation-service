@@ -11,8 +11,6 @@ import (
 	"github.com/m-lab/annotation-service/search"
 )
 
-const MaxmindPrefix = "Maxmind/" // Folder containing the maxmind files
-
 // LoadGeoLite2Dataset load the Geolite2 dataset with filename from bucket.
 func LoadGeoLite2Dataset(filename string, bucketname string) (*parser.GeoDataset, error) {
 	zip, err := loader.CreateZipReader(context.Background(), bucketname, filename)
