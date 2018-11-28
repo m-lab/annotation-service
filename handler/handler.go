@@ -12,25 +12,11 @@ import (
 	"net"
 	"net/http"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
+	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/metrics"
-)
-
-var (
-	// ErrNilDataset is returned when CurrentAnnotator is nil.
-	ErrNilDataset = errors.New("CurrentAnnotator is nil")
-
-	// A mutex to make sure that we are not reading from the CurrentAnnotator
-	// pointer while trying to update it
-	currentDataMutex = &sync.RWMutex{}
-
-	// CurrentAnnotator points to a GeoDataset struct containing the absolute
-	// latest data for the annotator to search and reply with
-	// TODO: This will be moved elsewhere in next PR.
-	CurrentAnnotator api.Annotator
 )
 
 const (
@@ -44,6 +30,8 @@ const (
 func SetupHandlers() {
 	http.HandleFunc("/annotate", Annotate)
 	http.HandleFunc("/batch_annotate", BatchAnnotate)
+	// This listens for pubsub messages about new downloader files, and loads them
+	// when they become available.
 	go waitForDownloaderMessages()
 }
 
@@ -143,12 +131,27 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responseMap := make(map[string]*api.GeoData)
-	for _, data := range dataSlice {
-		responseMap[data.IP+strconv.FormatInt(data.Timestamp.Unix(), encodingBase)], err = GetMetadataForSingleIP(&data)
-		if err != nil {
+
+	// For now, use the date of the first item.  In future the items will not have individual timestamps.
+	if len(dataSlice) > 0 {
+		date := dataSlice[0].Timestamp
+		ann := geolite2.GetAnnotator(date)
+		if ann == nil {
 			// stop sending more request in the same batch because w/ high chance the dataset is not ready
 			fmt.Fprintf(w, "Batch Request Error")
 			return
+		}
+		dateString := strconv.FormatInt(date.Unix(), encodingBase)
+
+		for _, request := range dataSlice {
+			metrics.Metrics_totalLookups.Inc()
+			annotation, err := ann.GetAnnotation(&request)
+			if err != nil {
+				continue
+			}
+			// This requires that the caller should ignore the dateString.
+			// TODO - the unit tests do not catch this problem, so maybe it isn't a problem.
+			responseMap[request.IP+dateString] = annotation
 		}
 	}
 
@@ -198,11 +201,10 @@ func BatchValidateAndParse(source io.Reader) ([]api.RequestData, error) {
 // pointer, even if it cannot find the appropriate metadata.
 func GetMetadataForSingleIP(request *api.RequestData) (*api.GeoData, error) {
 	metrics.Metrics_totalLookups.Inc()
-	currentDataMutex.RLock()
-	ann := CurrentAnnotator
-	currentDataMutex.RUnlock()
+	// TODO replace with generic GetAnnotator, that respects time.
+	ann := geolite2.GetAnnotator(request.Timestamp)
 	if ann == nil {
-		return nil, ErrNilDataset
+		return nil, geolite2.ErrNilDataset
 	}
 
 	return ann.GetAnnotation(request)

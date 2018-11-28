@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
+	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/handler"
-	"github.com/m-lab/annotation-service/parser"
 )
 
 func TestAnnotate(t *testing.T) {
@@ -27,8 +27,9 @@ func TestAnnotate(t *testing.T) {
 		{"1.4.128.0", "625600", `{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":42.1,"longitude":-73.1},"ASN":{}}`},
 		{"This will be an error.", "1000", "Invalid request"},
 	}
-	handler.CurrentAnnotator = &parser.GeoDataset{
-		IP4Nodes: []parser.IPNode{
+	// TODO - make and use an annotator generator
+	geolite2.CurrentAnnotator = &geolite2.GeoDataset{
+		IP4Nodes: []geolite2.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),
 				IPAddressHigh: net.IPv4(255, 255, 255, 255),
@@ -38,7 +39,7 @@ func TestAnnotate(t *testing.T) {
 				Longitude:     -73.1,
 			},
 		},
-		IP6Nodes: []parser.IPNode{
+		IP6Nodes: []geolite2.IPNode{
 			{
 				IPAddressLow:  net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				IPAddressHigh: net.IP{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
@@ -48,7 +49,7 @@ func TestAnnotate(t *testing.T) {
 				Longitude:     -73.1,
 			},
 		},
-		LocationNodes: []parser.LocationNode{
+		LocationNodes: []geolite2.LocationNode{
 			{
 				CityName: "Not A Real City", RegionCode: "ME",
 			},
@@ -183,8 +184,9 @@ func TestBatchAnnotate(t *testing.T) {
 			alt: `{"127.0.0.1ov94o0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}},"2620:0:1003:1008:5179:57e3:3c75:1886ov94o0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}}}`,
 		},
 	}
-	handler.CurrentAnnotator = &parser.GeoDataset{
-		IP4Nodes: []parser.IPNode{
+	// TODO - make a test utility in geolite2 package.
+	geolite2.CurrentAnnotator = &geolite2.GeoDataset{
+		IP4Nodes: []geolite2.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),
 				IPAddressHigh: net.IPv4(255, 255, 255, 255),
@@ -192,7 +194,7 @@ func TestBatchAnnotate(t *testing.T) {
 				PostalCode:    "10583",
 			},
 		},
-		IP6Nodes: []parser.IPNode{
+		IP6Nodes: []geolite2.IPNode{
 			{
 				IPAddressLow:  net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				IPAddressHigh: net.IP{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
@@ -200,7 +202,7 @@ func TestBatchAnnotate(t *testing.T) {
 				PostalCode:    "10583",
 			},
 		},
-		LocationNodes: []parser.LocationNode{
+		LocationNodes: []geolite2.LocationNode{
 			{
 				CityName: "Not A Real City", RegionCode: "ME",
 			},
@@ -231,8 +233,8 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 				ASN: &api.IPASNData{}},
 		},
 	}
-	handler.CurrentAnnotator = &parser.GeoDataset{
-		IP4Nodes: []parser.IPNode{
+	geolite2.CurrentAnnotator = &geolite2.GeoDataset{
+		IP4Nodes: []geolite2.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),
 				IPAddressHigh: net.IPv4(255, 255, 255, 255),
@@ -240,7 +242,7 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 				PostalCode:    "10583",
 			},
 		},
-		IP6Nodes: []parser.IPNode{
+		IP6Nodes: []geolite2.IPNode{
 			{
 				IPAddressLow:  net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				IPAddressHigh: net.IP{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
@@ -248,7 +250,7 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 				PostalCode:    "10583",
 			},
 		},
-		LocationNodes: []parser.LocationNode{
+		LocationNodes: []geolite2.LocationNode{
 			{
 				CityName: "Not A Real City",
 			},
