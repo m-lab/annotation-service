@@ -197,9 +197,9 @@ func BatchValidateAndParse(source io.Reader) ([]common.RequestData, error) {
 // pointer, even if it cannot find the appropriate metadata.
 func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error) {
 	metrics.Metrics_totalLookups.Inc()
-	currentDataMutex.Lock()
+	currentDataMutex.RLock()
 	ann := CurrentAnnotator
-	currentDataMutex.Unlock()
+	currentDataMutex.RUnlock()
 	if ann == nil {
 		return nil, ErrNilDataset
 	}
