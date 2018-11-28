@@ -1,7 +1,6 @@
 package common
 
 import (
-	"errors"
 	"os"
 	"regexp"
 	"time"
@@ -50,20 +49,10 @@ type GeoData struct {
 
 // The RequestData schema is the schema for the json that we will send
 // down the pipe to the annotation service.
+// DEPRECATED
+// Should instead use a single Date (time.Time) and array of net.IP.
 type RequestData struct {
 	IP        string    // Holds the IP from an incoming request
 	IPFormat  int       // Holds the ip format, 4 or 6
 	Timestamp time.Time // Holds the timestamp from an incoming request
-}
-
-// ExtractDateFromFilename return the date for a filename like
-// gs://downloader-mlab-oti/Maxmind/2017/05/08/20170508T080000Z-GeoLiteCity.dat.gz
-// TODO move this to maxmind package
-func ExtractDateFromFilename(filename string) (time.Time, error) {
-	re := regexp.MustCompile(`[0-9]{8}T`)
-	filedate := re.FindAllString(filename, -1)
-	if len(filedate) != 1 {
-		return time.Time{}, errors.New("cannot extract date from input filename")
-	}
-	return time.Parse(time.RFC3339, filedate[0][0:4]+"-"+filedate[0][4:6]+"-"+filedate[0][6:8]+"T00:00:00Z")
 }
