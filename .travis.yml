@@ -18,6 +18,7 @@ before_install:
 - sudo apt-get update -q
 - sudo apt-get install -y libgeoip-dev pkg-config
 - go get gopkg.in/check.v1
+# TODO: Looks like this is no longer needed?
 - go get github.com/abh/geoip
 
 # This installs gcloud, sets up devappserver.
