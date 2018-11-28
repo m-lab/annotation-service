@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/m-lab/annotation-service/common"
+	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/loader"
 	"github.com/m-lab/annotation-service/parser"
 
@@ -37,13 +37,13 @@ func determineFilenameOfLatestGeolite2File() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	prospectiveFiles := client.Bucket(common.MaxmindBucketName).Objects(ctx, &storage.Query{Prefix: common.MaxmindPrefix})
+	prospectiveFiles := client.Bucket(api.MaxmindBucketName).Objects(ctx, &storage.Query{Prefix: api.MaxmindPrefix})
 	filename := ""
 	for file, err := prospectiveFiles.Next(); err != iterator.Done; file, err = prospectiveFiles.Next() {
 		if err != nil {
 			return "", err
 		}
-		if file.Name > filename && common.GeoLite2Regex.MatchString(file.Name) {
+		if file.Name > filename && api.GeoLite2Regex.MatchString(file.Name) {
 			filename = file.Name
 		}
 
@@ -68,5 +68,5 @@ func LoadLatestGeolite2File() (*parser.GeoDataset, error) {
 	if err != nil {
 		return nil, err
 	}
-	return LoadGeoLite2Dataset(filename, common.MaxmindBucketName)
+	return LoadGeoLite2Dataset(filename, api.MaxmindBucketName)
 }

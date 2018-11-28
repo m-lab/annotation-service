@@ -1,6 +1,6 @@
-// Package common contains interfaces and low level structs required across
+// Package api contains interfaces and low level structs required across
 // multiple packages or repositories.
-package common
+package api
 
 import (
 	"errors"

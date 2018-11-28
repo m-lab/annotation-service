@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/m-lab/annotation-service/common"
+	"github.com/m-lab/annotation-service/api"
 )
 
 const mapMax = 200000
@@ -78,13 +78,13 @@ func (ds *GeoDataset) SearchBinary(ipLookUp string, IsIP4 bool) (p IPNode, e err
 // locationNodes. It will then use that data to fill in a GeoData
 // struct and return its pointer.
 // TODO make this unexported
-func convertIPNodeToGeoData(ipNode IPNode, locationNodes []LocationNode) *common.GeoData {
+func convertIPNodeToGeoData(ipNode IPNode, locationNodes []LocationNode) *api.GeoData {
 	locNode := LocationNode{}
 	if ipNode.LocationIndex >= 0 {
 		locNode = locationNodes[ipNode.LocationIndex]
 	}
-	return &common.GeoData{
-		Geo: &common.GeolocationIP{
+	return &api.GeoData{
+		Geo: &api.GeolocationIP{
 			Continent_code: locNode.ContinentCode,
 			Country_code:   locNode.CountryCode,
 			Country_code3:  "", // missing from geoLite2 ?
@@ -97,19 +97,19 @@ func convertIPNodeToGeoData(ipNode IPNode, locationNodes []LocationNode) *common
 			Latitude:       ipNode.Latitude,
 			Longitude:      ipNode.Longitude,
 		},
-		ASN: &common.IPASNData{},
+		ASN: &api.IPASNData{},
 	}
 
 }
 
 // This just allows compiler to check that GeoDataset satisfies the Finder interface.
-func assertAnnotator(f common.Annotator) {
-	func(common.Annotator) {}(&GeoDataset{})
+func assertAnnotator(f api.Annotator) {
+	func(api.Annotator) {}(&GeoDataset{})
 }
 
 // Find looks up the IP address and returns the corresponding GeoData
 // TODO - improve the format handling.  Perhaps pass in a net.IP ?
-func (ds *GeoDataset) GetAnnotation(request *common.RequestData) (*common.GeoData, error) {
+func (ds *GeoDataset) GetAnnotation(request *api.RequestData) (*api.GeoData, error) {
 	var node IPNode
 	err := errors.New("unknown IP format")
 	node, err = ds.SearchBinary(request.IP, request.IPFormat == 4)

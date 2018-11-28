@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/m-lab/annotation-service/common"
+	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/parser"
 )
 
@@ -75,21 +75,21 @@ func TestConvertIPNodeToGeoData(t *testing.T) {
 	tests := []struct {
 		node parser.IPNode
 		locs []parser.LocationNode
-		res  *common.GeoData
+		res  *api.GeoData
 	}{
 		{
 			node: parser.IPNode{LocationIndex: 0, PostalCode: "10583"},
 			locs: []parser.LocationNode{{CityName: "Not A Real City", RegionCode: "ME"}},
-			res: &common.GeoData{
-				Geo: &common.GeolocationIP{City: "Not A Real City", Postal_code: "10583", Region: "ME"},
-				ASN: &common.IPASNData{}},
+			res: &api.GeoData{
+				Geo: &api.GeolocationIP{City: "Not A Real City", Postal_code: "10583", Region: "ME"},
+				ASN: &api.IPASNData{}},
 		},
 		{
 			node: parser.IPNode{LocationIndex: -1, PostalCode: "10583"},
 			locs: nil,
-			res: &common.GeoData{
-				Geo: &common.GeolocationIP{Postal_code: "10583"},
-				ASN: &common.IPASNData{}},
+			res: &api.GeoData{
+				Geo: &api.GeolocationIP{Postal_code: "10583"},
+				ASN: &api.IPASNData{}},
 		},
 	}
 	for _, test := range tests {
