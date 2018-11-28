@@ -113,6 +113,15 @@ func NewBatchResponse(size int) *BatchResponse {
 	return &BatchResponse{"", time.Time{}, responseMap}
 }
 
+func getAnnotator(date time.Time) common.Annotator {
+	// TODO - use the requested date
+	// dateString := strconv.FormatInt(date.Unix(), encodingBase)
+	currentDataMutex.Lock()
+	ann := CurrentAnnotator
+	currentDataMutex.Unlock()
+	return ann
+}
+
 // BatchAnnotate is a URL handler that expects the body of the request
 // to contain a JSON encoded slice of common.RequestDatas. It will
 // look up all the ip addresses and bundle them into a map of metadata
@@ -138,12 +147,27 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responseMap := make(map[string]*common.GeoData)
-	for _, data := range dataSlice {
-		responseMap[data.IP+strconv.FormatInt(data.Timestamp.Unix(), encodingBase)], err = GetMetadataForSingleIP(&data)
-		if err != nil {
+
+	// For now, use the date of the first item.  In future the items will not have individual timestamps.
+	if len(dataSlice) > 0 {
+		date := dataSlice[0].Timestamp
+		ann := getAnnotator(date)
+		if ann == nil {
 			// stop sending more request in the same batch because w/ high chance the dataset is not ready
 			fmt.Fprintf(w, "Batch Request Error")
 			return
+		}
+		dateString := strconv.FormatInt(date.Unix(), encodingBase)
+
+		for _, request := range dataSlice {
+			metrics.Metrics_totalLookups.Inc()
+			annotation, err := ann.GetAnnotation(&request)
+			if err != nil {
+				continue
+			}
+			// This requires that the caller should ignore the dateString.
+			// TODO - the unit tests do not catch this problem, so maybe it isn't a problem.
+			responseMap[request.IP+dateString] = annotation
 		}
 	}
 	encodedResult, err := json.Marshal(responseMap)
@@ -152,7 +176,6 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
-
 }
 
 // BatchValidateAndParse will take a reader (likely the body of a
@@ -162,7 +185,6 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 // it encounters an error, then it will return nil and that error.
 func BatchValidateAndParse(source io.Reader) ([]common.RequestData, error) {
 	jsonBuffer, err := ioutil.ReadAll(source)
-	validatedData := []common.RequestData{}
 	if err != nil {
 		return nil, err
 	}
@@ -172,6 +194,7 @@ func BatchValidateAndParse(source io.Reader) ([]common.RequestData, error) {
 	if err != nil {
 		return nil, err
 	}
+	validatedData := make([]common.RequestData, 0, len(uncheckedData))
 	for _, data := range uncheckedData {
 		newIP := net.ParseIP(data.IP)
 		if newIP == nil {

@@ -50,6 +50,8 @@ type GeoData struct {
 
 // The RequestData schema is the schema for the json that we will send
 // down the pipe to the annotation service.
+// DEPRECATED
+// Should instead use a single Date (time.Time) and array of net.IP.
 type RequestData struct {
 	IP        string    // Holds the IP from an incoming request
 	IPFormat  int       // Holds the ip format, 4 or 6
@@ -67,6 +69,7 @@ type Annotator interface {
 }
 
 // AnnotationLoader provides the Load function, which loads an annotator.
+// TODO - do we really need this, or should we just have a single maxmind.Load function.
 type AnnotationLoader interface {
 	Load(date time.Time) (Annotator, error)
 }
