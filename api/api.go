@@ -4,26 +4,15 @@ package api
 
 import (
 	"errors"
-	"os"
 	"regexp"
 	"time"
-)
-
-var (
-	// This is the bucket containing maxmind files.
-	MaxmindBucketName = "downloader-" + os.Getenv("GCLOUD_PROJECT")
-	// This is the regex used to filter for which files we want to consider acceptable for using with Geolite2
-	GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
-)
-
-const (
-	MaxmindPrefix = "Maxmind/" // Folder containing the maxmind files
 )
 
 // The GeolocationIP struct contains all the information needed for the
 // geolocation data that will be inserted into big query. The fiels are
 // capitalized for exporting, although the originals in the DB schema
 // are not.
+// This is in common because it is used by the etl repository.
 // TODO update these to proper camelCase.
 type GeolocationIP struct {
 	Continent_code string  `json:"continent_code,,omitempty"` // Gives a shorthand for the continent
