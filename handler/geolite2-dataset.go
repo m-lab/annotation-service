@@ -39,13 +39,13 @@ func determineFilenameOfLatestGeolite2File() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	prospectiveFiles := client.Bucket(BucketName).Objects(ctx, &storage.Query{Prefix: MaxmindPrefix})
+	prospectiveFiles := client.Bucket(common.MaxmindBucketName).Objects(ctx, &storage.Query{Prefix: common.MaxmindPrefix})
 	filename := ""
 	for file, err := prospectiveFiles.Next(); err != iterator.Done; file, err = prospectiveFiles.Next() {
 		if err != nil {
 			return "", err
 		}
-		if file.Name > filename && GeoLite2Regex.MatchString(file.Name) {
+		if file.Name > filename && common.GeoLite2Regex.MatchString(file.Name) {
 			filename = file.Name
 		}
 
@@ -70,7 +70,7 @@ func LoadLatestGeolite2File() (*parser.GeoDataset, error) {
 	if err != nil {
 		return nil, err
 	}
-	return LoadGeoLite2Dataset(filename, BucketName)
+	return LoadGeoLite2Dataset(filename, common.MaxmindBucketName)
 }
 
 // ConvertIPNodeToGeoData takes a parser.IPNode, plus a list of

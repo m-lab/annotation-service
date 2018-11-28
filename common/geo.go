@@ -1,7 +1,20 @@
 package common
 
 import (
+	"os"
+	"regexp"
 	"time"
+)
+
+var (
+	// This is the bucket containing maxmind files.
+	MaxmindBucketName = "downloader-" + os.Getenv("GCLOUD_PROJECT")
+	// This is the regex used to filter for which files we want to consider acceptable for using with Geolite2
+	GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
+)
+
+const (
+	MaxmindPrefix = "Maxmind/" // Folder containing the maxmind files
 )
 
 // The GeolocationIP struct contains all the information needed for the
@@ -36,6 +49,8 @@ type GeoData struct {
 
 // The RequestData schema is the schema for the json that we will send
 // down the pipe to the annotation service.
+// DEPRECATED
+// Should instead use a single Date (time.Time) and array of net.IP.
 type RequestData struct {
 	IP        string    // Holds the IP from an incoming request
 	IPFormat  int       // Holds the ip format, 4 or 6

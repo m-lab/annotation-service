@@ -152,7 +152,6 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
-
 }
 
 // BatchValidateAndParse will take a reader (likely the body of a
@@ -162,7 +161,6 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 // it encounters an error, then it will return nil and that error.
 func BatchValidateAndParse(source io.Reader) ([]common.RequestData, error) {
 	jsonBuffer, err := ioutil.ReadAll(source)
-	validatedData := []common.RequestData{}
 	if err != nil {
 		return nil, err
 	}
@@ -172,6 +170,7 @@ func BatchValidateAndParse(source io.Reader) ([]common.RequestData, error) {
 	if err != nil {
 		return nil, err
 	}
+	validatedData := make([]common.RequestData, 0, len(uncheckedData))
 	for _, data := range uncheckedData {
 		newIP := net.ParseIP(data.IP)
 		if newIP == nil {
