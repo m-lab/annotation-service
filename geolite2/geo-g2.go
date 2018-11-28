@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"os"
 	"regexp"
 	"strconv"
 	"sync"
@@ -20,12 +21,21 @@ import (
 )
 
 const (
+	MaxmindPrefix = "Maxmind/" // Folder containing the maxmind files
+
 	ipNumColumnsGlite2        = 10
 	locationNumColumnsGlite2  = 13
 	gLite2Prefix              = "GeoLite2-City"
 	geoLite2BlocksFilenameIP4 = "GeoLite2-City-Blocks-IPv4.csv"  // Filename of ipv4 blocks file
 	geoLite2BlocksFilenameIP6 = "GeoLite2-City-Blocks-IPv6.csv"  // Filename of ipv6 blocks file
 	geoLite2LocationsFilename = "GeoLite2-City-Locations-en.csv" // Filename of locations file
+)
+
+var (
+	// MaxmindBucketName is the bucket containing maxmind files.
+	MaxmindBucketName = "downloader-" + os.Getenv("GCLOUD_PROJECT")
+	// This is the regex used to filter for which files we want to consider acceptable for using with Geolite2
+	GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
 )
 
 func GetAnnotator(date time.Time) common.Annotator {
@@ -319,13 +329,13 @@ func determineFilenameOfLatestGeolite2File() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	prospectiveFiles := client.Bucket(common.MaxmindBucketName).Objects(ctx, &storage.Query{Prefix: common.MaxmindPrefix})
+	prospectiveFiles := client.Bucket(MaxmindBucketName).Objects(ctx, &storage.Query{Prefix: MaxmindPrefix})
 	filename := ""
 	for file, err := prospectiveFiles.Next(); err != iterator.Done; file, err = prospectiveFiles.Next() {
 		if err != nil {
 			return "", err
 		}
-		if file.Name > filename && common.GeoLite2Regex.MatchString(file.Name) {
+		if file.Name > filename && GeoLite2Regex.MatchString(file.Name) {
 			filename = file.Name
 		}
 
@@ -350,5 +360,5 @@ func LoadLatestGeolite2File() (*GeoDataset, error) {
 	if err != nil {
 		return nil, err
 	}
-	return LoadGeoLite2Dataset(filename, common.MaxmindBucketName)
+	return LoadGeoLite2Dataset(filename, MaxmindBucketName)
 }
