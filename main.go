@@ -5,13 +5,14 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 
+	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/metrics"
 )
 
 // Update the list of maxmind datasets daily
 func updateMaxmindDatasets(w http.ResponseWriter, r *http.Request) {
-	handler.PopulateLatestData()
+	geolite2.PopulateLatestData()
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
 }
@@ -25,7 +26,7 @@ func main() {
 	log.Print("Beginning Setup\n")
 	http.HandleFunc("/cron/update_maxmind_datasets", updateMaxmindDatasets)
 
-	handler.PopulateLatestData()
+	geolite2.PopulateLatestData()
 	handler.SetupHandlers()
 	metrics.SetupPrometheus()
 	log.Print("Listening on port 8080")
