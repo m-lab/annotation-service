@@ -1,7 +1,7 @@
-// Package parser contains code for loading and parsing GeoLite2 datasets.
+// Package geolite2 contains code for loading and parsing GeoLite2 datasets.
 // Only files including IPv4, IPv6, and Location (in english)
 // will be read and parsed into lists.
-package parser
+package geolite2
 
 import (
 	"bytes"

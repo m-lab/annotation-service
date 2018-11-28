@@ -1,4 +1,4 @@
-package parser_test
+package geolite2_test
 
 import (
 	"archive/zip"
@@ -9,8 +9,8 @@ import (
 
 	"github.com/go-test/deep"
 
+	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/loader"
-	"github.com/m-lab/annotation-service/parser"
 )
 
 func init() {
@@ -19,9 +19,9 @@ func init() {
 }
 
 func TestIPLisGLite2(t *testing.T) {
-	var ipv4, ipv6 []parser.IPNode
-	var ipv6Expected = []parser.IPNode{
-		parser.IPNode{
+	var ipv4, ipv6 []geolite2.IPNode
+	var ipv6Expected = []geolite2.IPNode{
+		geolite2.IPNode{
 			net.ParseIP("600:8801:9400:5a1:948b:ab15:dde3:61a3"),
 			net.ParseIP("600:8801:9400:5a1:948b:ab15:dde3:61a3"),
 			4,
@@ -29,7 +29,7 @@ func TestIPLisGLite2(t *testing.T) {
 			32.7596,
 			-116.994,
 		},
-		parser.IPNode{
+		geolite2.IPNode{
 			net.ParseIP("2001:5::"),
 			net.ParseIP("2001:0005:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF"),
 			4,
@@ -37,7 +37,7 @@ func TestIPLisGLite2(t *testing.T) {
 			47,
 			8,
 		},
-		parser.IPNode{
+		geolite2.IPNode{
 			net.ParseIP("2001:200::"),
 			net.ParseIP("2001:0200:00FF:FFFF:FFFF:FFFF:FFFF:FFFF"),
 			4,
@@ -46,8 +46,8 @@ func TestIPLisGLite2(t *testing.T) {
 			138,
 		},
 	}
-	var ipv4Expected = []parser.IPNode{
-		parser.IPNode{
+	var ipv4Expected = []geolite2.IPNode{
+		geolite2.IPNode{
 			net.ParseIP("1.0.0.0"),
 			net.ParseIP("1.0.0.255"),
 			0,
@@ -55,7 +55,7 @@ func TestIPLisGLite2(t *testing.T) {
 			-37.7,
 			145.1833,
 		},
-		parser.IPNode{
+		geolite2.IPNode{
 			net.ParseIP("1.0.1.0"),
 			net.ParseIP("1.0.1.255"),
 			4,
@@ -63,7 +63,7 @@ func TestIPLisGLite2(t *testing.T) {
 			26.0614,
 			119.3061,
 		},
-		parser.IPNode{
+		geolite2.IPNode{
 			net.ParseIP("1.0.2.0"),
 			net.ParseIP("1.0.3.255"),
 			4,
@@ -90,7 +90,7 @@ func TestIPLisGLite2(t *testing.T) {
 		t.Fatalf("Failed to create io.ReaderCloser")
 	}
 	defer rcIPv4.Close()
-	ipv4, err = parser.LoadIPListGLite2(rcIPv4, locationIDMap)
+	ipv4, err = geolite2.LoadIPListGLite2(rcIPv4, locationIDMap)
 	if err != nil {
 		t.Errorf("Failed to create ipv4")
 	}
@@ -104,7 +104,7 @@ func TestIPLisGLite2(t *testing.T) {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
 	defer rcIPv6.Close()
-	ipv6, err = parser.LoadIPListGLite2(rcIPv6, locationIDMap)
+	ipv6, err = geolite2.LoadIPListGLite2(rcIPv6, locationIDMap)
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Failed to create ipv6")
@@ -116,28 +116,28 @@ func TestIPLisGLite2(t *testing.T) {
 }
 
 func TestLocationListGLite2(t *testing.T) {
-	var actualLocList []parser.LocationNode
+	var actualLocList []geolite2.LocationNode
 	var actualIDMap map[int]int
-	var expectedLocList = []parser.LocationNode{
-		parser.LocationNode{
+	var expectedLocList = []geolite2.LocationNode{
+		geolite2.LocationNode{
 			32909,
 			"AS", "IR", "Iran",
 			"07", "Ostan-e Tehran",
 			0, "Shahre Jadide Andisheh",
 		},
-		parser.LocationNode{
+		geolite2.LocationNode{
 			49518,
 			"AF", "RW", "Rwanda",
 			"", "",
 			0, "",
 		},
-		parser.LocationNode{
+		geolite2.LocationNode{
 			51537,
 			"AF", "SO", "Somalia",
 			"", "",
 			0, "",
 		},
-		parser.LocationNode{
+		geolite2.LocationNode{
 			5127766,
 			"NA", "US", "United States",
 			"NY", "New York",
@@ -161,7 +161,7 @@ func TestLocationListGLite2(t *testing.T) {
 		t.Fatalf("Failed to create io.ReaderCloser")
 	}
 	defer rc.Close()
-	actualLocList, actualIDMap, err = parser.LoadLocListGLite2(rc)
+	actualLocList, actualIDMap, err = geolite2.LoadLocListGLite2(rc)
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Failed to LoadLocationList")
@@ -194,7 +194,7 @@ func TestCorruptData(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error finding file")
 	}
-	_, _, err = parser.LoadLocListGLite2(rc)
+	_, _, err = geolite2.LoadLocListGLite2(rc)
 	if err.Error() != "Corrupted Data: wrong number of columns" {
 		if err == nil {
 			t.Errorf("Error inconsistent:\ngot: nil\nwanted: Corrupted Data: wrong number of columns")

@@ -12,24 +12,11 @@ import (
 	"net"
 	"net/http"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/m-lab/annotation-service/common"
+	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/metrics"
-)
-
-var (
-	// ErrNilDataset is returned when CurrentAnnotator is nil.
-	ErrNilDataset = errors.New("CurrentAnnotator is nil")
-
-	// A mutex to make sure that we are not reading from the CurrentAnnotator
-	// pointer while trying to update it
-	currentDataMutex = &sync.RWMutex{}
-
-	// CurrentAnnotator points to a GeoDataset struct containing the absolute
-	// latest data for the annotator to search and reply with
-	CurrentAnnotator common.Annotator
 )
 
 const (
@@ -43,6 +30,8 @@ const (
 func SetupHandlers() {
 	http.HandleFunc("/annotate", Annotate)
 	http.HandleFunc("/batch_annotate", BatchAnnotate)
+	// This listens for pubsub messages about new downloader files, and loads them
+	// when they become available.
 	go waitForDownloaderMessages()
 }
 
@@ -117,15 +106,6 @@ func NewBatchResponse(size int) *BatchResponse {
 	return &BatchResponse{"", time.Time{}, responseMap}
 }
 
-func getAnnotator(date time.Time) common.Annotator {
-	// TODO - use the requested date
-	// dateString := strconv.FormatInt(date.Unix(), encodingBase)
-	currentDataMutex.Lock()
-	ann := CurrentAnnotator
-	currentDataMutex.Unlock()
-	return ann
-}
-
 // BatchAnnotate is a URL handler that expects the body of the request
 // to contain a JSON encoded slice of common.RequestDatas. It will
 // look up all the ip addresses and bundle them into a map of metadata
@@ -155,7 +135,7 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	// For now, use the date of the first item.  In future the items will not have individual timestamps.
 	if len(dataSlice) > 0 {
 		date := dataSlice[0].Timestamp
-		ann := getAnnotator(date)
+		ann := geolite2.GetAnnotator(date)
 		if ann == nil {
 			// stop sending more request in the same batch because w/ high chance the dataset is not ready
 			fmt.Fprintf(w, "Batch Request Error")
@@ -221,11 +201,10 @@ func BatchValidateAndParse(source io.Reader) ([]common.RequestData, error) {
 // pointer, even if it cannot find the appropriate metadata.
 func GetMetadataForSingleIP(request *common.RequestData) (*common.GeoData, error) {
 	metrics.Metrics_totalLookups.Inc()
-	currentDataMutex.RLock()
-	ann := CurrentAnnotator
-	currentDataMutex.RUnlock()
+	// TODO replace with generic GetAnnotator, that respects time.
+	ann := geolite2.GetAnnotator(request.Timestamp)
 	if ann == nil {
-		return nil, ErrNilDataset
+		return nil, geolite2.ErrNilDataset
 	}
 
 	return ann.GetAnnotation(request)
