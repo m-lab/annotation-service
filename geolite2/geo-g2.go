@@ -1,25 +1,63 @@
-package parser
+package geolite2
 
 import (
 	"archive/zip"
+	"context"
 	"encoding/csv"
 	"errors"
 	"io"
 	"log"
 	"net"
+	"os"
 	"regexp"
 	"strconv"
+	"sync"
+	"time"
 
+	"cloud.google.com/go/storage"
+	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/loader"
+	"google.golang.org/api/iterator"
 )
 
 const (
+	MaxmindPrefix = "Maxmind/" // Folder containing the maxmind files
+
 	ipNumColumnsGlite2        = 10
 	locationNumColumnsGlite2  = 13
 	gLite2Prefix              = "GeoLite2-City"
 	geoLite2BlocksFilenameIP4 = "GeoLite2-City-Blocks-IPv4.csv"  // Filename of ipv4 blocks file
 	geoLite2BlocksFilenameIP6 = "GeoLite2-City-Blocks-IPv6.csv"  // Filename of ipv6 blocks file
 	geoLite2LocationsFilename = "GeoLite2-City-Locations-en.csv" // Filename of locations file
+)
+
+var (
+	// MaxmindBucketName is the bucket containing maxmind files.
+	MaxmindBucketName = "downloader-" + os.Getenv("GCLOUD_PROJECT")
+	// This is the regex used to filter for which files we want to consider acceptable for using with Geolite2
+	GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
+)
+
+func GetAnnotator(date time.Time) api.Annotator {
+	// TODO - use the requested date
+	// dateString := strconv.FormatInt(date.Unix(), encodingBase)
+	currentDataMutex.RLock()
+	ann := CurrentAnnotator
+	currentDataMutex.RUnlock()
+	return ann
+}
+
+var (
+	// ErrNilDataset is returned when CurrentAnnotator is nil.
+	ErrNilDataset = errors.New("CurrentAnnotator is nil")
+
+	// A mutex to make sure that we are not reading from the CurrentAnnotator
+	// pointer while trying to update it
+	currentDataMutex = &sync.RWMutex{}
+
+	// CurrentAnnotator points to a GeoDataset struct containing the absolute
+	// latest data for the annotator to search and reply with
+	CurrentAnnotator api.Annotator
 )
 
 func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
@@ -265,4 +303,62 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 		list = append(list, peek)
 	}
 	return list, nil
+}
+
+// PopulateLatestData will search to the latest Geolite2 files
+// available in GCS and will use them to create a new GeoDataset which
+// it will place into the global scope as the latest version. It will
+// do so safely with use of the currentDataMutex RW mutex. It it
+// encounters an error, it will halt the program.
+func PopulateLatestData() {
+	data, err := LoadLatestGeolite2File()
+	if err != nil {
+		log.Fatal(err)
+	}
+	currentDataMutex.Lock()
+	CurrentAnnotator = data
+	currentDataMutex.Unlock()
+}
+
+// determineFilenameOfLatestGeolite2File will get a list of filenames
+// from GCS and search through them, eventually returing either the
+// latest filename or an error.
+func determineFilenameOfLatestGeolite2File() (string, error) {
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		return "", err
+	}
+	prospectiveFiles := client.Bucket(MaxmindBucketName).Objects(ctx, &storage.Query{Prefix: MaxmindPrefix})
+	filename := ""
+	for file, err := prospectiveFiles.Next(); err != iterator.Done; file, err = prospectiveFiles.Next() {
+		if err != nil {
+			return "", err
+		}
+		if file.Name > filename && GeoLite2Regex.MatchString(file.Name) {
+			filename = file.Name
+		}
+
+	}
+	return filename, nil
+}
+
+// LoadGeoLite2Dataset load the Geolite2 dataset with filename from bucket.
+func LoadGeoLite2Dataset(filename string, bucketname string) (*GeoDataset, error) {
+	zip, err := loader.CreateZipReader(context.Background(), bucketname, filename)
+	if err != nil {
+		return nil, err
+	}
+	return LoadGeoLite2(zip)
+}
+
+// LoadLatestGeolite2File will check GCS for the latest file, download
+// it, process it, and load it into memory so that it can be easily
+// searched, then it will return a pointer to that GeoDataset or an error.
+func LoadLatestGeolite2File() (*GeoDataset, error) {
+	filename, err := determineFilenameOfLatestGeolite2File()
+	if err != nil {
+		return nil, err
+	}
+	return LoadGeoLite2Dataset(filename, MaxmindBucketName)
 }

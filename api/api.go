@@ -4,26 +4,15 @@ package api
 
 import (
 	"errors"
-	"os"
 	"regexp"
 	"time"
-)
-
-var (
-	// This is the bucket containing maxmind files.
-	MaxmindBucketName = "downloader-" + os.Getenv("GCLOUD_PROJECT")
-	// This is the regex used to filter for which files we want to consider acceptable for using with Geolite2
-	GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
-)
-
-const (
-	MaxmindPrefix = "Maxmind/" // Folder containing the maxmind files
 )
 
 // The GeolocationIP struct contains all the information needed for the
 // geolocation data that will be inserted into big query. The fiels are
 // capitalized for exporting, although the originals in the DB schema
 // are not.
+// This is in common because it is used by the etl repository.
 // TODO update these to proper camelCase.
 type GeolocationIP struct {
 	Continent_code string  `json:"continent_code,,omitempty"` // Gives a shorthand for the continent
@@ -80,6 +69,7 @@ type AnnotationLoader interface {
 // ExtractDateFromFilename return the date for a filename like
 // gs://downloader-mlab-oti/Maxmind/2017/05/08/20170508T080000Z-GeoLiteCity.dat.gz
 // TODO move this to maxmind package
+// TODO - actually, this now seems to be dead code.  But probably needed again soon, so leaving it here.
 func ExtractDateFromFilename(filename string) (time.Time, error) {
 	re := regexp.MustCompile(`[0-9]{8}T`)
 	filedate := re.FindAllString(filename, -1)
