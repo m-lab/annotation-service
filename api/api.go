@@ -3,7 +3,9 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
+	"net"
 	"regexp"
 	"time"
 )
@@ -49,13 +51,27 @@ type RequestData struct {
 	Timestamp time.Time // Holds the timestamp from an incoming request
 }
 
+// RequestWrapper will be used for all future request types.
+type RequestWrapper struct {
+	RequestType string
+	Body        json.RawMessage
+}
+
+// The RequestData schema is the schema for the json that we will send
+// down the pipe to the annotation service.
+type AltRequestData struct {
+	RequestType string
+	Date        time.Time
+	IPs         []net.IP
+}
+
 // Annotator provides the GetAnnotation method, which retrieves the annotation for a given IP address.
 type Annotator interface {
 	// TODO use net.IP, and drop the bool
 	// TODO return struct instead of pointer.
 	GetAnnotation(request *RequestData) (*GeoData, error)
 	// These return the date range covered by the annotator.
-	// TODO GetStartDate() time.Time
+	// TODO StartDate() time.Time
 	// TODO GetEndDate() time.Time
 }
 
