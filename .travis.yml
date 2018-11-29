@@ -68,8 +68,8 @@ script:
 
 # Run all tests, collecting coverage data.
 - go test -covermode=count -coverprofile=api.cov -v github.com/m-lab/annotation-service/api
-- go test -covermode=count -coverprofile=geoip.cov -v github.com/m-lab/annotation-service/geoip
 - go test -covermode=count -coverprofile=handler.cov -v github.com/m-lab/annotation-service/handler
+- go test -covermode=count -coverprofile=legacy.cov -v github.com/m-lab/annotation-service/legacy
 - go test -covermode=count -coverprofile=loader.cov -v github.com/m-lab/annotation-service/loader
 - go test -covermode=count -coverprofile=metrics.cov -v github.com/m-lab/annotation-service/metrics
 - go test -covermode=count -coverprofile=geolite2.cov -v github.com/m-lab/annotation-service/geolite2
