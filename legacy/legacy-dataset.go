@@ -87,11 +87,51 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/loader"
 )
+
+// This is the regex used to filter for which files we want to consider acceptable for using with legacy dataset
+var GeoLegacyRegex = regexp.MustCompile(`.*-GeoLiteCity.dat.*`)
+var GeoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
+
+type LegacyDatasets struct {
+	v4Data *GeoIP
+	v6Data *GeoIP
+}
+
+// LoadBundleLegacyDataset loads both IPv4 and IPv6 version of the requested dataset into memory.
+func LoadBundleLegacyDataset(filename string, bucketname string) (LegacyDatasets, error) {
+	if GeoLegacyRegex.MatchString(filename) {
+		v4, err := LoadLegacyGeoliteDataset(filename, bucketname)
+		if err != nil {
+			return LegacyDatasets{nil, nil}, errors.New("cannot load IPv4 dataset")
+		}
+		v6, err := LoadLegacyGeoliteDataset(strings.Replace(filename, "GeoLiteCity", "GeoLiteCityv6", -1), bucketname)
+		if err != nil {
+			return LegacyDatasets{nil, nil}, errors.New("cannot load IPv6 dataset")
+		}
+		return LegacyDatasets{v4Data: v4, v6Data: v6}, nil
+	}
+
+	if GeoLegacyv6Regex.MatchString(filename) {
+		v6, err := LoadLegacyGeoliteDataset(filename, bucketname)
+		if err != nil {
+			return LegacyDatasets{nil, nil}, errors.New("cannot load IPv6 dataset")
+		}
+		v4, err := LoadLegacyGeoliteDataset(strings.Replace(filename, "GeoLiteCityv6", "GeoLiteCity", -1), bucketname)
+		if err != nil {
+			return LegacyDatasets{nil, nil}, errors.New("cannot load IPv4 dataset")
+		}
+		return LegacyDatasets{v4Data: v4, v6Data: v6}, nil
+	}
+
+	return LegacyDatasets{nil, nil}, errors.New("Wrong input dataset name")
+}
 
 // LoadGeoliteDataset will check GCS for the matching dataset, download
 // it, process it, and load it into memory so that it can be easily
@@ -118,11 +158,17 @@ func round(x float32) float64 {
 	return i
 }
 
-func GetRecordFromLegacyDataset(ip string, gi *GeoIP, isIP4 bool) *api.GeoData {
-	if gi == nil {
+func GetRecordFromLegacyDataset(ip string, gi LegacyDatasets, isIP4 bool) *api.GeoData {
+	if gi.v4Data == nil || gi.v6Data == nil {
 		return nil
 	}
-	record := gi.GetRecord(ip, isIP4)
+	var record *GeoIPRecord
+	if isIP4 {
+		record = gi.v4Data.GetRecord(ip, isIP4)
+	} else {
+		record = gi.v6Data.GetRecord(ip, isIP4)
+	}
+
 	// It is very possible that the record missed some fields in legacy dataset.
 	if record != nil {
 		return &api.GeoData{
