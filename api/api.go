@@ -57,12 +57,13 @@ type RequestWrapper struct {
 	Body        json.RawMessage
 }
 
-// The RequestData schema is the schema for the json that we will send
-// down the pipe to the annotation service.
-type AltRequestData struct {
-	RequestType string
-	Date        time.Time
-	IPs         []net.IP
+const RequestVersion2 = "Annotate v2.0"
+
+// AltRequest describes the data we expect to receive (json encoded) in the request body.
+type AltRequest struct {
+	RequestType string    // This should contain "Annotate v2.0"
+	Date        time.Time // The date to be used to annotate the addresses.
+	IPs         []net.IP  // The net.IP addresses to be annotated
 }
 
 // Annotator provides the GetAnnotation method, which retrieves the annotation for a given IP address.
