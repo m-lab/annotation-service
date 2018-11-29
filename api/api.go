@@ -69,6 +69,7 @@ type AnnotationLoader interface {
 // ExtractDateFromFilename return the date for a filename like
 // gs://downloader-mlab-oti/Maxmind/2017/05/08/20170508T080000Z-GeoLiteCity.dat.gz
 // TODO move this to maxmind package
+// TODO - actually, this now seems to be dead code.  But probably needed again soon, so leaving it here.
 func ExtractDateFromFilename(filename string) (time.Time, error) {
 	re := regexp.MustCompile(`[0-9]{8}T`)
 	filedate := re.FindAllString(filename, -1)
