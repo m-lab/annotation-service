@@ -7,8 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -164,9 +164,20 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	metrics.TotalRequests.Inc()
 	defer metrics.ActiveRequests.Dec()
 
-	dataSlice, err := BatchValidateAndParse(r.Body)
+	jsonBuffer, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Println(err)
+		fmt.Fprintf(w, "Invalid Request!")
+		return
+	}
 	r.Body.Close()
 
+	handleNewOrOld(w, jsonBuffer)
+}
+
+// TODO Leave this here for now to make review easier, rearrange later.
+func handleOld(w http.ResponseWriter, jsonBuffer []byte) {
+	dataSlice, err := BatchValidateAndParse(jsonBuffer)
 	if err != nil {
 		fmt.Fprintf(w, "Invalid Request!")
 		return
@@ -195,19 +206,19 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, string(encodedResult))
 }
 
+func handleNewOrOld(w http.ResponseWriter, jsonBuffer []byte) {
+	handleOld(w, jsonBuffer)
+}
+
 // BatchValidateAndParse will take a reader (likely the body of a
 // request) containing the JSON encoded array of
 // api.RequestDatas. It will then validate that json and use it to
 // construct a slice of api.RequestDatas, which it will return. If
 // it encounters an error, then it will return nil and that error.
-func BatchValidateAndParse(source io.Reader) ([]api.RequestData, error) {
-	jsonBuffer, err := ioutil.ReadAll(source)
-	if err != nil {
-		return nil, err
-	}
+func BatchValidateAndParse(jsonBuffer []byte) ([]api.RequestData, error) {
 	uncheckedData := []api.RequestData{}
 
-	err = json.Unmarshal(jsonBuffer, &uncheckedData)
+	err := json.Unmarshal(jsonBuffer, &uncheckedData)
 	if err != nil {
 		return nil, err
 	}
