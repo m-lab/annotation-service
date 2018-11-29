@@ -106,11 +106,52 @@ func NewBatchResponse(size int) *BatchResponse {
 	return &BatchResponse{"", time.Time{}, responseMap}
 }
 
+// TODO move to annotatormanager package soon.
+var ErrNoAnnotator = errors.New("no Annotator found")
+
+// TODO move to annotatormanager package soon.
+func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoData, time.Time, error) {
+	responseMap := make(map[string]*api.GeoData)
+
+	// For now, use the date of the first item.  In future the items will not have individual timestamps.
+	legacyAPI := date == time.Time{}
+	if legacyAPI {
+		// For legacyAPI, use the timestamp of the first IP to choose the annotator.
+		date = ips[0].Timestamp
+	}
+	ann := geolite2.GetAnnotator(date)
+	if ann == nil {
+		// stop sending more request in the same batch because w/ high chance the dataset is not ready
+		return nil, time.Time{}, ErrNoAnnotator
+	}
+
+	for i := range ips {
+		request := ips[i]
+		metrics.Metrics_totalLookups.Inc()
+		annotation, err := ann.GetAnnotation(&request)
+		if err != nil {
+			// TODO need better error handling.
+			continue
+		}
+		// This requires that the caller should ignore the dateString.
+		// TODO - the unit tests do not catch this problem, so maybe it isn't a problem.
+		dateString := ""
+		if legacyAPI {
+			// When using the old API, encode the actual timestamp from the request.
+			dateString = strconv.FormatInt(request.Timestamp.Unix(), encodingBase)
+		}
+		responseMap[request.IP+dateString] = annotation
+	}
+	// TODO use annotator's actual start date.
+	return responseMap, time.Time{}, nil
+}
+
 // BatchAnnotate is a URL handler that expects the body of the request
 // to contain a JSON encoded slice of api.RequestDatas. It will
 // look up all the ip addresses and bundle them into a map of metadata
 // structs (with the keys being the ip concatenated with the base 36
 // encoded timestamp) and send them back, again JSON encoded.
+// TODO update this comment when we switch to new API.
 func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	// Setup timers and counters for prometheus metrics.
 	timerStart := time.Now()
@@ -125,34 +166,23 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	r.Body.Close()
 
 	if err != nil {
-		fmt.Println(err)
 		fmt.Fprintf(w, "Invalid Request!")
 		return
 	}
 
-	responseMap := make(map[string]*api.GeoData)
+	var responseMap map[string]*api.GeoData
 
 	// For now, use the date of the first item.  In future the items will not have individual timestamps.
 	if len(dataSlice) > 0 {
-		date := dataSlice[0].Timestamp
-		ann := geolite2.GetAnnotator(date)
-		if ann == nil {
-			// stop sending more request in the same batch because w/ high chance the dataset is not ready
-			fmt.Fprintf(w, "Batch Request Error")
+		// For old request format, we use empty date.
+		date := time.Time{}
+		responseMap, _, err = AnnotateLegacy(date, dataSlice)
+		if err != nil {
+			fmt.Fprintf(w, err.Error())
 			return
 		}
-		dateString := strconv.FormatInt(date.Unix(), encodingBase)
-
-		for _, request := range dataSlice {
-			metrics.Metrics_totalLookups.Inc()
-			annotation, err := ann.GetAnnotation(&request)
-			if err != nil {
-				continue
-			}
-			// This requires that the caller should ignore the dateString.
-			// TODO - the unit tests do not catch this problem, so maybe it isn't a problem.
-			responseMap[request.IP+dateString] = annotation
-		}
+	} else {
+		responseMap = make(map[string]*api.GeoData)
 	}
 
 	encodedResult, err := json.Marshal(responseMap)

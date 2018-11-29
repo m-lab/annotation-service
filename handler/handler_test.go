@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -17,6 +18,11 @@ import (
 	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/handler"
 )
+
+func init() {
+	// Always prepend the filename and line number.
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+}
 
 func TestAnnotate(t *testing.T) {
 	tests := []struct {
