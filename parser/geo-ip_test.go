@@ -99,3 +99,6 @@ func TestConvertIPNodeToGeoData(t *testing.T) {
 		}
 	}
 }
+
+// TODO - add test for GetAnnotation.  Postponing to next PR, which merges this code with search package,
+// and moves to geolite2 package.  The TestGetAnnotation will be build on the code currently in geo-search_test.go
