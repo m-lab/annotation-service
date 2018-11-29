@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/m-lab/annotation-service/common"
+	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/parser"
 )
@@ -27,7 +27,7 @@ func TestAnnotate(t *testing.T) {
 		{"1.4.128.0", "625600", `{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":42.1,"longitude":-73.1},"ASN":{}}`},
 		{"This will be an error.", "1000", "Invalid request"},
 	}
-	handler.CurrentGeoDataset = &parser.GeoDataset{
+	handler.CurrentAnnotator = &parser.GeoDataset{
 		IP4Nodes: []parser.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),
@@ -69,7 +69,7 @@ func TestAnnotate(t *testing.T) {
 func TestValidateAndParse(t *testing.T) {
 	tests := []struct {
 		req *http.Request
-		res *common.RequestData
+		res *api.RequestData
 		err error
 	}{
 		{
@@ -87,13 +87,13 @@ func TestValidateAndParse(t *testing.T) {
 		{
 			req: httptest.NewRequest("GET",
 				"http://example.com/annotate?ip_addr=127.0.0.1&since_epoch=10", nil),
-			res: &common.RequestData{"127.0.0.1", 4, time.Unix(10, 0)},
+			res: &api.RequestData{"127.0.0.1", 4, time.Unix(10, 0)},
 			err: nil,
 		},
 		{
 			req: httptest.NewRequest("GET",
 				"http://example.com/annotate?ip_addr=2620:0:1003:1008:5179:57e3:3c75:1886&since_epoch=10", nil),
-			res: &common.RequestData{"2620:0:1003:1008:5179:57e3:3c75:1886", 6, time.Unix(10, 0)},
+			res: &api.RequestData{"2620:0:1003:1008:5179:57e3:3c75:1886", 6, time.Unix(10, 0)},
 			err: nil,
 		},
 	}
@@ -119,7 +119,7 @@ func TestBatchValidateAndParse(t *testing.T) {
 	timeCon, _ := time.Parse(time.RFC3339, "2002-10-02T15:00:00Z")
 	tests := []struct {
 		source io.Reader
-		res    []common.RequestData
+		res    []api.RequestData
 		err    error
 	}{
 		{
@@ -134,7 +134,7 @@ func TestBatchValidateAndParse(t *testing.T) {
 		},
 		{
 			source: bytes.NewBufferString(`[]`),
-			res:    []common.RequestData{},
+			res:    []api.RequestData{},
 			err:    nil,
 		},
 		{
@@ -145,7 +145,7 @@ func TestBatchValidateAndParse(t *testing.T) {
 		{
 			source: bytes.NewBufferString(`[{"ip": "127.0.0.1", "timestamp": "2002-10-02T15:00:00Z"},` +
 				`{"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "timestamp": "2002-10-02T15:00:00Z"}]`),
-			res: []common.RequestData{
+			res: []api.RequestData{
 				{"127.0.0.1", 4, timeCon},
 				{"2620:0:1003:1008:5179:57e3:3c75:1886", 6, timeCon},
 			},
@@ -183,7 +183,7 @@ func TestBatchAnnotate(t *testing.T) {
 			alt: `{"127.0.0.1ov94o0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}},"2620:0:1003:1008:5179:57e3:3c75:1886ov94o0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":{}}}`,
 		},
 	}
-	handler.CurrentGeoDataset = &parser.GeoDataset{
+	handler.CurrentAnnotator = &parser.GeoDataset{
 		IP4Nodes: []parser.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),
@@ -221,17 +221,17 @@ func TestBatchAnnotate(t *testing.T) {
 // returning a canned response
 func TestGetMetadataForSingleIP(t *testing.T) {
 	tests := []struct {
-		req *common.RequestData
-		res *common.GeoData
+		req *api.RequestData
+		res *api.GeoData
 	}{
 		{
-			req: &common.RequestData{"127.0.0.1", 4, time.Unix(0, 0)},
-			res: &common.GeoData{
-				Geo: &common.GeolocationIP{City: "Not A Real City", Postal_code: "10583"},
-				ASN: &common.IPASNData{}},
+			req: &api.RequestData{"127.0.0.1", 4, time.Unix(0, 0)},
+			res: &api.GeoData{
+				Geo: &api.GeolocationIP{City: "Not A Real City", Postal_code: "10583"},
+				ASN: &api.IPASNData{}},
 		},
 	}
-	handler.CurrentGeoDataset = &parser.GeoDataset{
+	handler.CurrentAnnotator = &parser.GeoDataset{
 		IP4Nodes: []parser.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),
@@ -259,46 +259,5 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 		if !reflect.DeepEqual(res, test.res) {
 			t.Errorf("Expected %v, got %v", test.res, res)
 		}
-	}
-}
-
-func TestConvertIPNodeToGeoData(t *testing.T) {
-	tests := []struct {
-		node parser.IPNode
-		locs []parser.LocationNode
-		res  *common.GeoData
-	}{
-		{
-			node: parser.IPNode{LocationIndex: 0, PostalCode: "10583"},
-			locs: []parser.LocationNode{{CityName: "Not A Real City", RegionCode: "ME"}},
-			res: &common.GeoData{
-				Geo: &common.GeolocationIP{City: "Not A Real City", Postal_code: "10583", Region: "ME"},
-				ASN: &common.IPASNData{}},
-		},
-		{
-			node: parser.IPNode{LocationIndex: -1, PostalCode: "10583"},
-			locs: nil,
-			res: &common.GeoData{
-				Geo: &common.GeolocationIP{Postal_code: "10583"},
-				ASN: &common.IPASNData{}},
-		},
-	}
-	for _, test := range tests {
-		res := handler.ConvertIPNodeToGeoData(test.node, test.locs)
-		if !reflect.DeepEqual(res, test.res) {
-			t.Errorf("Expected %v, got %v", test.res, res)
-		}
-	}
-}
-
-func TestExtractDateFromFilename(t *testing.T) {
-	date, err := handler.ExtractDateFromFilename("Maxmind/2017/05/08/20170508T080000Z-GeoLiteCity.dat.gz")
-	if date.Year() != 2017 || date.Month() != 5 || date.Day() != 8 || err != nil {
-		t.Errorf("Did not extract data correctly. Expected %d, got %v, %+v.", 20170508, date, err)
-	}
-
-	date2, err := handler.ExtractDateFromFilename("Maxmind/2017/10/05/20171005T033334Z-GeoLite2-City-CSV.zip")
-	if date2.Year() != 2017 || date2.Month() != 10 || date2.Day() != 5 || err != nil {
-		t.Errorf("Did not extract data correctly. Expected %d, got %v, %+v.", 20171005, date2, err)
 	}
 }

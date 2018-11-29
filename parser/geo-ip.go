@@ -1,3 +1,4 @@
+// Package parser contains code for loading and parsing GeoLite2 datasets.
 // Only files including IPv4, IPv6, and Location (in english)
 // will be read and parsed into lists.
 package parser
@@ -10,6 +11,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/m-lab/annotation-service/api"
 )
 
 const mapMax = 200000
@@ -42,6 +45,85 @@ type GeoDataset struct {
 	IP4Nodes      []IPNode       // The IPNode list containing IP4Nodes
 	IP6Nodes      []IPNode       // The IPNode list containing IP6Nodes
 	LocationNodes []LocationNode // The location nodes corresponding to the IPNodes
+}
+
+// TODO SearchBinary and associated code should go in legacy, NOT here.
+// Need to clean up handler code first, though.
+var ErrNodeNotFound = errors.New("node not found")
+
+func (ds *GeoDataset) SearchBinary(ipLookUp string, IsIP4 bool) (p IPNode, e error) {
+	list := ds.IP6Nodes
+	if IsIP4 {
+		list = ds.IP4Nodes
+	}
+	start := 0
+	end := len(list) - 1
+
+	userIP := net.ParseIP(ipLookUp)
+	for start <= end {
+		median := (start + end) / 2
+		if bytes.Compare(userIP, list[median].IPAddressLow) >= 0 && bytes.Compare(userIP, list[median].IPAddressHigh) <= 0 {
+			return list[median], nil
+		}
+		if bytes.Compare(userIP, list[median].IPAddressLow) > 0 {
+			start = median + 1
+		} else {
+			end = median - 1
+		}
+	}
+	return p, ErrNodeNotFound
+}
+
+// ConvertIPNodeToGeoData takes a parser.IPNode, plus a list of
+// locationNodes. It will then use that data to fill in a GeoData
+// struct and return its pointer.
+// TODO make this unexported
+func convertIPNodeToGeoData(ipNode IPNode, locationNodes []LocationNode) *api.GeoData {
+	locNode := LocationNode{}
+	if ipNode.LocationIndex >= 0 {
+		locNode = locationNodes[ipNode.LocationIndex]
+	}
+	return &api.GeoData{
+		Geo: &api.GeolocationIP{
+			Continent_code: locNode.ContinentCode,
+			Country_code:   locNode.CountryCode,
+			Country_code3:  "", // missing from geoLite2 ?
+			Country_name:   locNode.CountryName,
+			Region:         locNode.RegionCode,
+			Metro_code:     locNode.MetroCode,
+			City:           locNode.CityName,
+			Area_code:      0, // new geoLite2 does not have area code.
+			Postal_code:    ipNode.PostalCode,
+			Latitude:       ipNode.Latitude,
+			Longitude:      ipNode.Longitude,
+		},
+		ASN: &api.IPASNData{},
+	}
+
+}
+
+// This just allows compiler to check that GeoDataset satisfies the Finder interface.
+func assertAnnotator(f api.Annotator) {
+	func(api.Annotator) {}(&GeoDataset{})
+}
+
+// Find looks up the IP address and returns the corresponding GeoData
+// TODO - improve the format handling.  Perhaps pass in a net.IP ?
+func (ds *GeoDataset) GetAnnotation(request *api.RequestData) (*api.GeoData, error) {
+	var node IPNode
+	err := errors.New("unknown IP format")
+	node, err = ds.SearchBinary(request.IP, request.IPFormat == 4)
+
+	if err != nil {
+		// ErrNodeNotFound is super spammy - 10% of requests, so suppress those.
+		if err != ErrNodeNotFound {
+			log.Println(err, request.IP)
+		}
+		//TODO metric here
+		return nil, err
+	}
+
+	return convertIPNodeToGeoData(node, ds.LocationNodes), nil
 }
 
 // Verify column length

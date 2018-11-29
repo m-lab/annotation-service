@@ -4,9 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"reflect"
 	"strconv"
 	"strings"
+	"testing"
 
+	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/parser"
 )
 
@@ -67,3 +70,35 @@ func isEqualLocLists(list, listComp []parser.LocationNode) error {
 	}
 	return nil
 }
+
+func TestConvertIPNodeToGeoData(t *testing.T) {
+	tests := []struct {
+		node parser.IPNode
+		locs []parser.LocationNode
+		res  *api.GeoData
+	}{
+		{
+			node: parser.IPNode{LocationIndex: 0, PostalCode: "10583"},
+			locs: []parser.LocationNode{{CityName: "Not A Real City", RegionCode: "ME"}},
+			res: &api.GeoData{
+				Geo: &api.GeolocationIP{City: "Not A Real City", Postal_code: "10583", Region: "ME"},
+				ASN: &api.IPASNData{}},
+		},
+		{
+			node: parser.IPNode{LocationIndex: -1, PostalCode: "10583"},
+			locs: nil,
+			res: &api.GeoData{
+				Geo: &api.GeolocationIP{Postal_code: "10583"},
+				ASN: &api.IPASNData{}},
+		},
+	}
+	for _, test := range tests {
+		res := parser.ConvertIPNodeToGeoData(test.node, test.locs)
+		if !reflect.DeepEqual(res, test.res) {
+			t.Errorf("Expected %v, got %v", test.res, res)
+		}
+	}
+}
+
+// TODO - add test for GetAnnotation.  Postponing to next PR, which merges this code with search package,
+// and moves to geolite2 package.  The TestGetAnnotation will be build on the code currently in geo-search_test.go
