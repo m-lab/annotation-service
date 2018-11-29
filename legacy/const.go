@@ -1,4 +1,4 @@
-package geoip
+package legacy
 
 // GeoIPDBTypes enum in GeoIP.h
 const (

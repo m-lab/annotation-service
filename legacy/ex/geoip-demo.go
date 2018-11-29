@@ -5,30 +5,29 @@ package main
 
 import (
 	"fmt"
-
-	"github.com/m-lab/annotation-service/geoip"
+	"github.com/m-lab/annotation-service/legacy"
 )
 
 func main() {
 
 	file6 := "./GeoIPv6.dat"
 
-	gi6, err := geoip.Open(file6, "default")
+	gi6, err := legacy.Open(file6, "GeoIPv6.dat")
 	if err != nil {
 		fmt.Printf("Could not open GeoIPv6 database: %s\n", err)
 	}
 
-	gi, err := geoip.Open("./GeoLiteCity.dat", "default")
+	gi, err := legacy.Open("./GeoLiteCity.dat", "GeoLiteCity.dat")
 	if err != nil {
 		fmt.Printf("Could not open GeoIP database: %s\n", err)
 	}
 
-	giasn, err := geoip.Open("./GeoIPASNum.dat", "default")
+	giasn, err := legacy.Open("./GeoIPASNum.dat", "GeoIPASNum.dat")
 	if err != nil {
 		fmt.Printf("Could not open GeoIPASN database: %s\n", err)
 	}
 
-	giasn6, err := geoip.Open("./GeoIPASNumv6.dat", "default")
+	giasn6, err := legacy.Open("./GeoIPASNumv6.dat", "GeoIPASNumv6.dat")
 	if err != nil {
 		fmt.Printf("Could not open GeoIPASN database: %s\n", err)
 	}
@@ -56,9 +55,7 @@ func main() {
 	}
 
 	gi6.Free()
-
-	if gi6.Check() {
-		fmt.Printf("Free() did not release gi6 memory correctly.\n")
-	}
-
+	gi.Free()
+	giasn.Free()
+	giasn6.Free()
 }

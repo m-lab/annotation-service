@@ -1,11 +1,11 @@
-package geoip_test
+package legacy_test
 
 import (
 	"testing"
 
 	. "gopkg.in/check.v1"
 
-	"github.com/m-lab/annotation-service/geoip"
+	"github.com/m-lab/annotation-service/legacy"
 )
 
 // Hook up gocheck into the gotest runner.
@@ -19,7 +19,7 @@ var _ = Suite(&GeoIPSuite{})
 func (s *GeoIPSuite) TestOpenAndFree(c *C) {
 	file := "./ex/GeoLiteCity.dat"
 
-	gi, err := geoip.Open(file, "GeoLiteCity.dat")
+	gi, err := legacy.Open(file, "GeoLiteCity.dat")
 
 	c.Check(gi, NotNil)
 	c.Check(err, IsNil)
