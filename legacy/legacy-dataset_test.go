@@ -11,31 +11,29 @@ import (
 var _ = check.Suite(&GeoIPSuite{})
 
 func (s *GeoIPSuite) TestLoadBundleLegacyDataset(c *check.C) {
-	gi, err := legacy.LoadBundleLegacyDataset("Maxmind/2014/03/07/20140307T160000Z-GeoLiteCity.dat.gz", "downloader-mlab-testing")
+	gi, err := legacy.LoadBundleLegacyDataset("Maxmind/2017/04/08/20170408T080000Z-GeoLiteCity.dat.gz", "downloader-mlab-testing")
 	if err != nil {
 		log.Printf("Did not load legacy dataset correctly %v", err)
 	}
 
 	record := legacy.GetRecordFromLegacyDataset("2620:0:1003:415:fa1e:73f3:ec68:7709", gi, false)
 	c.Assert(record, check.NotNil)
+	log.Printf("%v\n", record)
 	c.Check(
-		*record,
+		*(record.Geo),
 		check.Equals,
-		api.GeoData{
-			Geo: &api.GeolocationIP{
-				Continent_code: "NA",
-				Country_code:   "US",
-				Country_code3:  "USA",
-				Country_name:   "United States",
-				Region:         "CA",
-				Metro_code:     803,
-				City:           "El Segundo",
-				Area_code:      310,
-				Postal_code:    "90245",
-				Latitude:       33.9164,
-				Longitude:      -118.4041,
-			},
-			ASN: &api.IPASNData{},
+		api.GeolocationIP{
+			Continent_code: "NA",
+			Country_code:   "US",
+			Country_code3:  "USA",
+			Country_name:   "United States",
+			Region:         "",
+			Metro_code:     0,
+			City:           "",
+			Area_code:      0,
+			Postal_code:    "",
+			Latitude:       37.751,
+			Longitude:      -97.822,
 		},
 	)
 
