@@ -17,7 +17,7 @@ type GeoIPSuite struct {
 var _ = Suite(&GeoIPSuite{})
 
 func (s *GeoIPSuite) TestOpenAndFree(c *C) {
-	file := "./ex/GeoLiteCity.dat"
+	file := "./testdata/GeoLiteCity.dat"
 
 	gi, err := legacy.Open(file, "GeoLiteCity.dat")
 

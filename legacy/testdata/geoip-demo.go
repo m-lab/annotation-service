@@ -10,9 +10,7 @@ import (
 
 func main() {
 
-	file6 := "./GeoIPv6.dat"
-
-	gi6, err := legacy.Open(file6, "GeoIPv6.dat")
+	gi6, err := legacy.Open("./GeoIPv6.dat", "GeoIPv6.dat")
 	if err != nil {
 		fmt.Printf("Could not open GeoIPv6 database: %s\n", err)
 	}
