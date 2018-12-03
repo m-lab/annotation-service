@@ -1,3 +1,4 @@
+// NOTE: When performance tuning, consider whether to update this yaml file, or annotator.yaml, or both.
 runtime: custom
 env: flex
 service: annotatorss

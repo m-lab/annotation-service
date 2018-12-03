@@ -109,16 +109,14 @@ func NewBatchResponse(size int) *BatchResponse {
 // TODO move to annotatormanager package soon.
 var ErrNoAnnotator = errors.New("no Annotator found")
 
+// AnnotateLegacy uses a single `date` to select an annotator, and uses that annotator to annotate all
+// `ips`.  It uses the dates from the individual RequestData to form the keys for the result map.
+// Return values include the StartDate associated with the Annotator that was used.
 // TODO move to annotatormanager package soon.
+// DEPRECATED: This will soon be replaced with Annotate(), that will use net.IP instead of RequestData.
 func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoData, time.Time, error) {
 	responseMap := make(map[string]*api.GeoData)
 
-	// For now, use the date of the first item.  In future the items will not have individual timestamps.
-	legacyAPI := date == time.Time{}
-	if legacyAPI {
-		// For legacyAPI, use the timestamp of the first IP to choose the annotator.
-		date = ips[0].Timestamp
-	}
 	ann := geolite2.GetAnnotator(date)
 	if ann == nil {
 		// stop sending more request in the same batch because w/ high chance the dataset is not ready
@@ -135,11 +133,7 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 		}
 		// This requires that the caller should ignore the dateString.
 		// TODO - the unit tests do not catch this problem, so maybe it isn't a problem.
-		dateString := ""
-		if legacyAPI {
-			// When using the old API, encode the actual timestamp from the request.
-			dateString = strconv.FormatInt(request.Timestamp.Unix(), encodingBase)
-		}
+		dateString := strconv.FormatInt(request.Timestamp.Unix(), encodingBase)
 		responseMap[request.IP+dateString] = annotation
 	}
 	// TODO use annotator's actual start date.
@@ -174,8 +168,8 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 
 	// For now, use the date of the first item.  In future the items will not have individual timestamps.
 	if len(dataSlice) > 0 {
-		// For old request format, we use empty date.
-		date := time.Time{}
+		// For old request format, we use the date of the first RequestData
+		date := dataSlice[0].Timestamp
 		responseMap, _, err = AnnotateLegacy(date, dataSlice)
 		if err != nil {
 			fmt.Fprintf(w, err.Error())
