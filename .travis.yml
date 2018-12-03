@@ -62,20 +62,20 @@ script:
 
 # First run all tests, to ensure that we don't miss any new tests not included in
 # the coverage collection.
-- go test ./...
+- GCLOUD_PROJECT=mlab-testing go test ./...
 # Also run benchmarks
 - go test -bench . ./geolite2/...
 
 # Run all tests, collecting coverage data.
 - go test -covermode=count -coverprofile=api.cov -v github.com/m-lab/annotation-service/api
-- go test -covermode=count -coverprofile=geoip.cov -v github.com/m-lab/annotation-service/geoip
 - go test -covermode=count -coverprofile=handler.cov -v github.com/m-lab/annotation-service/handler
+- GCLOUD_PROJECT=mlab-testing go test -covermode=count -coverprofile=legacy.cov -v github.com/m-lab/annotation-service/legacy
 - go test -covermode=count -coverprofile=loader.cov -v github.com/m-lab/annotation-service/loader
 - go test -covermode=count -coverprofile=metrics.cov -v github.com/m-lab/annotation-service/metrics
 - go test -covermode=count -coverprofile=geolite2.cov -v github.com/m-lab/annotation-service/geolite2
 
 # Coveralls
-- $HOME/gopath/bin/gocovmerge api.cov handler.cov geoip.cov loader.cov geolite2.cov > merge.cov
+- $HOME/gopath/bin/gocovmerge api.cov handler.cov legacy.cov loader.cov geolite2.cov > merge.cov
 - $HOME/gopath/bin/goveralls -coverprofile=merge.cov -service=travis-ci
 
 # Build and prepare for deployment
