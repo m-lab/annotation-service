@@ -19,6 +19,11 @@ import (
 	"google.golang.org/appengine/aetest"
 )
 
+// This just allows compiler to check that GeoDataset satisfies the Finder interface.
+func assertAnnotator(f api.Annotator) {
+	func(api.Annotator) {}(&geolite2.GeoDataset{})
+}
+
 // Returns nil if two IP Lists are equal
 func isEqualIPLists(listComp, list []geolite2.IPNode) error {
 	for index, element := range list {

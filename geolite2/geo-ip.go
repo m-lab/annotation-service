@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/m-lab/annotation-service/api"
 )
@@ -102,12 +103,7 @@ func convertIPNodeToGeoData(ipNode IPNode, locationNodes []LocationNode) *api.Ge
 
 }
 
-// This just allows compiler to check that GeoDataset satisfies the Finder interface.
-func assertAnnotator(f api.Annotator) {
-	func(api.Annotator) {}(&GeoDataset{})
-}
-
-// Find looks up the IP address and returns the corresponding GeoData
+// GetAnnotation looks up the IP address and returns the corresponding GeoData
 // TODO - improve the format handling.  Perhaps pass in a net.IP ?
 func (ds *GeoDataset) GetAnnotation(request *api.RequestData) (*api.GeoData, error) {
 	var node IPNode
@@ -124,6 +120,12 @@ func (ds *GeoDataset) GetAnnotation(request *api.RequestData) (*api.GeoData, err
 	}
 
 	return convertIPNodeToGeoData(node, ds.LocationNodes), nil
+}
+
+// StartDate returns the date that the dataset was published.
+// TODO implement actual dataset time!!
+func (ds *GeoDataset) StartDate() time.Time {
+	return time.Time{}
 }
 
 // Verify column length

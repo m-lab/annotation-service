@@ -91,8 +91,9 @@ deploy:
 # SANDBOX:  Allows any branch with sandbox-*, to trigger deploying that
 # branch to sandbox for pre-review testing.
 - provider: script
-  script: $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-sandbox /tmp/mlab-sandbox.json
-    $TRAVIS_BUILD_DIR annotator.yaml
+  script:
+    $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-sandbox /tmp/mlab-sandbox.json $TRAVIS_BUILD_DIR annotator.yaml
+   && $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-sandbox /tmp/mlab-sandbox.json $TRAVIS_BUILD_DIR annotator-ss.yaml
   skip_cleanup: true
   on:
     repo: m-lab/annotation-service
