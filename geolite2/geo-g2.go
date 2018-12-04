@@ -11,11 +11,8 @@ import (
 	"os"
 	"regexp"
 	"strconv"
-	"sync"
-	"time"
 
 	"cloud.google.com/go/storage"
-	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/loader"
 	"google.golang.org/api/iterator"
 )
@@ -36,28 +33,6 @@ var (
 	MaxmindBucketName = "downloader-" + os.Getenv("GCLOUD_PROJECT")
 	// This is the regex used to filter for which files we want to consider acceptable for using with Geolite2
 	GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
-)
-
-func GetAnnotator(date time.Time) api.Annotator {
-	// TODO - use the requested date
-	// dateString := strconv.FormatInt(date.Unix(), encodingBase)
-	currentDataMutex.RLock()
-	ann := CurrentAnnotator
-	currentDataMutex.RUnlock()
-	return ann
-}
-
-var (
-	// ErrNilDataset is returned when CurrentAnnotator is nil.
-	ErrNilDataset = errors.New("CurrentAnnotator is nil")
-
-	// A mutex to make sure that we are not reading from the CurrentAnnotator
-	// pointer while trying to update it
-	currentDataMutex = &sync.RWMutex{}
-
-	// CurrentAnnotator points to a GeoDataset struct containing the absolute
-	// latest data for the annotator to search and reply with
-	CurrentAnnotator api.Annotator
 )
 
 func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
@@ -303,21 +278,6 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 		list = append(list, peek)
 	}
 	return list, nil
-}
-
-// PopulateLatestData will search to the latest Geolite2 files
-// available in GCS and will use them to create a new GeoDataset which
-// it will place into the global scope as the latest version. It will
-// do so safely with use of the currentDataMutex RW mutex. It it
-// encounters an error, it will halt the program.
-func PopulateLatestData() {
-	data, err := LoadLatestGeolite2File()
-	if err != nil {
-		log.Fatal(err)
-	}
-	currentDataMutex.Lock()
-	CurrentAnnotator = data
-	currentDataMutex.Unlock()
 }
 
 // determineFilenameOfLatestGeolite2File will get a list of filenames

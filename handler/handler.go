@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
-	"github.com/m-lab/annotation-service/geolite2"
+	"github.com/m-lab/annotation-service/manager"
 	"github.com/m-lab/annotation-service/metrics"
 )
 
@@ -117,7 +117,7 @@ var ErrNoAnnotator = errors.New("no Annotator found")
 func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoData, time.Time, error) {
 	responseMap := make(map[string]*api.GeoData)
 
-	ann := geolite2.GetAnnotator(date)
+	ann := manager.GetAnnotator(date)
 	if ann == nil {
 		// stop sending more request in the same batch because w/ high chance the dataset is not ready
 		return nil, time.Time{}, ErrNoAnnotator
@@ -226,7 +226,7 @@ func BatchValidateAndParse(source io.Reader) ([]api.RequestData, error) {
 func GetMetadataForSingleIP(request *api.RequestData) (*api.GeoData, error) {
 	metrics.Metrics_totalLookups.Inc()
 	// TODO replace with generic GetAnnotator, that respects time.
-	ann := geolite2.GetAnnotator(request.Timestamp)
+	ann := manager.GetAnnotator(request.Timestamp)
 	if ann == nil {
 		return nil, geolite2.ErrNilDataset
 	}
