@@ -28,7 +28,7 @@ type IPNode struct {
 	Longitude     float64
 }
 
-// locationNode defines Location databases
+// LocationNode defines Location databases
 type LocationNode struct {
 	GeonameID     int
 	ContinentCode string
@@ -48,10 +48,12 @@ type GeoDataset struct {
 	LocationNodes []LocationNode // The location nodes corresponding to the IPNodes
 }
 
+// ErrNodeNotFound is returned when we can't find data in our system.
 // TODO SearchBinary and associated code should go in legacy, NOT here.
 // Need to clean up handler code first, though.
 var ErrNodeNotFound = errors.New("node not found")
 
+// SearchBinary does a binary search for a list element.
 func (ds *GeoDataset) SearchBinary(ipLookUp string, IsIP4 bool) (p IPNode, e error) {
 	list := ds.IP6Nodes
 	if IsIP4 {
@@ -143,16 +145,16 @@ func checkNumColumns(record []string, size int) error {
 //	104084: 4,
 //	17:     4,
 // }
-// lookupGeoId("17",locationIdMap) would return (2,nil).
+// lookupGeoID("17",locationIdMap) would return (2,nil).
 // TODO: Add error metrics
-func lookupGeoId(gnid string, idMap map[int]int) (int, error) {
-	geonameId, err := strconv.Atoi(gnid)
+func lookupGeoID(gnid string, idMap map[int]int) (int, error) {
+	geonameID, err := strconv.Atoi(gnid)
 	if err != nil {
 		return 0, errors.New("Corrupted Data: geonameID should be a number")
 	}
-	loadIndex, ok := idMap[geonameId]
+	loadIndex, ok := idMap[geonameID]
 	if !ok {
-		log.Println("geonameID not found ", geonameId)
+		log.Println("geonameID not found ", geonameID)
 		return 0, errors.New("Corrupted Data: geonameId not found")
 	}
 	return loadIndex, nil
@@ -174,15 +176,13 @@ func checkCaps(str, field string) (string, error) {
 	match, _ := regexp.MatchString("^[0-9A-Z]*$", str)
 	if match {
 		return str, nil
-	} else {
-		log.Println(field, "should be all capitals and no punctuation: ", str)
-		output := strings.Join([]string{"Corrupted Data: ", field, " should be all caps and no punctuation"}, "")
-		return "", errors.New(output)
-
 	}
+	log.Println(field, "should be all capitals and no punctuation: ", str)
+	output := strings.Join([]string{"Corrupted Data: ", field, " should be all caps and no punctuation"}, "")
+	return "", errors.New(output)
 }
 
-// Returns nil if two nodes are equal
+// IsEqualIPNodes returns nil if two nodes are equal
 // Used by the search package
 func IsEqualIPNodes(expected, node IPNode) error {
 	if !((node.IPAddressLow).Equal(expected.IPAddressLow)) {
@@ -268,6 +268,7 @@ func lessThan(a, b net.IP) bool {
 	return bytes.Compare(a, b) < 0
 }
 
+// PlusOne adds one to a net.IP.
 func PlusOne(a net.IP) net.IP {
 	a = append([]byte(nil), a...)
 	var i int

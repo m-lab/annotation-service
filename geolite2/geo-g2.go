@@ -237,9 +237,9 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 		newNode.IPAddressLow = lowIP
 		newNode.IPAddressHigh = highIP
 		// Look for GeoId within idMap and return index
-		index, err := lookupGeoId(record[1], idMap)
+		index, err := lookupGeoID(record[1], idMap)
 		if err != nil {
-			if backupIndex, err := lookupGeoId(record[2], idMap); err == nil {
+			if backupIndex, err := lookupGeoID(record[2], idMap); err == nil {
 				index = backupIndex
 			} else {
 				log.Println("Couldn't get a valid Geoname id!", record)
