@@ -17,6 +17,7 @@ import (
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/handler"
+	"github.com/m-lab/annotation-service/manager"
 )
 
 func init() {
@@ -34,7 +35,7 @@ func TestAnnotate(t *testing.T) {
 		{"This will be an error.", "1000", "Invalid request"},
 	}
 	// TODO - make and use an annotator generator
-	geolite2.CurrentAnnotator = &geolite2.GeoDataset{
+	manager.CurrentAnnotator = &geolite2.GeoDataset{
 		IP4Nodes: []geolite2.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),
@@ -191,7 +192,7 @@ func TestBatchAnnotate(t *testing.T) {
 		},
 	}
 	// TODO - make a test utility in geolite2 package.
-	geolite2.CurrentAnnotator = &geolite2.GeoDataset{
+	manager.CurrentAnnotator = &geolite2.GeoDataset{
 		IP4Nodes: []geolite2.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),
@@ -239,7 +240,7 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 				ASN: &api.IPASNData{}},
 		},
 	}
-	geolite2.CurrentAnnotator = &geolite2.GeoDataset{
+	manager.CurrentAnnotator = &geolite2.GeoDataset{
 		IP4Nodes: []geolite2.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),

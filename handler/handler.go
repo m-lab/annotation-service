@@ -228,7 +228,7 @@ func GetMetadataForSingleIP(request *api.RequestData) (*api.GeoData, error) {
 	// TODO replace with generic GetAnnotator, that respects time.
 	ann := manager.GetAnnotator(request.Timestamp)
 	if ann == nil {
-		return nil, geolite2.ErrNilDataset
+		return nil, manager.ErrNilDataset
 	}
 
 	return ann.GetAnnotation(request)
