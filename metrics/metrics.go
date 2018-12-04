@@ -19,16 +19,24 @@ var (
 		Help: "The response time of each request, in nanoseconds.",
 	})
 	Metrics_totalRequests = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "annotator_Annotation_Requests_Total",
+		Name: "annotator_Annotation_Requests_total",
 		Help: "The total number of annotation service requests.",
 	})
 	Metrics_totalLookups = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "annotator_Annotation_Lookups_Total",
+		Name: "annotator_Annotation_Lookups_total",
 		Help: "The total number of ip lookups.",
 	})
 )
 
-func SetupPrometheus() {
+func init() {
+	prometheus.MustRegister(Metrics_activeRequests)
+	prometheus.MustRegister(Metrics_totalRequests)
+	prometheus.MustRegister(Metrics_totalLookups)
+	prometheus.MustRegister(Metrics_requestTimes)
+}
+
+// SetupPrometheus sets up and runs a webserver to export prometheus metrics.
+func SetupPrometheus() *http.Server {
 	// Define a custom serve mux for prometheus to listen on a separate port.
 	// We listen on a separate port so we can forward this port on the host VM.
 	// We cannot forward port 8080 because it is used by AppEngine.
@@ -43,10 +51,10 @@ func SetupPrometheus() {
 	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
-	http.Handle("/metrics", promhttp.Handler())
-	prometheus.MustRegister(Metrics_activeRequests)
-	prometheus.MustRegister(Metrics_totalRequests)
-	prometheus.MustRegister(Metrics_totalLookups)
-	prometheus.MustRegister(Metrics_requestTimes)
-	go http.ListenAndServe(":9090", mux)
+	server := &http.Server{
+		Addr:    ":9090",
+		Handler: mux,
+	}
+	go server.ListenAndServe()
+	return server
 }
