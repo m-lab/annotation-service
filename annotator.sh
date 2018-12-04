@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2154
 
 # Shell file allows App engine's devappserver to override google devappserver
 # and handles token issues.  This must be done in the shell file to use the

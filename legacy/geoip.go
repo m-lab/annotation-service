@@ -1,8 +1,8 @@
+// Package legacy supports legacy MaxMind data lookups.
+// TODO - should probably rename this legacy?
 /* Go (cgo) interface to libgeoip
    originally forked from github.com/abh/geoip
 */
-// Package legacy supports legacy MaxMind data lookups.
-// TODO - should probably rename this legacy?
 package legacy
 
 /*

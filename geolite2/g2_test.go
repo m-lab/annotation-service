@@ -21,7 +21,7 @@ func init() {
 func TestIPLisGLite2(t *testing.T) {
 	var ipv4, ipv6 []geolite2.IPNode
 	var ipv6Expected = []geolite2.IPNode{
-		geolite2.IPNode{
+		{
 			net.ParseIP("600:8801:9400:5a1:948b:ab15:dde3:61a3"),
 			net.ParseIP("600:8801:9400:5a1:948b:ab15:dde3:61a3"),
 			4,
@@ -29,7 +29,7 @@ func TestIPLisGLite2(t *testing.T) {
 			32.7596,
 			-116.994,
 		},
-		geolite2.IPNode{
+		{
 			net.ParseIP("2001:5::"),
 			net.ParseIP("2001:0005:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF"),
 			4,
@@ -37,7 +37,7 @@ func TestIPLisGLite2(t *testing.T) {
 			47,
 			8,
 		},
-		geolite2.IPNode{
+		{
 			net.ParseIP("2001:200::"),
 			net.ParseIP("2001:0200:00FF:FFFF:FFFF:FFFF:FFFF:FFFF"),
 			4,
@@ -47,7 +47,7 @@ func TestIPLisGLite2(t *testing.T) {
 		},
 	}
 	var ipv4Expected = []geolite2.IPNode{
-		geolite2.IPNode{
+		{
 			net.ParseIP("1.0.0.0"),
 			net.ParseIP("1.0.0.255"),
 			0,
@@ -55,7 +55,7 @@ func TestIPLisGLite2(t *testing.T) {
 			-37.7,
 			145.1833,
 		},
-		geolite2.IPNode{
+		{
 			net.ParseIP("1.0.1.0"),
 			net.ParseIP("1.0.1.255"),
 			4,
@@ -63,7 +63,7 @@ func TestIPLisGLite2(t *testing.T) {
 			26.0614,
 			119.3061,
 		},
-		geolite2.IPNode{
+		{
 			net.ParseIP("1.0.2.0"),
 			net.ParseIP("1.0.3.255"),
 			4,
@@ -119,25 +119,25 @@ func TestLocationListGLite2(t *testing.T) {
 	var actualLocList []geolite2.LocationNode
 	var actualIDMap map[int]int
 	var expectedLocList = []geolite2.LocationNode{
-		geolite2.LocationNode{
+		{
 			32909,
 			"AS", "IR", "Iran",
 			"07", "Ostan-e Tehran",
 			0, "Shahre Jadide Andisheh",
 		},
-		geolite2.LocationNode{
+		{
 			49518,
 			"AF", "RW", "Rwanda",
 			"", "",
 			0, "",
 		},
-		geolite2.LocationNode{
+		{
 			51537,
 			"AF", "SO", "Somalia",
 			"", "",
 			0, "",
 		},
-		geolite2.LocationNode{
+		{
 			5127766,
 			"NA", "US", "United States",
 			"NY", "New York",

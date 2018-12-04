@@ -10,29 +10,29 @@ import (
 
 //These vars are the prometheus metrics
 var (
-	Metrics_activeRequests = prometheus.NewGauge(prometheus.GaugeOpts{
+	ActiveRequests = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "annotator_Running_Annotation_Requests_Count",
 		Help: "The current number of unfulfilled annotation service requests.",
 	})
-	Metrics_requestTimes = prometheus.NewSummary(prometheus.SummaryOpts{
+	RequestTimes = prometheus.NewSummary(prometheus.SummaryOpts{
 		Name: "annotator_Request_Response_Time_Summary",
 		Help: "The response time of each request, in nanoseconds.",
 	})
-	Metrics_totalRequests = prometheus.NewCounter(prometheus.CounterOpts{
+	TotalRequests = prometheus.NewCounter(prometheus.CounterOpts{
 		Name: "annotator_Annotation_Requests_total",
 		Help: "The total number of annotation service requests.",
 	})
-	Metrics_totalLookups = prometheus.NewCounter(prometheus.CounterOpts{
+	TotalLookups = prometheus.NewCounter(prometheus.CounterOpts{
 		Name: "annotator_Annotation_Lookups_total",
 		Help: "The total number of ip lookups.",
 	})
 )
 
 func init() {
-	prometheus.MustRegister(Metrics_activeRequests)
-	prometheus.MustRegister(Metrics_totalRequests)
-	prometheus.MustRegister(Metrics_totalLookups)
-	prometheus.MustRegister(Metrics_requestTimes)
+	prometheus.MustRegister(ActiveRequests)
+	prometheus.MustRegister(TotalRequests)
+	prometheus.MustRegister(TotalLookups)
+	prometheus.MustRegister(RequestTimes)
 }
 
 // SetupPrometheus sets up and runs a webserver to export prometheus metrics.
