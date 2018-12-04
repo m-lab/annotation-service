@@ -36,7 +36,7 @@ func SetupHandlers() {
 }
 
 func Init() {
-    manage.Init()
+    manager.Init()
     SetupHandlers()
 }
 
