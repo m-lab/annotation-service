@@ -86,17 +86,17 @@ func convertIPNodeToGeoData(ipNode IPNode, locationNodes []LocationNode) *api.Ge
 	}
 	return &api.GeoData{
 		Geo: &api.GeolocationIP{
-			Continent_code: locNode.ContinentCode,
-			Country_code:   locNode.CountryCode,
-			Country_code3:  "", // missing from geoLite2 ?
-			Country_name:   locNode.CountryName,
-			Region:         locNode.RegionCode,
-			Metro_code:     locNode.MetroCode,
-			City:           locNode.CityName,
-			Area_code:      0, // new geoLite2 does not have area code.
-			Postal_code:    ipNode.PostalCode,
-			Latitude:       ipNode.Latitude,
-			Longitude:      ipNode.Longitude,
+			ContinentCode: locNode.ContinentCode,
+			CountryCode:   locNode.CountryCode,
+			CountryCode3:  "", // missing from geoLite2 ?
+			CountryName:   locNode.CountryName,
+			Region:        locNode.RegionCode,
+			MetroCode:     locNode.MetroCode,
+			City:          locNode.CityName,
+			AreaCode:      0, // new geoLite2 does not have area code.
+			PostalCode:    ipNode.PostalCode,
+			Latitude:      ipNode.Latitude,
+			Longitude:     ipNode.Longitude,
 		},
 		ASN: &api.IPASNData{},
 	}
