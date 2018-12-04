@@ -35,6 +35,11 @@ func SetupHandlers() {
 	go waitForDownloaderMessages()
 }
 
+func Init() {
+    manage.Init()
+    SetupHandlers()
+}
+
 // Annotate is a URL handler that looks up IP address and puts
 // metadata out to the response encoded in json format.
 func Annotate(w http.ResponseWriter, r *http.Request) {

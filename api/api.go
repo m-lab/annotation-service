@@ -3,9 +3,18 @@
 package api
 
 import (
-	"errors"
-	"regexp"
+	"os"
 	"time"
+)
+
+const (
+	// Folder containing the maxmind files
+	MaxmindPrefix = "Maxmind/"
+)
+
+var (
+	// MaxmindBucketName is the bucket containing maxmind files.
+	MaxmindBucketName = "downloader-" + os.Getenv("GCLOUD_PROJECT")
 )
 
 // The GeolocationIP struct contains all the information needed for the
@@ -64,17 +73,4 @@ type Annotator interface {
 // TODO - do we really need this, or should we just have a single maxmind.Load function.
 type AnnotationLoader interface {
 	Load(date time.Time) (Annotator, error)
-}
-
-// ExtractDateFromFilename return the date for a filename like
-// gs://downloader-mlab-oti/Maxmind/2017/05/08/20170508T080000Z-GeoLiteCity.dat.gz
-// TODO move this to maxmind package
-// TODO - actually, this now seems to be dead code.  But probably needed again soon, so leaving it here.
-func ExtractDateFromFilename(filename string) (time.Time, error) {
-	re := regexp.MustCompile(`[0-9]{8}T`)
-	filedate := re.FindAllString(filename, -1)
-	if len(filedate) != 1 {
-		return time.Time{}, errors.New("cannot extract date from input filename")
-	}
-	return time.Parse(time.RFC3339, filedate[0][0:4]+"-"+filedate[0][4:6]+"-"+filedate[0][6:8]+"T00:00:00Z")
 }
