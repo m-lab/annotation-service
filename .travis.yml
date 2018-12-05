@@ -6,7 +6,13 @@
 #  * test and build the go code
 #  * on success, deploy the result when the origin branch or tag matches
 #    a supported deployment target.
+
+# A lot of these lines are long shell command invocations that exceed
+# yamllint's recommended line length, so turn off the line-length warning in
+# this file.
 #
+# yamllint disable rule:line-length
+
 language: go
 
 # Without this, annotator.sh fails, related to gcloud.
@@ -78,12 +84,8 @@ deploy:
 # branch to sandbox for pre-review testing.
 - provider: script
   script:
-    $TRAVIS_BUILD_DIR/travis/deploy_app.sh
-     mlab-sandbox /tmp/mlab-sandbox.json $TRAVIS_BUILD_DIR
-     annotator.yaml
-    && $TRAVIS_BUILD_DIR/travis/deploy_app.sh
-     mlab-sandbox /tmp/mlab-sandbox.json $TRAVIS_BUILD_DIR
-     annotator-ss.yaml
+    $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-sandbox /tmp/mlab-sandbox.json $TRAVIS_BUILD_DIR annotator.yaml
+    && $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-sandbox /tmp/mlab-sandbox.json $TRAVIS_BUILD_DIR annotator-ss.yaml
   skip_cleanup: true
   on:
     repo: m-lab/annotation-service
@@ -94,8 +96,7 @@ deploy:
 # STAGING: Should trigger AFTER code review and commit to master branch.
 - provider: script
   script:
-    $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-staging /tmp/mlab-staging.json
-    $TRAVIS_BUILD_DIR annotator.yaml
+    $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-staging /tmp/mlab-staging.json $TRAVIS_BUILD_DIR annotator.yaml
   skip_cleanup: true
   on:
     repo: m-lab/annotation-service
@@ -104,8 +105,8 @@ deploy:
 # PROD: Should trigger AFTER code review and commit to master branch. Triggers
 # when tagged with prod-*.
 - provider: script
-  script: $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-oti /tmp/mlab-oti.json
-    $TRAVIS_BUILD_DIR annotator.yaml
+  script:
+    $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-oti /tmp/mlab-oti.json $TRAVIS_BUILD_DIR annotator.yaml
   skip_cleanup: true
   on:
     repo: m-lab/annotation-service
