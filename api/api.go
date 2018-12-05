@@ -57,11 +57,13 @@ type RequestWrapper struct {
 	Body        json.RawMessage
 }
 
+// RequestVersion2 is the string associated with v2.0 requests.
 const RequestVersion2 = "Annotate v2.0"
 
 // AltRequest describes the data we expect to receive (json encoded) in the request body.
 type AltRequest struct {
 	RequestType string    // This should contain "Annotate v2.0"
+	RequestInfo string    // Arbitrary info about the requester, to be used, e.g., for stats.
 	Date        time.Time // The date to be used to annotate the addresses.
 	IPs         []net.IP  // The net.IP addresses to be annotated
 }
@@ -72,7 +74,7 @@ type Annotator interface {
 	// TODO return struct instead of pointer.
 	GetAnnotation(request *RequestData) (*GeoData, error)
 	// These return the date range covered by the annotator.
-	// TODO StartDate() time.Time
+	StartDate() time.Time
 	// TODO GetEndDate() time.Time
 }
 
