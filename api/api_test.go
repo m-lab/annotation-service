@@ -21,7 +21,7 @@ func TestExtractDateFromFilename(t *testing.T) {
 }
 
 func TestRequestWrapper(t *testing.T) {
-	req := api.AltRequest{RequestType: "foobar"}
+	req := api.RequestV2{RequestType: "foobar"}
 
 	bytes, err := json.Marshal(req)
 	if err != nil {
