@@ -236,7 +236,7 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 		{
 			req: &api.RequestData{"127.0.0.1", 4, time.Unix(0, 0)},
 			res: &api.GeoData{
-				Geo: &api.GeolocationIP{City: "Not A Real City", Postal_code: "10583"},
+				Geo: &api.GeolocationIP{City: "Not A Real City", PostalCode: "10583"},
 				ASN: &api.IPASNData{}},
 		},
 	}

@@ -6,7 +6,13 @@
 #  * test and build the go code
 #  * on success, deploy the result when the origin branch or tag matches
 #    a supported deployment target.
+
+# A lot of these lines are long shell command invocations that exceed
+# yamllint's recommended line length, so turn off the line-length warning in
+# this file.
 #
+# yamllint disable rule:line-length
+
 language: go
 
 # Without this, annotator.sh fails, related to gcloud.
@@ -14,12 +20,9 @@ sudo: required
 
 before_install:
 - go get github.com/mattn/goveralls
-- go get github.com/wadey/gocovmerge
 - sudo apt-get update -q
 - sudo apt-get install -y libgeoip-dev pkg-config
 - go get gopkg.in/check.v1
-# TODO: Looks like this is no longer needed?
-- go get github.com/abh/geoip
 
 # This installs gcloud, sets up devappserver.
 - $TRAVIS_BUILD_DIR/annotator.sh
@@ -31,8 +34,9 @@ before_install:
 # project referenced in the "deploy" section. These keys authenticate the
 # gcloud deploy operations.
 #
-# Reusing the etl-travis-deploy service accounts, since we need identical capabilities.
-# The tar file contains newly created keys for each of the three service accounts.
+# Reusing the etl-travis-deploy service accounts, since we need identical
+# capabilities.  The tar file contains newly created keys for each of the three
+# service accounts.
 - travis/decrypt.sh "$encrypted_ca29bb0d9214_key" "$encrypted_ca29bb0d9214_iv"
   keys/service-accounts.tar.enc /tmp/service-accounts.tar /tmp
 - if [[ -r /tmp/service-accounts.tar ]] ; then
@@ -60,23 +64,11 @@ script:
 - export APPENGINE_DEV_APPSERVER="${HOME}/google-cloud-sdk/bin/dev_appserver.py"
 - source "${HOME}/google-cloud-sdk/path.bash.inc"
 
-# First run all tests, to ensure that we don't miss any new tests not included in
-# the coverage collection.
-- GCLOUD_PROJECT=mlab-testing go test ./...
-# Also run benchmarks
+# Run all tests and gather and submit coverage information.
+- GCLOUD_PROJECT=mlab-testing go test -coverprofile=cover.cov ./...
+- $HOME/gopath/bin/goveralls -coverprofile=cover.cov -service=travis-ci
+# Run benchmarks
 - go test -bench . ./geolite2/...
-
-# Run all tests, collecting coverage data.
-- go test -covermode=count -coverprofile=api.cov -v github.com/m-lab/annotation-service/api
-- go test -covermode=count -coverprofile=handler.cov -v github.com/m-lab/annotation-service/handler
-- GCLOUD_PROJECT=mlab-testing go test -covermode=count -coverprofile=legacy.cov -v github.com/m-lab/annotation-service/legacy
-- go test -covermode=count -coverprofile=loader.cov -v github.com/m-lab/annotation-service/loader
-- go test -covermode=count -coverprofile=metrics.cov -v github.com/m-lab/annotation-service/metrics
-- go test -covermode=count -coverprofile=geolite2.cov -v github.com/m-lab/annotation-service/geolite2
-
-# Coveralls
-- $HOME/gopath/bin/gocovmerge api.cov handler.cov legacy.cov loader.cov geolite2.cov > merge.cov
-- $HOME/gopath/bin/goveralls -coverprofile=merge.cov -service=travis-ci
 
 # Build and prepare for deployment
 - go build
@@ -93,7 +85,7 @@ deploy:
 - provider: script
   script:
     $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-sandbox /tmp/mlab-sandbox.json $TRAVIS_BUILD_DIR annotator.yaml
-   && $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-sandbox /tmp/mlab-sandbox.json $TRAVIS_BUILD_DIR annotator-ss.yaml
+    && $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-sandbox /tmp/mlab-sandbox.json $TRAVIS_BUILD_DIR annotator-ss.yaml
   skip_cleanup: true
   on:
     repo: m-lab/annotation-service
@@ -103,8 +95,8 @@ deploy:
 
 # STAGING: Should trigger AFTER code review and commit to master branch.
 - provider: script
-  script: $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-staging /tmp/mlab-staging.json
-    $TRAVIS_BUILD_DIR annotator.yaml
+  script:
+    $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-staging /tmp/mlab-staging.json $TRAVIS_BUILD_DIR annotator.yaml
   skip_cleanup: true
   on:
     repo: m-lab/annotation-service
@@ -113,8 +105,8 @@ deploy:
 # PROD: Should trigger AFTER code review and commit to master branch. Triggers
 # when tagged with prod-*.
 - provider: script
-  script: $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-oti /tmp/mlab-oti.json
-    $TRAVIS_BUILD_DIR annotator.yaml
+  script:
+    $TRAVIS_BUILD_DIR/travis/deploy_app.sh mlab-oti /tmp/mlab-oti.json $TRAVIS_BUILD_DIR annotator.yaml
   skip_cleanup: true
   on:
     repo: m-lab/annotation-service
