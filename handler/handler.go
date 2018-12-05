@@ -148,6 +148,39 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 	return responseMap, time.Time{}, nil
 }
 
+func AnnotateV2(date time.Time, ips []net.IP) (api.ResponseV2, error) {
+	responseMap := make(map[string]*api.GeoData, len(ips))
+
+	ann := manager.GetAnnotator(date)
+	if ann == nil {
+		// stop sending more request in the same batch because w/ high chance the dataset is not ready
+		return api.ResponseV2{}, errNoAnnotator
+	}
+
+	for i := range ips {
+		ip := ips[i]
+		format := 4
+		if ip.To4() == nil {
+			format = 6
+		}
+		// TODO - this is kinda hacky.  Should change the GetAnnotation api instead.
+		request := api.RequestData{ip.String(), format, date}
+		metrics.TotalLookups.Inc()
+
+		annotation, err := ann.GetAnnotation(&request)
+		if err != nil {
+			// TODO need better error handling.
+			continue
+		}
+		// This requires that the caller should ignore the dateString.
+		// TODO - the unit tests do not catch this problem, so maybe it isn't a problem.
+		dateString := strconv.FormatInt(request.Timestamp.Unix(), encodingBase)
+		responseMap[request.IP+dateString] = annotation
+	}
+	// TODO use annotator's actual start date.
+	return api.ResponseV2{ann.StartDate(), responseMap}, nil
+}
+
 // BatchAnnotate is a URL handler that expects the body of the request
 // to contain a JSON encoded slice of api.RequestDatas. It will
 // look up all the ip addresses and bundle them into a map of metadata
@@ -179,6 +212,7 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 func handleOld(w http.ResponseWriter, jsonBuffer []byte) {
 	dataSlice, err := BatchValidateAndParse(jsonBuffer)
 	if err != nil {
+		// TODO Add metric
 		fmt.Fprintf(w, "Invalid Request!")
 		return
 	}
@@ -200,6 +234,39 @@ func handleOld(w http.ResponseWriter, jsonBuffer []byte) {
 
 	encodedResult, err := json.Marshal(responseMap)
 	if err != nil {
+		// TODO Add metric
+		fmt.Fprintf(w, "Unknown JSON Encoding Error")
+		return
+	}
+	fmt.Fprint(w, string(encodedResult))
+}
+
+func handleV2(w http.ResponseWriter, jsonBuffer []byte) {
+	request := api.RequestV2{}
+
+	err := json.Unmarshal(jsonBuffer, &request)
+	if err != nil {
+		// TODO Add metric
+		fmt.Fprintf(w, "Unable to parse V2.0 request %s", string(jsonBuffer))
+		return
+	}
+
+	// No need to validate IP addresses, as they are net.IP
+	response := api.ResponseV2{}
+
+	// For now, use the date of the first item.  In future the items will not have individual timestamps.
+	if len(request.IPs) > 0 {
+		// For old request format, we use the date of the first RequestData
+		response, err = AnnotateV2(request.Date, request.IPs)
+		if err != nil {
+			fmt.Fprintf(w, err.Error())
+			return
+		}
+	}
+
+	encodedResult, err := json.Marshal(response)
+	if err != nil {
+		// TODO Add metric
 		fmt.Fprintf(w, "Unknown JSON Encoding Error")
 		return
 	}
@@ -207,7 +274,20 @@ func handleOld(w http.ResponseWriter, jsonBuffer []byte) {
 }
 
 func handleNewOrOld(w http.ResponseWriter, jsonBuffer []byte) {
-	handleOld(w, jsonBuffer)
+	// Check API version of the request
+	wrapper := api.RequestWrapper{}
+	err := json.Unmarshal(jsonBuffer, &wrapper)
+	if err != nil {
+		handleOld(w, jsonBuffer)
+	} else {
+		switch wrapper.RequestType {
+		case api.RequestVersion2:
+			handleV2(w, jsonBuffer)
+		default:
+			// TODO Add metric
+			fmt.Fprintf(w, "Unknown API version %s", wrapper.RequestType)
+		}
+	}
 }
 
 // BatchValidateAndParse will take a reader (likely the body of a
