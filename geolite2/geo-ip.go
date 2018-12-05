@@ -43,6 +43,7 @@ type LocationNode struct {
 // The GeoDataset struct bundles all the data needed to search and
 // find data into one common structure
 type GeoDataset struct {
+	start         time.Time      // Date from which to start using this dataset
 	IP4Nodes      []IPNode       // The IPNode list containing IP4Nodes
 	IP6Nodes      []IPNode       // The IPNode list containing IP6Nodes
 	LocationNodes []LocationNode // The location nodes corresponding to the IPNodes
@@ -127,7 +128,7 @@ func (ds *GeoDataset) GetAnnotation(request *api.RequestData) (*api.GeoData, err
 // StartDate returns the date that the dataset was published.
 // TODO implement actual dataset time!!
 func (ds *GeoDataset) StartDate() time.Time {
-	return time.Time{}
+	return ds.start
 }
 
 // Verify column length
