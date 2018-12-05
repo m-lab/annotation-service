@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/m-lab/annotation-service/legacy"
 )
 
@@ -43,7 +44,7 @@ func main() {
 	}
 	if gi6 != nil {
 		ip := "2607:f238:2::5"
-		country, netmask := gi6.GetCountry_v6(ip)
+		country, netmask := gi6.GetCountryV6(ip)
 		var asn string
 		var asn_netmask int
 		if giasn6 != nil {

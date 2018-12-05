@@ -21,8 +21,11 @@ import (
 	"os"
 	"sync"
 	"unsafe"
+
+	"github.com/m-lab/annotation-service/legacy/geoip"
 )
 
+// GeoIP contains a single v4 or v6 dataset for a particular day.
 type GeoIP struct {
 	db *C.GeoIP
 
@@ -57,7 +60,7 @@ func (gi *GeoIP) Check() bool {
 
 // Open opens a DB. It is a default convenience wrapper around OpenDB.
 func Open(filename string, datasetName string) (*GeoIP, error) {
-	return OpenDB(filename, GEOIP_MEMORY_CACHE, datasetName)
+	return OpenDB(filename, geoip.MemoryCache, datasetName)
 }
 
 // OpenDB opens a GeoIP database by filename with specified GeoIPOptions flag.
@@ -129,10 +132,10 @@ func OpenTypeFlag(dbType int, flag int) (*GeoIP, error) {
 // OpenType opens a specified GeoIP database type in the default location
 // and the 'memory cache' flag. Use OpenTypeFlag() to specify flag.
 func OpenType(dbType int) (*GeoIP, error) {
-	return OpenTypeFlag(dbType, GEOIP_MEMORY_CACHE)
+	return OpenTypeFlag(dbType, geoip.MemoryCache)
 }
 
-// Takes an IPv4 address string and returns the organization name for that IP.
+// GetOrg takes an IPv4 address string and returns the organization name for that IP.
 // Requires the GeoIP organization database.
 func (gi *GeoIP) GetOrg(ip string) string {
 	name, _ := gi.GetName(ip)
@@ -163,6 +166,7 @@ func (gi *GeoIP) GetName(ip string) (name string, netmask int) {
 	return
 }
 
+// GeoIPRecord contains a single record for a particular IP block.
 type GeoIPRecord struct {
 	CountryCode   string
 	CountryCode3  string
@@ -222,8 +226,8 @@ func (gi *GeoIP) GetRecord(ip string, isIP4 bool) *GeoIPRecord {
 		   The GeoIPRecord struct in GeoIPCity.h contains an int32 union of metro_code and dma_code.
 		   The union is unnamed, so cgo names it anon0 and assumes it's a 4-byte array.
 		*/
-		union_int := (*int32)(unsafe.Pointer(&record.anon0))
-		rec.MetroCode = int(*union_int)
+		unionInt := (*int32)(unsafe.Pointer(&record.anon0))
+		rec.MetroCode = int(*unionInt)
 		rec.AreaCode = int(record.area_code)
 	}
 
@@ -297,7 +301,7 @@ func (gi *GeoIP) GetNameV6(ip string) (name string, netmask int) {
 	return
 }
 
-// Takes an IPv4 address string and returns the country code for that IP
+// GetCountry takes an IPv4 address string and returns the country code for that IP
 // and the netmask for that IP range.
 func (gi *GeoIP) GetCountry(ip string) (cc string, netmask int) {
 	if gi.db == nil {
@@ -319,9 +323,9 @@ func (gi *GeoIP) GetCountry(ip string) (cc string, netmask int) {
 	return
 }
 
-// GetCountry_v6 works the same as GetCountry except for IPv6 addresses, be sure to
+// GetCountryV6 works the same as GetCountry except for IPv6 addresses, be sure to
 // load a database with IPv6 data to get any results.
-func (gi *GeoIP) GetCountry_v6(ip string) (cc string, netmask int) {
+func (gi *GeoIP) GetCountryV6(ip string) (cc string, netmask int) {
 	if gi.db == nil {
 		return
 	}

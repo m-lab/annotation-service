@@ -23,6 +23,7 @@ var (
 	CurrentAnnotator api.Annotator
 )
 
+// GetAnnotator returns the correct annotator to use for a given timestamp.
 func GetAnnotator(date time.Time) api.Annotator {
 	// TODO - use the requested date
 	// dateString := strconv.FormatInt(date.Unix(), encodingBase)

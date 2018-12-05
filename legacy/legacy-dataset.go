@@ -96,69 +96,17 @@ import (
 )
 
 // This is the regex used to filter for which files we want to consider acceptable for using with legacy dataset
-var GeoLegacyRegex = regexp.MustCompile(`.*-GeoLiteCity.dat.*`)
-var GeoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
+var geoLegacyRegex = regexp.MustCompile(`.*-GeoLiteCity.dat.*`)
+var geoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
 
-type LegacyDatasets struct {
+// Datasets contains pointers to the datasets used to hold and lookup IP data.
+type Datasets struct {
 	v4Data *GeoIP
 	v6Data *GeoIP
 }
 
-// LoadBundleLegacyDataset loads both IPv4 and IPv6 version of the requested dataset into memory.
-func LoadBundleLegacyDataset(filename string, bucketname string) (LegacyDatasets, error) {
-	if GeoLegacyRegex.MatchString(filename) {
-		v4, err := LoadLegacyGeoliteDataset(filename, bucketname)
-		if err != nil {
-			return LegacyDatasets{nil, nil}, errors.New("cannot load IPv4 dataset")
-		}
-		v6, err := LoadLegacyGeoliteDataset(strings.Replace(filename, "GeoLiteCity", "GeoLiteCityv6", -1), bucketname)
-		if err != nil {
-			return LegacyDatasets{nil, nil}, errors.New("cannot load IPv6 dataset")
-		}
-		return LegacyDatasets{v4Data: v4, v6Data: v6}, nil
-	}
-
-	if GeoLegacyv6Regex.MatchString(filename) {
-		v6, err := LoadLegacyGeoliteDataset(filename, bucketname)
-		if err != nil {
-			return LegacyDatasets{nil, nil}, errors.New("cannot load IPv6 dataset")
-		}
-		v4, err := LoadLegacyGeoliteDataset(strings.Replace(filename, "GeoLiteCityv6", "GeoLiteCity", -1), bucketname)
-		if err != nil {
-			return LegacyDatasets{nil, nil}, errors.New("cannot load IPv4 dataset")
-		}
-		return LegacyDatasets{v4Data: v4, v6Data: v6}, nil
-	}
-
-	return LegacyDatasets{nil, nil}, errors.New("Wrong input dataset name")
-}
-
-// LoadGeoliteDataset will check GCS for the matching dataset, download
-// it, process it, and load it into memory so that it can be easily
-// searched, then it will return a pointer to that GeoDataset or an error.
-func LoadLegacyGeoliteDataset(filename string, bucketname string) (*GeoIP, error) {
-	// load the legacy binary dataset
-	dataFileName := "GeoLiteCity.dat"
-	err := loader.UncompressGzFile(context.Background(), bucketname, filename, dataFileName)
-	if err != nil {
-		return nil, err
-	}
-	gi, err := Open(dataFileName, filename)
-	if err != nil {
-		return nil, errors.New("could not open GeoIP database")
-	}
-	return gi, nil
-}
-
-func round(x float32) float64 {
-	i, err := strconv.ParseFloat(fmt.Sprintf("%.3f", x), 64)
-	if err != nil {
-		return float64(0)
-	}
-	return i
-}
-
-func GetRecordFromLegacyDataset(ip string, gi LegacyDatasets, isIP4 bool) *api.GeoData {
+// GetRecord retrieves an individual record from a dataset.
+func (gi Datasets) GetRecord(ip string, isIP4 bool) *api.GeoData {
 	if gi.v4Data == nil || gi.v6Data == nil {
 		return nil
 	}
@@ -189,4 +137,58 @@ func GetRecordFromLegacyDataset(ip string, gi LegacyDatasets, isIP4 bool) *api.G
 		}
 	}
 	return nil
+}
+
+// LoadBundleDataset loads both IPv4 and IPv6 version of the requested dataset into memory.
+func LoadBundleDataset(filename string, bucketname string) (Datasets, error) {
+	if geoLegacyRegex.MatchString(filename) {
+		v4, err := LoadGeoliteDataset(filename, bucketname)
+		if err != nil {
+			return Datasets{nil, nil}, errors.New("cannot load IPv4 dataset")
+		}
+		v6, err := LoadGeoliteDataset(strings.Replace(filename, "GeoLiteCity", "GeoLiteCityv6", -1), bucketname)
+		if err != nil {
+			return Datasets{nil, nil}, errors.New("cannot load IPv6 dataset")
+		}
+		return Datasets{v4Data: v4, v6Data: v6}, nil
+	}
+
+	if geoLegacyv6Regex.MatchString(filename) {
+		v6, err := LoadGeoliteDataset(filename, bucketname)
+		if err != nil {
+			return Datasets{nil, nil}, errors.New("cannot load IPv6 dataset")
+		}
+		v4, err := LoadGeoliteDataset(strings.Replace(filename, "GeoLiteCityv6", "GeoLiteCity", -1), bucketname)
+		if err != nil {
+			return Datasets{nil, nil}, errors.New("cannot load IPv4 dataset")
+		}
+		return Datasets{v4Data: v4, v6Data: v6}, nil
+	}
+
+	return Datasets{nil, nil}, errors.New("Wrong input dataset name")
+}
+
+// LoadGeoliteDataset will check GCS for the matching dataset, download
+// it, process it, and load it into memory so that it can be easily
+// searched, then it will return a pointer to that GeoDataset or an error.
+func LoadGeoliteDataset(filename string, bucketname string) (*GeoIP, error) {
+	// load the legacy binary dataset
+	dataFileName := "GeoLiteCity.dat"
+	err := loader.UncompressGzFile(context.Background(), bucketname, filename, dataFileName)
+	if err != nil {
+		return nil, err
+	}
+	gi, err := Open(dataFileName, filename)
+	if err != nil {
+		return nil, errors.New("could not open GeoIP database")
+	}
+	return gi, nil
+}
+
+func round(x float32) float64 {
+	i, err := strconv.ParseFloat(fmt.Sprintf("%.3f", x), 64)
+	if err != nil {
+		return float64(0)
+	}
+	return i
 }
