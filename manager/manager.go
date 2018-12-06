@@ -36,13 +36,17 @@ type AnnotatorMap struct {
 	mutex sync.RWMutex
 }
 
+func NewAnnotatorMap() *AnnotatorMap {
+	return &AnnotatorMap{annotators: make(map[string]api.Annotator, 10)}
+}
+
 // NOTE: Should only be called by checkAndLoadAnnotator.
 // Loads an annotator, and updates the pending map entry.
 // On entry, the calling goroutine should "own" the
 func (am *AnnotatorMap) loadAnnotator(dateString string) {
 	// On entry, this goroutine has exclusive ownership of the
 	// map entry, and the responsibility for loading the annotator.
-	var ann api.Annotator = &geolite2.GeoDataset{}
+	var newAnn api.Annotator = &geolite2.GeoDataset{}
 	// TODO actually load the annotator and handle loading errors.
 
 	am.mutex.Lock()
@@ -55,7 +59,7 @@ func (am *AnnotatorMap) loadAnnotator(dateString string) {
 	if ann != nil {
 		// TODO handle error
 	}
-	am.annotators[dateString] = ann
+	am.annotators[dateString] = newAnn
 }
 
 // This asynchronously attempts to set map entry to nil, and
