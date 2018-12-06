@@ -99,12 +99,14 @@ func (am *AnnotatorMap) GetAnnotator(dateString string) (api.Annotator, error) {
 	defer am.mutex.RUnlock()
 
 	ann, ok := am.annotators[dateString]
-	if ok {
-		return ann, nil
-	} else {
+	if !ok {
 		am.checkAndLoadAnnotator(dateString)
 		return nil, ErrPendingAnnotatorLoad
 	}
+	if ann == nil {
+		return nil, ErrPendingAnnotatorLoad
+	}
+	return ann, nil
 }
 
 func GetAnnotator(date time.Time) api.Annotator {
