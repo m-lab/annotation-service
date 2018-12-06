@@ -36,8 +36,7 @@ func SetupHandlers() {
 }
 
 func Init() {
-    manager.Init()
-    manager.PopulateLatestData()
+    manager.InitDataset()
     SetupHandlers()
 }
 

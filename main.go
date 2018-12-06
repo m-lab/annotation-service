@@ -12,8 +12,7 @@ import (
 
 // Update the list of maxmind datasets daily
 func updateMaxmindDatasets(w http.ResponseWriter, r *http.Request) {
-	manager.Init()
-	manager.PopulateLatestData()
+	manager.InitDataset()
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
 }
