@@ -1,10 +1,10 @@
 package geoloader
 
 import (
-        "errors"
+	"errors"
 	"log"
 	"sync"
-        "time"
+	"time"
 
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/geolite2"
@@ -16,42 +16,88 @@ const (
 )
 
 var (
-	// GeoLite2Annotator points to Geolite2 datasets in memory.
-	Geolite2Annotator map[string]api.Annotator
+	ArchivedLoader AnnotatorLoader
 
-	// A mutex to make sure that we are not reading from the Geolite2Annotator
-	// pointer while trying to update it
-	archivedDataMutex = &sync.RWMutex{}
+	// ErrPendingAnnotatorLoad is returned when a new annotator is requested, but not yet loaded.
+	ErrPendingAnnotatorLoad = errors.New("annotator is loading")
+
+	ErrAnnotatorLoadFailed = errors.New("unable to load annoator")
 )
+
+// AnnotatorLoader manages all loading of and already loaded Annotators
+type AnnotatorLoader struct {
+	// Keys are date strings in YYYYMMDD format.
+	annotators map[string]api.Annotator
+	// Lock to be held when reading or writing the map.
+	mutex sync.RWMutex
+}
+
+// NOTE: Should only be called by checkAndLoadAnnotator.
+// Loads an annotator, and updates the pending map entry.
+// On entry, the calling goroutine should "own" the
+func (am *AnnotatorLoader) loadAnnotator(dateString string) {
+	// On entry, this goroutine has exclusive ownership of the
+	// map entry, and the responsibility for loading the annotator.
+	var ann api.Annotator = nil
+	// TODO actually load the annotator and handle loading errors.
+
+	am.mutex.Lock()
+	defer am.mutex.Unlock()
+
+	ann, ok := am.annotators[dateString]
+	if !ok {
+		// TODO handle error
+	}
+	if ann != nil {
+		// TODO handle error
+	}
+	am.annotators[dateString] = ann
+}
+
+// This asynchronously attempts to set map entry to nil, and
+// if successful, proceeds to asynchronously load the new dataset.
+func (am *AnnotatorLoader) checkAndLoadAnnotator(dateString string) {
+	go func() {
+		am.mutex.Lock()
+
+		_, ok := am.annotators[dateString]
+		if ok {
+			// Another goroutine is already responsible for loading.
+			am.mutex.Unlock()
+			return
+		} else {
+			// Place marker so that other requesters know it is loading.
+			am.annotators[dateString] = nil
+		}
+
+		// Drop the lock before attempting to load the annotator.
+		am.mutex.Unlock()
+		am.loadAnnotator(dateString)
+	}()
+}
+
+// Gets the named annotator, if already in the map.
+func (am *AnnotatorLoader) GetAnnotator(dateString string) (api.Annotator, error) {
+	am.mutex.RLock()
+	defer am.mutex.RUnlock()
+
+	ann, ok := am.annotators[dateString]
+	if ok {
+		return ann, nil
+	} else {
+		am.checkAndLoadAnnotator(dateString)
+		return nil, ErrPendingAnnotatorLoad
+	}
+}
 
 // GetArchivedAnnotator returns the pointer to the dataset in memory with the filename.
 func GetArchivedAnnotator(filename string) api.Annotator {
-	ann := Geolite2Annotator[filename]
-	if ann != nil {
+	ann, err := ArchivedLoader.GetAnnotator(filename)
+
+	if err == nil {
 		return ann
 	}
-
-	// load new dataset into memory if it is not there already
-	archivedDataMutex.Lock()
-	if len(Geolite2Annotator) >= MaxHistoricalGeolite2Dataset {
-		// Remove one entry
-		for key, _ := range Geolite2Annotator {
-			log.Println("remove Geolite2 dataset " + key)
-			delete(Geolite2Annotator, key)
-			break
-		}
-	}
-	ann, err := geolite2.LoadGeoLite2Dataset(filename, api.MaxmindBucketName)
-	if err != nil {
-		return nil
-	}
-	log.Println("historical Geolite2 dataset loaded " + filename)
-	Geolite2Annotator[filename] = ann
-	log.Printf("number of Geolite2 dataset in memory: %d ", len(Geolite2Annotator))
-	log.Println(Geolite2Annotator)
-	archivedDataMutex.Unlock()
-
-	return ann
+	return nil
 }
 
 // PopulateLatestData will search to the latest Geolite2 files
