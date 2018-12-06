@@ -1,7 +1,8 @@
 package manager_test
 
 import (
-	"runtime"
+	"errors"
+	"sync"
 	"testing"
 
 	"github.com/m-lab/annotation-service/manager"
@@ -20,11 +21,22 @@ func TestAnnotatorMap(t *testing.T) {
 		t.Error("Should be", manager.ErrPendingAnnotatorLoad)
 	}
 
-	// HACK - wait until the two goroutines complete.
-	// Not sure if this is stable across implementations.
-	// Wait for goroutines to complete.
-	for runtime.NumGoroutine() > 3 {
-	}
+	// Wait for both annotator to be available.
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
+	go func(date string) {
+		err := errors.New("start")
+		for ; err != nil; _, err = am.GetAnnotator(date) {
+		}
+		wg.Done()
+	}("20110101")
+	go func(date string) {
+		err := errors.New("start")
+		for ; err != nil; _, err = am.GetAnnotator(date) {
+		}
+		wg.Done()
+	}("20110102")
+	wg.Wait()
 
 	ann, err = am.GetAnnotator("20110102")
 	if err != nil {
@@ -32,8 +44,5 @@ func TestAnnotatorMap(t *testing.T) {
 	}
 	if ann == nil {
 		t.Error("Expecting non-nil annotator")
-	}
-	if runtime.NumGoroutine() != 3 {
-		t.Error(runtime.NumGoroutine())
 	}
 }
