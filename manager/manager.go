@@ -42,7 +42,7 @@ type AnnotatorMap struct {
 func (am *AnnotatorMap) loadAnnotator(dateString string) {
 	// On entry, this goroutine has exclusive ownership of the
 	// map entry, and the responsibility for loading the annotator.
-	var ann api.Annotator = nil
+	var ann api.Annotator = &geolite2.GeoDataset{}
 	// TODO actually load the annotator and handle loading errors.
 
 	am.mutex.Lock()
