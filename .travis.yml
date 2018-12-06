@@ -24,10 +24,6 @@ before_install:
 - sudo apt-get install -y libgeoip-dev pkg-config
 - go get gopkg.in/check.v1
 
-# Coverage tools
-- go get github.com/mattn/goveralls
-- go get github.com/wadey/gocovmerge
-
 # This installs gcloud, sets up devappserver.
 - $TRAVIS_BUILD_DIR/annotator.sh
 
@@ -73,10 +69,6 @@ script:
 - $HOME/gopath/bin/goveralls -coverprofile=cover.cov -service=travis-ci
 # Run benchmarks
 - go test -bench . ./geolite2/...
-
-# Coveralls
-- $HOME/gopath/bin/gocovmerge api.cov geolite2.cov geoloader.cov handler.cov legacy.cov loader.cov  > merge.cov
-- $HOME/gopath/bin/goveralls -coverprofile=merge.cov -service=travis-ci
 
 # Build and prepare for deployment
 - go build
