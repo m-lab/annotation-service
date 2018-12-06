@@ -46,91 +46,67 @@ type AnnotatorMap struct {
 	// Keys are date strings in YYYYMMDD format.
 	annotators map[string]api.Annotator
 	// Lock to be held when reading or writing the map.
-	mutex  sync.RWMutex
-	loader func(string) (api.Annotator, error)
-}
-
-// NewAnnotatorMap creates a new map that will use the provided loader for loading new Annotators.
-func NewAnnotatorMap(loader func(string) (api.Annotator, error)) *AnnotatorMap {
-	return &AnnotatorMap{annotators: make(map[string]api.Annotator, 10), loader: loader}
+	mutex sync.RWMutex
 }
 
 // NOTE: Should only be called by checkAndLoadAnnotator.
-// The calling goroutine should "own" the responsibility for
-// setting the annotator.
-func (am *AnnotatorMap) setAnnotatorIfNil(dateString string, ann api.Annotator) error {
+// Loads an annotator, and updates the pending map entry.
+// On entry, the calling goroutine should "own" the
+func (am *AnnotatorMap) loadAnnotator(dateString string) {
+	// On entry, this goroutine has exclusive ownership of the
+	// map entry, and the responsibility for loading the annotator.
+	var ann api.Annotator = nil
+	// TODO actually load the annotator and handle loading errors.
+
 	am.mutex.Lock()
 	defer am.mutex.Unlock()
 
-	old, ok := am.annotators[dateString]
+	ann, ok := am.annotators[dateString]
 	if !ok {
-		return ErrGoroutineNotOwner
+		// TODO handle error
 	}
-	if old != nil {
-		return ErrMapEntryAlreadySet
+	if ann != nil {
+		// TODO handle error
 	}
 	am.annotators[dateString] = ann
-	return nil
 }
 
-func (am *AnnotatorMap) maybeSetNil(dateString string) bool {
-	am.mutex.Lock()
-	defer am.mutex.Unlock()
-	_, ok := am.annotators[dateString]
-	if ok {
-		// Another goroutine is already responsible for loading.
-		return false
-	}
-
-	// Place marker so that other requesters know it is loading.
-	am.annotators[dateString] = nil
-	return true
-}
-
-// This synchronously attempts to set map entry to nil, and
+// This asynchronously attempts to set map entry to nil, and
 // if successful, proceeds to asynchronously load the new dataset.
 func (am *AnnotatorMap) checkAndLoadAnnotator(dateString string) {
-	reserved := am.maybeSetNil(dateString)
-	if reserved {
-		// This goroutine now has exclusive ownership of the
-		// map entry, and the responsibility for loading the annotator.
-		go func(dateString string) {
-			newAnn, err := am.loader(dateString)
-			if err != nil {
-				// TODO add a metric
-				log.Println(err)
-				return
-			}
-			// Set the new annotator value.  Entry should be nil.
-			err = am.setAnnotatorIfNil(dateString, newAnn)
-			if err != nil {
-				// TODO add a metric
-				log.Println(err)
-			}
-		}(dateString)
-	}
+	go func() {
+		am.mutex.Lock()
+
+		_, ok := am.annotators[dateString]
+		if ok {
+			// Another goroutine is already responsible for loading.
+			am.mutex.Unlock()
+			return
+		} else {
+			// Place marker so that other requesters know it is loading.
+			am.annotators[dateString] = nil
+		}
+
+		// Drop the lock before attempting to load the annotator.
+		am.mutex.Unlock()
+		am.loadAnnotator(dateString)
+	}()
 }
 
-// GetAnnotator gets the named annotator, if already in the map.
-// If not already loaded, this will trigger loading, and return ErrPendingAnnotatorLoad
+// Gets the named annotator, if already in the map.
 func (am *AnnotatorMap) GetAnnotator(dateString string) (api.Annotator, error) {
 	am.mutex.RLock()
-	ann, ok := am.annotators[dateString]
-	am.mutex.RUnlock()
+	defer am.mutex.RUnlock()
 
-	if !ok {
-		// There is not yet any entry for this date.  Try to load it.
+	ann, ok := am.annotators[dateString]
+	if ok {
+		return ann, nil
+	} else {
 		am.checkAndLoadAnnotator(dateString)
 		return nil, ErrPendingAnnotatorLoad
 	}
-	if ann == nil {
-		// Another goroutine is already loading this entry.  Return error.
-		return nil, ErrPendingAnnotatorLoad
-	}
-	return ann, nil
 }
 
-// GetAnnotator returns the correct annotator to use for a given timestamp.
 func GetAnnotator(date time.Time) api.Annotator {
 	// TODO - use the requested date
 	// dateString := strconv.FormatInt(date.Unix(), encodingBase)
