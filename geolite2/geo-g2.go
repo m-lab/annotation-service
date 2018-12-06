@@ -28,10 +28,10 @@ const (
 
 var (
 	// This is the regex used to filter for which files we want to consider acceptable for using with Geolite2
-	GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
+	geoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
 )
 
-func LoadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
+func loadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
 	locations, err := loader.FindFile(geoLite2LocationsFilename, zip)
 	if err != nil {
 		return nil, err
@@ -71,10 +71,10 @@ func rangeCIDR(cidr string) (net.IP, net.IP, error) {
 	if err != nil {
 		return nil, nil, errors.New("Invalid CIDR IP range")
 	}
-	lowIp := make(net.IP, len(ip))
-	copy(lowIp, ip)
+	lowIP := make(net.IP, len(ip))
+	copy(lowIP, ip)
 	mask := ipnet.Mask
-	for x, _ := range ip {
+	for x := range ip {
 		if len(mask) == 4 {
 			if x < 12 {
 				ip[x] |= 0
@@ -85,10 +85,10 @@ func rangeCIDR(cidr string) (net.IP, net.IP, error) {
 			ip[x] |= ^mask[x]
 		}
 	}
-	return lowIp, ip, nil
+	return lowIP, ip, nil
 }
 
-// Create Location list for GLite2 databases
+// LoadLocListGLite2 creates the Location list for GLite2 databases
 // TODO This code is a bit fragile.  Should probably parse the header and
 // use that to guide the parsing of the rows.
 // TODO(yachang) If a database fails to load, the cache should mark it as unloadable,
@@ -130,10 +130,9 @@ func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 				log.Println(record)
 				return nil, nil, errors.New("Corrupted Data: wrong number of columns")
 
-			} else {
-				log.Println(err, ": ", record)
-				return nil, nil, err
 			}
+			log.Println(err, ": ", record)
+			return nil, nil, err
 		}
 		var lNode LocationNode
 		lNode.GeonameID, err = strconv.Atoi(record[0])
@@ -146,7 +145,7 @@ func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		lNode.ContinentCode, err = checkCaps(record[2], "Continent code")
 		if err != nil {
 			log.Println(err)
-			errorCount += 1
+			errorCount++
 			if errorCount > maxErrorCount {
 				return nil, nil, errors.New("Too many errors during loading the dataset location list")
 			}
@@ -155,7 +154,7 @@ func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		lNode.CountryCode, err = checkCaps(record[4], "Country code")
 		if err != nil {
 			log.Println(err)
-			errorCount += 1
+			errorCount++
 			if errorCount > maxErrorCount {
 				return nil, nil, errors.New("Too many errors during loading the dataset location list")
 			}
@@ -175,7 +174,7 @@ func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 		if err != nil {
 			if len(record[11]) > 0 {
 				log.Println("MetroCode should be a number")
-				errorCount += 1
+				errorCount++
 				if errorCount > maxErrorCount {
 					return nil, nil, errors.New("Too many errors during loading the dataset location list")
 				}
@@ -216,27 +215,27 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 		err = checkNumColumns(record, ipNumColumnsGlite2)
 		if err != nil {
 			log.Println(err)
-			errorCount += 1
+			errorCount++
 			if errorCount > maxErrorCount {
 				return nil, errors.New("Too many errors during loading the dataset IP list.")
 			}
 			continue
 		}
-		lowIp, highIp, err := rangeCIDR(record[0])
+		lowIP, highIP, err := rangeCIDR(record[0])
 		if err != nil {
 			log.Println(err)
-			errorCount += 1
+			errorCount++
 			if errorCount > maxErrorCount {
 				return nil, errors.New("Too many errors during loading the dataset IP list")
 			}
 			continue
 		}
-		newNode.IPAddressLow = lowIp
-		newNode.IPAddressHigh = highIp
+		newNode.IPAddressLow = lowIP
+		newNode.IPAddressHigh = highIP
 		// Look for GeoId within idMap and return index
-		index, err := lookupGeoId(record[1], idMap)
+		index, err := lookupGeoID(record[1], idMap)
 		if err != nil {
-			if backupIndex, err := lookupGeoId(record[2], idMap); err == nil {
+			if backupIndex, err := lookupGeoID(record[2], idMap); err == nil {
 				index = backupIndex
 			} else {
 				log.Println("Couldn't get a valid Geoname id!", record)
@@ -249,7 +248,7 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 		newNode.Latitude, err = stringToFloat(record[7], "Latitude")
 		if err != nil {
 			log.Println(err)
-			errorCount += 1
+			errorCount++
 			if errorCount > maxErrorCount {
 				return nil, errors.New("Too many errors during loading the dataset IP list")
 			}
@@ -258,7 +257,7 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 		newNode.Longitude, err = stringToFloat(record[8], "Longitude")
 		if err != nil {
 			log.Println(err)
-			errorCount += 1
+			errorCount++
 			if errorCount > maxErrorCount {
 				return nil, errors.New("Too many errors during loading the dataset IP list")
 			}
@@ -291,7 +290,7 @@ func determineFilenameOfLatestGeolite2File() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		if file.Name > filename && GeoLite2Regex.MatchString(file.Name) {
+		if file.Name > filename && geoLite2Regex.MatchString(file.Name) {
 			filename = file.Name
 		}
 
@@ -305,7 +304,7 @@ func LoadGeoLite2Dataset(filename string, bucketname string) (*GeoDataset, error
 	if err != nil {
 		return nil, err
 	}
-	return LoadGeoLite2(zip)
+	return loadGeoLite2(zip)
 }
 
 // LoadLatestGeolite2File will check GCS for the latest file, download

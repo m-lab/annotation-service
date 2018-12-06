@@ -173,17 +173,17 @@ func GetRecordFromLegacyDataset(ip string, gi LegacyDatasets, isIP4 bool) *api.G
 	if record != nil {
 		return &api.GeoData{
 			Geo: &api.GeolocationIP{
-				Continent_code: record.ContinentCode,
-				Country_code:   record.CountryCode,
-				Country_code3:  record.CountryCode3,
-				Country_name:   record.CountryName,
-				Region:         record.Region,
-				Metro_code:     int64(record.MetroCode),
-				City:           record.City,
-				Area_code:      int64(record.AreaCode),
-				Postal_code:    record.PostalCode,
-				Latitude:       round(record.Latitude),
-				Longitude:      round(record.Longitude),
+				ContinentCode: record.ContinentCode,
+				CountryCode:   record.CountryCode,
+				CountryCode3:  record.CountryCode3,
+				CountryName:   record.CountryName,
+				Region:        record.Region,
+				MetroCode:     int64(record.MetroCode),
+				City:          record.City,
+				AreaCode:      int64(record.AreaCode),
+				PostalCode:    record.PostalCode,
+				Latitude:      round(record.Latitude),
+				Longitude:     round(record.Longitude),
 			},
 			ASN: &api.IPASNData{},
 		}

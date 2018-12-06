@@ -46,11 +46,11 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 	// Setup timers and counters for prometheus metrics.
 	timerStart := time.Now()
 	defer func(tStart time.Time) {
-		metrics.Metrics_requestTimes.Observe(float64(time.Since(tStart).Nanoseconds()))
+		metrics.RequestTimes.Observe(float64(time.Since(tStart).Nanoseconds()))
 	}(timerStart)
-	metrics.Metrics_activeRequests.Inc()
-	metrics.Metrics_totalRequests.Inc()
-	defer metrics.Metrics_activeRequests.Dec()
+	metrics.ActiveRequests.Inc()
+	metrics.TotalRequests.Inc()
+	defer metrics.ActiveRequests.Dec()
 
 	data, err := ValidateAndParse(r)
 	if err != nil {
@@ -78,7 +78,7 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 func ValidateAndParse(r *http.Request) (*api.RequestData, error) {
 	query := r.URL.Query()
 
-	time_milli, err := strconv.ParseInt(query.Get("since_epoch"), 10, 64)
+	timeMilli, err := strconv.ParseInt(query.Get("since_epoch"), 10, 64)
 	if err != nil {
 		return nil, errors.New("invalid time")
 	}
@@ -90,9 +90,17 @@ func ValidateAndParse(r *http.Request) (*api.RequestData, error) {
 		return nil, errors.New("invalid IP address")
 	}
 	if newIP.To4() != nil {
-		return &api.RequestData{ip, 4, time.Unix(time_milli, 0)}, nil
+		return &api.RequestData{
+			IP:        ip,
+			IPFormat:  4,
+			Timestamp: time.Unix(timeMilli, 0),
+		}, nil
 	}
-	return &api.RequestData{ip, 6, time.Unix(time_milli, 0)}, nil
+	return &api.RequestData{
+		IP:        ip,
+		IPFormat:  6,
+		Timestamp: time.Unix(timeMilli, 0),
+	}, nil
 }
 
 // BatchResponse is the response type for batch requests.  It is converted to
@@ -112,7 +120,7 @@ func NewBatchResponse(size int) *BatchResponse {
 }
 
 // TODO move to annotatormanager package soon.
-var ErrNoAnnotator = errors.New("no Annotator found")
+var errNoAnnotator = errors.New("no Annotator found")
 
 // AnnotateLegacy uses a single `date` to select an annotator, and uses that annotator to annotate all
 // `ips`.  It uses the dates from the individual RequestData to form the keys for the result map.
@@ -125,12 +133,12 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 	ann := manager.GetAnnotator(date)
 	if ann == nil {
 		// stop sending more request in the same batch because w/ high chance the dataset is not ready
-		return nil, time.Time{}, ErrNoAnnotator
+		return nil, time.Time{}, errNoAnnotator
 	}
 
 	for i := range ips {
 		request := ips[i]
-		metrics.Metrics_totalLookups.Inc()
+		metrics.TotalLookups.Inc()
 		annotation, err := ann.GetAnnotation(&request)
 		if err != nil {
 			// TODO need better error handling.
@@ -155,11 +163,11 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	// Setup timers and counters for prometheus metrics.
 	timerStart := time.Now()
 	defer func(tStart time.Time) {
-		metrics.Metrics_requestTimes.Observe(float64(time.Since(tStart).Nanoseconds()))
+		metrics.RequestTimes.Observe(float64(time.Since(tStart).Nanoseconds()))
 	}(timerStart)
-	metrics.Metrics_activeRequests.Inc()
-	metrics.Metrics_totalRequests.Inc()
-	defer metrics.Metrics_activeRequests.Dec()
+	metrics.ActiveRequests.Inc()
+	metrics.TotalRequests.Inc()
+	defer metrics.ActiveRequests.Dec()
 
 	dataSlice, err := BatchValidateAndParse(r.Body)
 	r.Body.Close()
@@ -229,7 +237,7 @@ func BatchValidateAndParse(source io.Reader) ([]api.RequestData, error) {
 // metadata, returning a pointer. It is gaurenteed to return a non-nil
 // pointer, even if it cannot find the appropriate metadata.
 func GetMetadataForSingleIP(request *api.RequestData) (*api.GeoData, error) {
-	metrics.Metrics_totalLookups.Inc()
+	metrics.TotalLookups.Inc()
 	// TODO replace with generic GetAnnotator, that respects time.
 	ann := manager.GetAnnotator(request.Timestamp)
 	if ann == nil {
