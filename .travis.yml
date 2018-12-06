@@ -24,6 +24,10 @@ before_install:
 - sudo apt-get install -y libgeoip-dev pkg-config
 - go get gopkg.in/check.v1
 
+# Coverage tools
+- go get github.com/mattn/goveralls
+- go get github.com/wadey/gocovmerge
+
 # This installs gcloud, sets up devappserver.
 - $TRAVIS_BUILD_DIR/annotator.sh
 
