@@ -29,15 +29,18 @@ var (
 )
 
 // AnnotatorMap manages all loading of and already loaded Annotators
+// TODO - should this be a generic cache of interface{}?
 type AnnotatorMap struct {
 	// Keys are date strings in YYYYMMDD format.
 	annotators map[string]api.Annotator
 	// Lock to be held when reading or writing the map.
-	mutex sync.RWMutex
+	mutex  sync.RWMutex
+	loader func(string) (api.Annotator, error)
 }
 
-func NewAnnotatorMap() *AnnotatorMap {
-	return &AnnotatorMap{annotators: make(map[string]api.Annotator, 10)}
+// NewAnnotatorMap creates a new map that will use the provided loader for loading new Annotators.
+func NewAnnotatorMap(loader func(string) (api.Annotator, error)) *AnnotatorMap {
+	return &AnnotatorMap{annotators: make(map[string]api.Annotator, 10), loader: loader}
 }
 
 // NOTE: Should only be called by checkAndLoadAnnotator.
@@ -46,19 +49,26 @@ func NewAnnotatorMap() *AnnotatorMap {
 func (am *AnnotatorMap) loadAnnotator(dateString string) {
 	// On entry, this goroutine has exclusive ownership of the
 	// map entry, and the responsibility for loading the annotator.
-	var newAnn api.Annotator = &geolite2.GeoDataset{}
-	// TODO actually load the annotator and handle loading errors.
+	newAnn, err := am.loader(dateString)
+	if err != nil {
+		// TODO add a metric
+		log.Println(err)
+		return
+	}
 
 	am.mutex.Lock()
 	defer am.mutex.Unlock()
 
 	ann, ok := am.annotators[dateString]
 	if !ok {
+		// TODO add a metric
 		// TODO handle error
 	}
 	if ann != nil {
+		// TODO add a metric
 		// TODO handle error
 	}
+	// TODO add a metric
 	am.annotators[dateString] = newAnn
 }
 

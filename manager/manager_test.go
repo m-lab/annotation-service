@@ -5,11 +5,17 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/m-lab/annotation-service/api"
+	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/manager"
 )
 
+func fakeLoader(date string) (api.Annotator, error) {
+	return &geolite2.GeoDataset{}, nil
+}
+
 func TestAnnotatorMap(t *testing.T) {
-	am := manager.NewAnnotatorMap()
+	am := manager.NewAnnotatorMap(fakeLoader)
 
 	ann, err := am.GetAnnotator("20110101")
 	if err != manager.ErrPendingAnnotatorLoad {
