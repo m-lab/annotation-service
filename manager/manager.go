@@ -17,6 +17,7 @@ var (
 	// ErrPendingAnnotatorLoad is returned when a new annotator is requested, but not yet loaded.
 	ErrPendingAnnotatorLoad = errors.New("annotator is loading")
 
+	// ErrAnnotatorLoadFailed is returned when a requested annotator has failed to load.
 	ErrAnnotatorLoadFailed = errors.New("unable to load annoator")
 
 	// A mutex to make sure that we are not reading from the CurrentAnnotator
@@ -28,7 +29,8 @@ var (
 	CurrentAnnotator api.Annotator
 )
 
-// AnnotatorMap manages all loading of and already loaded Annotators
+// AnnotatorMap manages all loading and fetching of Annotators.
+// TODO - should we call this AnnotatorCache?
 // TODO - should this be a generic cache of interface{}?
 type AnnotatorMap struct {
 	// Keys are date strings in YYYYMMDD format.
@@ -83,18 +85,18 @@ func (am *AnnotatorMap) checkAndLoadAnnotator(dateString string) {
 			// Another goroutine is already responsible for loading.
 			am.mutex.Unlock()
 			return
-		} else {
-			// Place marker so that other requesters know it is loading.
-			am.annotators[dateString] = nil
 		}
 
+		// Place marker so that other requesters know it is loading.
+		am.annotators[dateString] = nil
 		// Drop the lock before attempting to load the annotator.
 		am.mutex.Unlock()
 		am.loadAnnotator(dateString)
 	}()
 }
 
-// Gets the named annotator, if already in the map.
+// GetAnnotator gets the named annotator, if already in the map.
+// If not already loaded, this will trigger loading, and return ErrPendingAnnotatorLoad
 func (am *AnnotatorMap) GetAnnotator(dateString string) (api.Annotator, error) {
 	am.mutex.RLock()
 	defer am.mutex.RUnlock()
@@ -110,6 +112,7 @@ func (am *AnnotatorMap) GetAnnotator(dateString string) (api.Annotator, error) {
 	return ann, nil
 }
 
+// GetAnnotator gets the current annotator.
 func GetAnnotator(date time.Time) api.Annotator {
 	// TODO - use the requested date
 	// dateString := strconv.FormatInt(date.Unix(), encodingBase)
