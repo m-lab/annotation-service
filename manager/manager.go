@@ -20,6 +20,10 @@ var (
 	// ErrAnnotatorLoadFailed is returned when a requested annotator has failed to load.
 	ErrAnnotatorLoadFailed = errors.New("unable to load annoator")
 
+	// These are UNEXPECTED errors!!
+	ErrGoroutineNotOwner  = errors.New("Goroutine not owner")
+	ErrMapEntryAlreadySet = errors.New("Map entry already set")
+
 	// A mutex to make sure that we are not reading from the CurrentAnnotator
 	// pointer while trying to update it
 	currentDataMutex = &sync.RWMutex{}
@@ -32,6 +36,12 @@ var (
 // AnnotatorMap manages all loading and fetching of Annotators.
 // TODO - should we call this AnnotatorCache?
 // TODO - should this be a generic cache of interface{}?
+//
+// Synchronization:
+//  All accesses must hold the mutex.  If an element is not found, the
+//  goroutine may attempt to take responsibility for loading it by obtaining
+//  the write lock, and writing an entry with a nil pointer.
+// TODO - still need a strategy for dealing with persistent errors.
 type AnnotatorMap struct {
 	// Keys are date strings in YYYYMMDD format.
 	annotators map[string]api.Annotator
@@ -46,67 +56,75 @@ func NewAnnotatorMap(loader func(string) (api.Annotator, error)) *AnnotatorMap {
 }
 
 // NOTE: Should only be called by checkAndLoadAnnotator.
-// Loads an annotator, and updates the pending map entry.
-// On entry, the calling goroutine should "own" the
-func (am *AnnotatorMap) loadAnnotator(dateString string) {
-	// On entry, this goroutine has exclusive ownership of the
-	// map entry, and the responsibility for loading the annotator.
-	newAnn, err := am.loader(dateString)
-	if err != nil {
-		// TODO add a metric
-		log.Println(err)
-		return
-	}
-
+// The calling goroutine should "own" the responsibility for
+// setting the annotator.
+func (am *AnnotatorMap) setAnnotatorIfNil(dateString string, ann api.Annotator) error {
 	am.mutex.Lock()
 	defer am.mutex.Unlock()
 
-	ann, ok := am.annotators[dateString]
+	old, ok := am.annotators[dateString]
 	if !ok {
-		// TODO add a metric
-		// TODO handle error
+		return ErrGoroutineNotOwner
 	}
-	if ann != nil {
-		// TODO add a metric
-		// TODO handle error
+	if old != nil {
+		return ErrMapEntryAlreadySet
 	}
-	// TODO add a metric
-	am.annotators[dateString] = newAnn
+	am.annotators[dateString] = ann
+	return nil
 }
 
-// This asynchronously attempts to set map entry to nil, and
+func (am *AnnotatorMap) maybeSetNil(dateString string) bool {
+	am.mutex.Lock()
+	defer am.mutex.Unlock()
+	_, ok := am.annotators[dateString]
+	if ok {
+		// Another goroutine is already responsible for loading.
+		return false
+	}
+
+	// Place marker so that other requesters know it is loading.
+	am.annotators[dateString] = nil
+	return true
+}
+
+// This synchronously attempts to set map entry to nil, and
 // if successful, proceeds to asynchronously load the new dataset.
 func (am *AnnotatorMap) checkAndLoadAnnotator(dateString string) {
-	go func() {
-		am.mutex.Lock()
-
-		_, ok := am.annotators[dateString]
-		if ok {
-			// Another goroutine is already responsible for loading.
-			am.mutex.Unlock()
-			return
-		}
-
-		// Place marker so that other requesters know it is loading.
-		am.annotators[dateString] = nil
-		// Drop the lock before attempting to load the annotator.
-		am.mutex.Unlock()
-		am.loadAnnotator(dateString)
-	}()
+	reserved := am.maybeSetNil(dateString)
+	if reserved {
+		// This goroutine now has exclusive ownership of the
+		// map entry, and the responsibility for loading the annotator.
+		go func(dateString string) {
+			newAnn, err := am.loader(dateString)
+			if err != nil {
+				// TODO add a metric
+				log.Println(err)
+				return
+			}
+			// Set the new annotator value.  Entry should be nil.
+			err = am.setAnnotatorIfNil(dateString, newAnn)
+			if err != nil {
+				// TODO add a metric
+				log.Println(err)
+			}
+		}(dateString)
+	}
 }
 
 // GetAnnotator gets the named annotator, if already in the map.
 // If not already loaded, this will trigger loading, and return ErrPendingAnnotatorLoad
 func (am *AnnotatorMap) GetAnnotator(dateString string) (api.Annotator, error) {
 	am.mutex.RLock()
-	defer am.mutex.RUnlock()
-
 	ann, ok := am.annotators[dateString]
+	am.mutex.RUnlock()
+
 	if !ok {
+		// There is not yet any entry for this date.  Try to load it.
 		am.checkAndLoadAnnotator(dateString)
 		return nil, ErrPendingAnnotatorLoad
 	}
 	if ann == nil {
+		// Another goroutine is already loading this entry.  Return error.
 		return nil, ErrPendingAnnotatorLoad
 	}
 	return ann, nil
