@@ -10,6 +10,10 @@ import (
 	"time"
 )
 
+/*************************************************************************
+*                             Annotation Structs                         *
+*************************************************************************/
+
 // The GeolocationIP struct contains all the information needed for the
 // geolocation data that will be inserted into big query. The fiels are
 // capitalized for exporting, although the originals in the DB schema
@@ -41,6 +45,10 @@ type GeoData struct {
 	ASN *IPASNData     // Holds the IP/ASN data
 }
 
+/*************************************************************************
+*                       Request/Response Structs                         *
+*************************************************************************/
+
 // The RequestData schema is the schema for the json that we will send
 // down the pipe to the annotation service.
 // DEPRECATED
@@ -57,8 +65,8 @@ type RequestWrapper struct {
 	Body        json.RawMessage
 }
 
-// RequestVersion2 is the string associated with v2.0 requests.
-const RequestVersion2 = "Annotate v2.0"
+// RequestV2Tag is the string associated with v2.0 requests.
+const RequestV2Tag = "Annotate v2.0"
 
 // RequestV2 describes the data we expect to receive (json encoded) in the request body.
 type RequestV2 struct {
@@ -68,11 +76,16 @@ type RequestV2 struct {
 	IPs         []net.IP  // The net.IP addresses to be annotated
 }
 
+// ResponseV2 describes data returned in V2 responses (json encoded).
 type ResponseV2 struct {
 	// TODO should we include additional metadata about the annotator sources?  Perhaps map of filenames?
 	StartDate   time.Time           // The StartDate of the dataset used for the annotation
 	Annotations map[string]*GeoData // Map from human readable IP address to GeoData
 }
+
+/*************************************************************************
+*                           Local Annotator API                          *
+*************************************************************************/
 
 // Annotator provides the GetAnnotation method, which retrieves the annotation for a given IP address.
 type Annotator interface {
