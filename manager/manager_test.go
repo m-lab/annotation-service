@@ -1,7 +1,7 @@
 package manager_test
 
 import (
-	"errors"
+	"log"
 	"sync"
 	"testing"
 
@@ -9,6 +9,11 @@ import (
 	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/manager"
 )
+
+func init() {
+	// Always prepend the filename and line number.
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+}
 
 func fakeLoader(date string) (api.Annotator, error) {
 	return &geolite2.GeoDataset{}, nil
@@ -31,14 +36,12 @@ func TestAnnotatorMap(t *testing.T) {
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
 	go func(date string) {
-		err := errors.New("start")
-		for ; err != nil; _, err = am.GetAnnotator(date) {
+		for _, err := am.GetAnnotator(date); err != nil; _, err = am.GetAnnotator(date) {
 		}
 		wg.Done()
 	}("20110101")
 	go func(date string) {
-		err := errors.New("start")
-		for ; err != nil; _, err = am.GetAnnotator(date) {
+		for _, err := am.GetAnnotator(date); err != nil; _, err = am.GetAnnotator(date) {
 		}
 		wg.Done()
 	}("20110102")
@@ -50,5 +53,6 @@ func TestAnnotatorMap(t *testing.T) {
 	}
 	if ann == nil {
 		t.Error("Expecting non-nil annotator")
+		log.Printf("%+v\n", am)
 	}
 }

@@ -21,8 +21,12 @@ var (
 	ErrAnnotatorLoadFailed = errors.New("unable to load annoator")
 
 	// These are UNEXPECTED errors!!
-	ErrGoroutineNotOwner  = errors.New("Goroutine not owner")
-	ErrMapEntryAlreadySet = errors.New("Map entry already set")
+	// ErrGoroutineNotOwner is returned when goroutine attempts to set annotator entry, but is not the owner.
+	ErrGoroutineNotOwner = errors.New("goroutine not owner")
+	// ErrMapEntryAlreadySet is returned when goroutine attempts to set annotator, but entry is non-null.
+	ErrMapEntryAlreadySet = errors.New("map entry already set")
+	// ErrNilEntry is returned when map has a nil entry, which should never happen.
+	ErrNilEntry = errors.New("Map entry is nil")
 
 	// A mutex to make sure that we are not reading from the CurrentAnnotator
 	// pointer while trying to update it
@@ -32,6 +36,11 @@ var (
 	// latest data for the annotator to search and reply with
 	CurrentAnnotator api.Annotator
 )
+
+type cacheEntry struct {
+	ann      api.Annotator
+	lastUsed time.Time
+}
 
 // AnnotatorMap manages all loading and fetching of Annotators.
 // TODO - should we call this AnnotatorCache?
@@ -44,69 +53,118 @@ var (
 // TODO - still need a strategy for dealing with persistent errors.
 type AnnotatorMap struct {
 	// Keys are date strings in YYYYMMDD format.
-	annotators map[string]api.Annotator
+	annotators map[string]*cacheEntry
 	// Lock to be held when reading or writing the map.
-	mutex sync.RWMutex
+	mutex       sync.Mutex
+	oldestIndex string // The index of the oldest entry.
+	loader      func(string) (api.Annotator, error)
+}
+
+// NewAnnotatorMap creates a new map that will use the provided loader for loading new Annotators.
+func NewAnnotatorMap(loader func(string) (api.Annotator, error)) *AnnotatorMap {
+	return &AnnotatorMap{annotators: make(map[string]*cacheEntry, 10), loader: loader}
 }
 
 // NOTE: Should only be called by checkAndLoadAnnotator.
-// Loads an annotator, and updates the pending map entry.
-// On entry, the calling goroutine should "own" the
-func (am *AnnotatorMap) loadAnnotator(dateString string) {
-	// On entry, this goroutine has exclusive ownership of the
-	// map entry, and the responsibility for loading the annotator.
-	var ann api.Annotator = nil
-	// TODO actually load the annotator and handle loading errors.
-
+// The calling goroutine should "own" the responsibility for
+// setting the annotator.
+func (am *AnnotatorMap) validateAndSetAnnotator(dateString string, ann api.Annotator) error {
 	am.mutex.Lock()
 	defer am.mutex.Unlock()
 
-	ann, ok := am.annotators[dateString]
-	if !ok {
-		// TODO handle error
+	entry, ok := am.annotators[dateString]
+	if !ok || entry == nil {
+		return ErrGoroutineNotOwner
 	}
-	if ann != nil {
-		// TODO handle error
+	if entry.ann != nil {
+		return ErrMapEntryAlreadySet
 	}
-	am.annotators[dateString] = ann
+	entry.ann = ann
+	entry.lastUsed = time.Now()
+	return nil
 }
 
-// This asynchronously attempts to set map entry to nil, and
-// if successful, proceeds to asynchronously load the new dataset.
-func (am *AnnotatorMap) checkAndLoadAnnotator(dateString string) {
-	go func() {
-		am.mutex.Lock()
-
-		_, ok := am.annotators[dateString]
-		if ok {
-			// Another goroutine is already responsible for loading.
-			am.mutex.Unlock()
+// This loads and saves the new dataset.
+// It should only be called asynchronously from GetAnnotator.
+func (am *AnnotatorMap) loadAnnotator(dateString string) {
+	// This goroutine now has exclusive ownership of the
+	// map entry, and the responsibility for loading the annotator.
+	go func(dateString string) {
+		ann, err := am.loader(dateString)
+		if err != nil {
+			// TODO add a metric
+			log.Println(err)
 			return
 		}
+		// Set the new annotator value.  Entry should be nil.
+		err = am.validateAndSetAnnotator(dateString, ann)
+		if err != nil {
+			// TODO add a metric
+			log.Println(err)
+		}
+	}(dateString)
+}
 
-		// Place marker so that other requesters know it is loading.
-		am.annotators[dateString] = nil
-		// Drop the lock before attempting to load the annotator.
-		am.mutex.Unlock()
-		am.loadAnnotator(dateString)
-	}()
+func (am *AnnotatorMap) updateOldest() {
+	am.oldestIndex = ""
+	if len(am.annotators) == 0 {
+		return
+	}
+	oldest := time.Now()
+	// Scan through the map keys to find the oldest key.
+	for k, e := range am.annotators {
+		if e.lastUsed.Before(oldest) {
+			oldest = e.lastUsed
+			am.oldestIndex = k
+		}
+	}
 }
 
 // GetAnnotator gets the named annotator, if already in the map.
 // If not already loaded, this will trigger loading, and return ErrPendingAnnotatorLoad
 func (am *AnnotatorMap) GetAnnotator(dateString string) (api.Annotator, error) {
-	am.mutex.RLock()
-	defer am.mutex.RUnlock()
-
-	ann, ok := am.annotators[dateString]
+	am.mutex.Lock()
+	defer am.mutex.Unlock()
+	entry, ok := am.annotators[dateString]
 	if !ok {
-		am.checkAndLoadAnnotator(dateString)
+		// There is no entry yet for this date, so we take ownership by
+		// creating an entry.
+		am.annotators[dateString] = &cacheEntry{}
+		go am.loadAnnotator(dateString)
+		// Another goroutine is already loading this entry.  Return error.
 		return nil, ErrPendingAnnotatorLoad
 	}
-	if ann == nil {
+
+	// TODO check for nil entry??
+	if entry == nil {
+		return nil, ErrNilEntry
+	} else if entry.ann == nil {
 		return nil, ErrPendingAnnotatorLoad
 	}
-	return ann, nil
+	// Update the LRU time.
+	entry.lastUsed = time.Now()
+	if am.oldestIndex == dateString {
+		am.updateOldest()
+	}
+
+	return entry.ann, nil
+}
+
+// EvictOneOlderThan evicts the oldest entry, IFF it was last referenced no later than `t`
+func (am *AnnotatorMap) EvictOneOlderThan(t time.Time) api.Annotator {
+	am.mutex.Lock()
+	defer am.mutex.Unlock()
+
+	if am.oldestIndex == "" {
+		return nil
+	}
+
+	e := am.annotators[am.oldestIndex]
+	if e.lastUsed.Before(t) {
+		delete(am.annotators, am.oldestIndex)
+		am.updateOldest()
+	}
+	return nil
 }
 
 // GetAnnotator gets the current annotator.
