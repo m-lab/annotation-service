@@ -9,23 +9,6 @@ import (
 	"github.com/m-lab/annotation-service/geolite2"
 )
 
-const (
-	// Maximum number of Geolite2 datasets in memory.
-	MaxHistoricalGeolite2Dataset = 5
-)
-
-var (
-	// ErrPendingAnnotatorLoad is returned when a new annotator is requested, but not yet loaded.
-	ErrPendingAnnotatorLoad = errors.New("annotator is loading")
-
-	// ErrAnnotatorLoadFailed is returned when a requested annotator has failed to load.
-	ErrAnnotatorLoadFailed = errors.New("unable to load annoator")
-
-	// These are UNEXPECTED errors!!
-	ErrGoroutineNotOwner  = errors.New("Goroutine not owner")
-	ErrMapEntryAlreadySet = errors.New("Map entry already set")
-)
-
 // PopulateLatestData will search to the latest Geolite2 files
 // available in GCS and will use them to create a new GeoDataset which
 // it will place into the global scope as the latest version. It will
@@ -80,4 +63,8 @@ func SelectArchivedDataset(requestDate time.Time) (string, error) {
 		return "", errors.New("cannot find proper dataset")
 	}
 	return lastFilename, nil
+}
+
+func Geolite2Loader(filename string) (api.Annotator, error) {
+	return geolite2.LoadGeoLite2Dataset(filename, api.MaxmindBucketName)
 }

@@ -2,7 +2,7 @@ package manager
 
 import (
 	"errors"
-        "log"
+	"log"
 	"sync"
 	"time"
 
@@ -34,7 +34,7 @@ var (
 
 	// ArchivedLoader points to a AnnotatorMap struct containing the archived
 	// Geolite2 dataset in memory.
-	ArchivedLoader AnnotatorMap
+	ArchivedLoader = NewAnnotatorMap(geoloader.Geolite2Loader)
 )
 
 // AnnotatorMap manages all loading and fetching of Annotators.
@@ -62,69 +62,69 @@ func NewAnnotatorMap(loader func(string) (api.Annotator, error)) *AnnotatorMap {
 // NOTE: Should only be called by checkAndLoadAnnotator.
 // The calling goroutine should "own" the responsibility for
 // setting the annotator.
-func (am *AnnotatorMap) setAnnotatorIfNil(dateString string, ann api.Annotator) error {
+func (am *AnnotatorMap) setAnnotatorIfNil(filenameString string, ann api.Annotator) error {
 	am.mutex.Lock()
 	defer am.mutex.Unlock()
 
-	old, ok := am.annotators[dateString]
+	old, ok := am.annotators[filenameString]
 	if !ok {
 		return ErrGoroutineNotOwner
 	}
 	if old != nil {
 		return ErrMapEntryAlreadySet
 	}
-	am.annotators[dateString] = ann
+	am.annotators[filenameString] = ann
 	return nil
 }
 
-func (am *AnnotatorMap) maybeSetNil(dateString string) bool {
+func (am *AnnotatorMap) maybeSetNil(filenameString string) bool {
 	am.mutex.Lock()
 	defer am.mutex.Unlock()
-	_, ok := am.annotators[dateString]
+	_, ok := am.annotators[filenameString]
 	if ok {
 		// Another goroutine is already responsible for loading.
 		return false
 	}
 
 	// Place marker so that other requesters know it is loading.
-	am.annotators[dateString] = nil
+	am.annotators[filenameString] = nil
 	return true
 }
 
 // This synchronously attempts to set map entry to nil, and
 // if successful, proceeds to asynchronously load the new dataset.
-func (am *AnnotatorMap) checkAndLoadAnnotator(dateString string) {
-	reserved := am.maybeSetNil(dateString)
+func (am *AnnotatorMap) checkAndLoadAnnotator(filenameString string) {
+	reserved := am.maybeSetNil(filenameString)
 	if reserved {
 		// This goroutine now has exclusive ownership of the
 		// map entry, and the responsibility for loading the annotator.
-		go func(dateString string) {
-			newAnn, err := am.loader(dateString)
+		go func(filenameString string) {
+			newAnn, err := am.loader(filenameString)
 			if err != nil {
 				// TODO add a metric
 				log.Println(err)
 				return
 			}
 			// Set the new annotator value.  Entry should be nil.
-			err = am.setAnnotatorIfNil(dateString, newAnn)
+			err = am.setAnnotatorIfNil(filenameString, newAnn)
 			if err != nil {
 				// TODO add a metric
 				log.Println(err)
 			}
-		}(dateString)
+		}(filenameString)
 	}
 }
 
 // GetAnnotator gets the named annotator, if already in the map.
 // If not already loaded, this will trigger loading, and return ErrPendingAnnotatorLoad
-func (am *AnnotatorMap) GetAnnotator(dateString string) (api.Annotator, error) {
+func (am *AnnotatorMap) GetAnnotator(filenameString string) (api.Annotator, error) {
 	am.mutex.RLock()
-	ann, ok := am.annotators[dateString]
+	ann, ok := am.annotators[filenameString]
 	am.mutex.RUnlock()
 
 	if !ok {
 		// There is not yet any entry for this date.  Try to load it.
-		am.checkAndLoadAnnotator(dateString)
+		am.checkAndLoadAnnotator(filenameString)
 		return nil, ErrPendingAnnotatorLoad
 	}
 	if ann == nil {
@@ -136,7 +136,7 @@ func (am *AnnotatorMap) GetAnnotator(dateString string) (api.Annotator, error) {
 
 // GetAnnotator returns the correct annotator to use for a given timestamp.
 func GetAnnotator(date time.Time) api.Annotator {
-	// dateString := strconv.FormatInt(date.Unix(), encodingBase)
+	// filenameString := strconv.FormatInt(date.Unix(), encodingBase)
 	if date.After(geoloader.LatestDatasetDate) {
 		currentDataMutex.RLock()
 		ann := CurrentAnnotator
