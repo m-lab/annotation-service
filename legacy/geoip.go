@@ -21,8 +21,15 @@ import (
 	"os"
 	"sync"
 	"unsafe"
+)
 
-	"github.com/m-lab/annotation-service/legacy/geoip"
+// GeoIPOptions enum in GeoIP.h
+const (
+	Standard    = 0
+	MemoryCache = 1
+	CheckCache  = 2
+	IndexCache  = 4
+	MMapCache   = 8
 )
 
 // GeoIP contains a single v4 or v6 dataset for a particular day.
@@ -60,7 +67,7 @@ func (gi *GeoIP) Check() bool {
 
 // Open opens a DB. It is a default convenience wrapper around OpenDB.
 func Open(filename string, datasetName string) (*GeoIP, error) {
-	return OpenDB(filename, geoip.MemoryCache, datasetName)
+	return OpenDB(filename, MemoryCache, datasetName)
 }
 
 // OpenDB opens a GeoIP database by filename with specified GeoIPOptions flag.
@@ -132,7 +139,7 @@ func OpenTypeFlag(dbType int, flag int) (*GeoIP, error) {
 // OpenType opens a specified GeoIP database type in the default location
 // and the 'memory cache' flag. Use OpenTypeFlag() to specify flag.
 func OpenType(dbType int) (*GeoIP, error) {
-	return OpenTypeFlag(dbType, geoip.MemoryCache)
+	return OpenTypeFlag(dbType, MemoryCache)
 }
 
 // GetOrg takes an IPv4 address string and returns the organization name for that IP.
