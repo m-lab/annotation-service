@@ -2,6 +2,7 @@ package manager
 
 import (
 	"errors"
+        "log"
 	"sync"
 	"time"
 
@@ -30,6 +31,10 @@ var (
 	// CurrentAnnotator points to a GeoDataset struct containing the absolute
 	// latest data for the annotator to search and reply with
 	CurrentAnnotator api.Annotator
+
+	// ArchivedLoader points to a AnnotatorMap struct containing the archived
+	// Geolite2 dataset in memory.
+	ArchivedLoader AnnotatorMap
 )
 
 // AnnotatorMap manages all loading and fetching of Annotators.
@@ -144,7 +149,11 @@ func GetAnnotator(date time.Time) api.Annotator {
 		return nil
 	}
 	if geoloader.GeoLite2Regex.MatchString(filename) {
-		return geoloader.GetArchivedAnnotator(filename)
+		ann, err := ArchivedLoader.GetAnnotator(filename)
+		if err == nil {
+			return ann
+		}
+		return nil
 	} else {
 		// TODO return a pointer to legacy dataset
 		return nil
