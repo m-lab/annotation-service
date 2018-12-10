@@ -227,7 +227,7 @@ func BatchValidateAndParse(source io.Reader) ([]api.RequestData, error) {
 		if newIP.To4() != nil {
 			ipType = 4
 		}
-		validatedData = append(validatedData, api.RequestData{data.IP, ipType, data.Timestamp})
+		validatedData = append(validatedData, api.RequestData{IP: data.IP, IPFormat: ipType, Timestamp: data.Timestamp})
 	}
 	return validatedData, nil
 }

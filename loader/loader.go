@@ -5,14 +5,15 @@ package loader
 import (
 	"archive/zip"
 	"bytes"
-	"cloud.google.com/go/storage"
 	"compress/gzip"
 	"errors"
-	"golang.org/x/net/context"
 	"io"
 	"io/ioutil"
 	"log"
 	"strings"
+
+	"cloud.google.com/go/storage"
+	"golang.org/x/net/context"
 )
 
 // CreateZipReader reads a file from GCS and wraps it in a zip.Reader.
@@ -50,7 +51,7 @@ func CreateZipReader(ctx context.Context, bucket string, bucketObj string) (*zip
 	return zipReader, nil
 }
 
-// Field "fn" is the filename being searched for within the zip file
+// FindFile searches through the zip file for the filen named fn.
 func FindFile(fn string, zrdr *zip.Reader) (io.ReadCloser, error) {
 	for _, f := range zrdr.File {
 		if strings.HasSuffix(f.Name, fn) {

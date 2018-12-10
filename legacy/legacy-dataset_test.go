@@ -11,12 +11,12 @@ import (
 var _ = check.Suite(&GeoIPSuite{})
 
 func (s *GeoIPSuite) TestLoadBundleLegacyDataset(c *check.C) {
-	gi, err := legacy.LoadBundleLegacyDataset("Maxmind/2017/04/08/20170408T080000Z-GeoLiteCity.dat.gz", "downloader-mlab-testing")
+	gi, err := legacy.LoadBundleDataset("Maxmind/2017/04/08/20170408T080000Z-GeoLiteCity.dat.gz", "downloader-mlab-testing")
 	if err != nil {
 		log.Printf("Did not load legacy dataset correctly %v", err)
 	}
 
-	record := legacy.GetRecordFromLegacyDataset("2620:0:1003:415:fa1e:73f3:ec68:7709", gi, false)
+	record := gi.GetRecord("2620:0:1003:415:fa1e:73f3:ec68:7709", false)
 	c.Assert(record, check.NotNil)
 	log.Printf("%v\n", record)
 	c.Check(
@@ -40,7 +40,7 @@ func (s *GeoIPSuite) TestLoadBundleLegacyDataset(c *check.C) {
 }
 
 func (s *GeoIPSuite) TestLoadLegacyGeoliteDataset(c *check.C) {
-	gi, err := legacy.LoadLegacyGeoliteDataset("Maxmind/2014/03/07/20140307T160000Z-GeoLiteCity.dat.gz", "downloader-mlab-testing")
+	gi, err := legacy.LoadGeoliteDataset("Maxmind/2014/03/07/20140307T160000Z-GeoLiteCity.dat.gz", "downloader-mlab-testing")
 	if err != nil {
 		log.Printf("Did not load legacy dataset correctly %v", err)
 	}
@@ -69,7 +69,7 @@ func (s *GeoIPSuite) TestLoadLegacyGeoliteDataset(c *check.C) {
 }
 
 func (s *GeoIPSuite) TestLoadLegacyGeoliteV6Dataset(c *check.C) {
-	gi, err := legacy.LoadLegacyGeoliteDataset("Maxmind/2014/03/07/20140307T160000Z-GeoLiteCityv6.dat.gz", "downloader-mlab-testing")
+	gi, err := legacy.LoadGeoliteDataset("Maxmind/2014/03/07/20140307T160000Z-GeoLiteCityv6.dat.gz", "downloader-mlab-testing")
 	if err != nil {
 		log.Printf("Did not load legacy dataset correctly %v", err)
 	}

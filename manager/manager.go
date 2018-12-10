@@ -22,7 +22,7 @@ var (
 	CurrentAnnotator api.Annotator
 )
 
-// GetAnnotator checks the date, and returns the correct annotator.
+// GetAnnotator returns the correct annotator to use for a given timestamp.
 func GetAnnotator(date time.Time) api.Annotator {
 	// dateString := strconv.FormatInt(date.Unix(), encodingBase)
 	if date.After(geoloader.LatestDatasetDate) {
