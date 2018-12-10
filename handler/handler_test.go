@@ -95,13 +95,13 @@ func TestValidateAndParse(t *testing.T) {
 		{
 			req: httptest.NewRequest("GET",
 				"http://example.com/annotate?ip_addr=127.0.0.1&since_epoch=10", nil),
-			res: &api.RequestData{"127.0.0.1", 4, time.Unix(10, 0)},
+			res: &api.RequestData{IP: "127.0.0.1", IPFormat: 4, Timestamp: time.Unix(10, 0)},
 			err: nil,
 		},
 		{
 			req: httptest.NewRequest("GET",
 				"http://example.com/annotate?ip_addr=2620:0:1003:1008:5179:57e3:3c75:1886&since_epoch=10", nil),
-			res: &api.RequestData{"2620:0:1003:1008:5179:57e3:3c75:1886", 6, time.Unix(10, 0)},
+			res: &api.RequestData{IP: "2620:0:1003:1008:5179:57e3:3c75:1886", IPFormat: 6, Timestamp: time.Unix(10, 0)},
 			err: nil,
 		},
 	}
@@ -154,8 +154,8 @@ func TestBatchValidateAndParse(t *testing.T) {
 			source: bytes.NewBufferString(`[{"ip": "127.0.0.1", "timestamp": "2002-10-02T15:00:00Z"},` +
 				`{"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "timestamp": "2002-10-02T15:00:00Z"}]`),
 			res: []api.RequestData{
-				{"127.0.0.1", 4, timeCon},
-				{"2620:0:1003:1008:5179:57e3:3c75:1886", 6, timeCon},
+				{IP: "127.0.0.1", IPFormat: 4, Timestamp: timeCon},
+				{IP: "2620:0:1003:1008:5179:57e3:3c75:1886", IPFormat: 6, Timestamp: timeCon},
 			},
 			err: nil,
 		},
@@ -234,7 +234,7 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 		res *api.GeoData
 	}{
 		{
-			req: &api.RequestData{"127.0.0.1", 4, time.Unix(0, 0)},
+			req: &api.RequestData{IP: "127.0.0.1", IPFormat: 4, Timestamp: time.Unix(0, 0)},
 			res: &api.GeoData{
 				Geo: &api.GeolocationIP{City: "Not A Real City", PostalCode: "10583"},
 				ASN: &api.IPASNData{}},
