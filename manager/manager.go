@@ -10,23 +10,32 @@ import (
 	"github.com/m-lab/annotation-service/geolite2"
 )
 
+// CacheError is the error type for all errors related to the Annotator cache.
+type CacheError interface {
+	error
+}
+
+func newCacheError(msg string) CacheError {
+	return CacheError(errors.New(msg))
+}
+
 var (
 	// ErrNilDataset is returned when CurrentAnnotator is nil.
-	ErrNilDataset = errors.New("CurrentAnnotator is nil")
+	ErrNilDataset = newCacheError("CurrentAnnotator is nil")
 
 	// ErrPendingAnnotatorLoad is returned when a new annotator is requested, but not yet loaded.
-	ErrPendingAnnotatorLoad = errors.New("annotator is loading")
+	ErrPendingAnnotatorLoad = newCacheError("annotator is loading")
 
 	// ErrAnnotatorLoadFailed is returned when a requested annotator has failed to load.
-	ErrAnnotatorLoadFailed = errors.New("unable to load annoator")
+	ErrAnnotatorLoadFailed = newCacheError("unable to load annoator")
 
 	// These are UNEXPECTED errors!!
 	// ErrGoroutineNotOwner is returned when goroutine attempts to set annotator entry, but is not the owner.
-	ErrGoroutineNotOwner = errors.New("goroutine not owner")
+	ErrGoroutineNotOwner = newCacheError("goroutine not owner")
 	// ErrMapEntryAlreadySet is returned when goroutine attempts to set annotator, but entry is non-null.
-	ErrMapEntryAlreadySet = errors.New("map entry already set")
+	ErrMapEntryAlreadySet = newCacheError("map entry already set")
 	// ErrNilEntry is returned when map has a nil entry, which should never happen.
-	ErrNilEntry = errors.New("Map entry is nil")
+	ErrNilEntry = newCacheError("Map entry is nil")
 
 	// A mutex to make sure that we are not reading from the CurrentAnnotator
 	// pointer while trying to update it
@@ -40,6 +49,8 @@ var (
 type cacheEntry struct {
 	ann      api.Annotator
 	lastUsed time.Time
+	//
+	err CacheError
 }
 
 // AnnotatorMap manages all loading and fetching of Annotators.
@@ -47,9 +58,10 @@ type cacheEntry struct {
 // TODO - should this be a generic cache of interface{}?
 //
 // Synchronization:
-//  All accesses must hold the mutex.  If an element is not found, the
-//  goroutine may attempt to take responsibility for loading it by obtaining
-//  the write lock, and writing an entry with a nil pointer.
+//  All accesses must hold the mutex.  If an element is not found, the goroutine
+//  may take ownership of the loading job by writing a new empty entry into the
+//  map.  It should then start a new goroutine to load the annotator and populate
+//  the entry.
 // TODO - still need a strategy for dealing with persistent errors.
 type AnnotatorMap struct {
 	// Keys are date strings in YYYYMMDD format.
@@ -68,7 +80,8 @@ func NewAnnotatorMap(loader func(string) (api.Annotator, error)) *AnnotatorMap {
 // NOTE: Should only be called by checkAndLoadAnnotator.
 // The calling goroutine should "own" the responsibility for
 // setting the annotator.
-func (am *AnnotatorMap) validateAndSetAnnotator(dateString string, ann api.Annotator) error {
+// TODO Add unit tests for load error cases.
+func (am *AnnotatorMap) validateAndSetAnnotator(dateString string, ann api.Annotator, err error) error {
 	am.mutex.Lock()
 	defer am.mutex.Unlock()
 
@@ -80,6 +93,7 @@ func (am *AnnotatorMap) validateAndSetAnnotator(dateString string, ann api.Annot
 		return ErrMapEntryAlreadySet
 	}
 	entry.ann = ann
+	entry.err = err
 	entry.lastUsed = time.Now()
 	return nil
 }
@@ -87,22 +101,17 @@ func (am *AnnotatorMap) validateAndSetAnnotator(dateString string, ann api.Annot
 // This loads and saves the new dataset.
 // It should only be called asynchronously from GetAnnotator.
 func (am *AnnotatorMap) loadAnnotator(dateString string) {
-	// This goroutine now has exclusive ownership of the
-	// map entry, and the responsibility for loading the annotator.
-	go func(dateString string) {
-		ann, err := am.loader(dateString)
-		if err != nil {
-			// TODO add a metric
-			log.Println(err)
-			return
-		}
-		// Set the new annotator value.  Entry should be nil.
-		err = am.validateAndSetAnnotator(dateString, ann)
-		if err != nil {
-			// TODO add a metric
-			log.Println(err)
-		}
-	}(dateString)
+	ann, err := am.loader(dateString)
+	if err != nil {
+		// TODO add a metric
+		log.Println(err)
+	}
+	// Set the new annotator value.  Entry should be nil.
+	err = am.validateAndSetAnnotator(dateString, ann, err)
+	if err != nil {
+		// TODO add a metric
+		log.Println(err)
+	}
 }
 
 func (am *AnnotatorMap) updateOldest() {
@@ -138,6 +147,8 @@ func (am *AnnotatorMap) GetAnnotator(dateString string) (api.Annotator, error) {
 	// TODO check for nil entry??
 	if entry == nil {
 		return nil, ErrNilEntry
+	} else if entry.err != nil {
+		return nil, entry.err
 	} else if entry.ann == nil {
 		return nil, ErrPendingAnnotatorLoad
 	}
