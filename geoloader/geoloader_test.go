@@ -1,10 +1,14 @@
 package geoloader_test
 
 import (
+	"errors"
 	"log"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/m-lab/annotation-service/api"
+	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/geoloader"
 )
 
@@ -63,5 +67,48 @@ func TestSelectArchivedDataset(t *testing.T) {
 	if filename6 != "Maxmind/2016/03/08/20160308T080000Z-GeoLiteCityv6.dat.gz" || err != nil {
 		t.Errorf("Did not select correct dataset. Expected %s, got %s, %+v.",
 			"Maxmind/2016/03/08/20160308T080000Z-GeoLiteCityv6.dat.gz", filename6, err)
+	}
+}
+
+func fakeLoader(date string) (api.Annotator, error) {
+	return &geolite2.GeoDataset{}, nil
+}
+
+func TestAnnotatorMap(t *testing.T) {
+	am := geoloader.NewAnnotatorMap(fakeLoader)
+
+	ann, err := am.GetAnnotator("20110101")
+	if err != geoloader.ErrPendingAnnotatorLoad {
+		t.Error("Should be", geoloader.ErrPendingAnnotatorLoad)
+	}
+
+	ann, err = am.GetAnnotator("20110102")
+	if err != geoloader.ErrPendingAnnotatorLoad {
+		t.Error("Should be", geoloader.ErrPendingAnnotatorLoad)
+	}
+
+	// Wait for both annotator to be available.
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
+	go func(date string) {
+		err := errors.New("start")
+		for ; err != nil; _, err = am.GetAnnotator(date) {
+		}
+		wg.Done()
+	}("20110101")
+	go func(date string) {
+		err := errors.New("start")
+		for ; err != nil; _, err = am.GetAnnotator(date) {
+		}
+		wg.Done()
+	}("20110102")
+	wg.Wait()
+
+	ann, err = am.GetAnnotator("20110102")
+	if err != nil {
+		t.Error("Not expecting:", err)
+	}
+	if ann == nil {
+		t.Error("Expecting non-nil annotator")
 	}
 }

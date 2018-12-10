@@ -47,9 +47,14 @@ func GetAnnotator(date time.Time) api.Annotator {
 // InitDataset will update the filename list of archived dataset in memory
 // and load the latest Geolite2 dataset in memory.
 func InitDataset() {
-        geoloader.UpdateArchivedFilenames()
+	geoloader.UpdateArchivedFilenames()
 
 	currentDataMutex.Lock()
 	CurrentAnnotator = geoloader.GetLatestData()
 	currentDataMutex.Unlock()
+}
+
+// AnnotationLoader provides the Load function, which loads an annotator.
+type AnnotationLoader interface {
+	Load(date time.Time) (api.Annotator, error)
 }

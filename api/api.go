@@ -67,9 +67,3 @@ type Annotator interface {
 	// TODO GetStartDate() time.Time
 	// TODO GetEndDate() time.Time
 }
-
-// AnnotationLoader provides the Load function, which loads an annotator.
-// TODO - do we really need this, or should we just have a single maxmind.Load function.
-type AnnotationLoader interface {
-	Load(date time.Time) (Annotator, error)
-}
