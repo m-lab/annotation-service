@@ -5,7 +5,6 @@ package api
 import (
 	"encoding/json"
 	"errors"
-	"net"
 	"regexp"
 	"time"
 )
@@ -73,7 +72,7 @@ type RequestV2 struct {
 	RequestType string    // This should contain "Annotate v2.0"
 	RequestInfo string    // Arbitrary info about the requester, to be used, e.g., for stats.
 	Date        time.Time // The date to be used to annotate the addresses.
-	IPs         []net.IP  // The net.IP addresses to be annotated
+	IPs         []string  // The IP addresses to be annotated
 }
 
 // ResponseV2 describes data returned in V2 responses (json encoded).
@@ -90,8 +89,7 @@ type ResponseV2 struct {
 // Annotator provides the GetAnnotation method, which retrieves the annotation for a given IP address.
 type Annotator interface {
 	// TODO use net.IP, and drop the bool
-	// TODO return struct instead of pointer.
-	GetAnnotation(request *RequestData) (*GeoData, error)
+	GetAnnotation(request *RequestData) (GeoData, error)
 	// These return the date range covered by the annotator.
 	StartDate() time.Time
 	// TODO GetEndDate() time.Time
