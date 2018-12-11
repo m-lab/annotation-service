@@ -3,6 +3,7 @@ package metrics
 import (
 	"net/http"
 	"net/http/pprof"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -55,6 +56,9 @@ func SetupPrometheus() *http.Server {
 		Addr:    ":9090",
 		Handler: mux,
 	}
-	go server.ListenAndServe()
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		server.ListenAndServe()
+	}()
 	return server
 }
