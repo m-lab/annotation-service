@@ -28,6 +28,14 @@ var (
 		Name: "annotator_Annotation_Lookups_total",
 		Help: "The total number of ip lookups.",
 	})
+	BadIPTotal = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "annotator_Bad_IP_Addresses_total",
+		Help: "The total number of ip parse failures.",
+	})
+	ErrorTotal = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "annotator_Error_total",
+		Help: "The total number annotation errors.",
+	})
 )
 
 func init() {
@@ -35,6 +43,8 @@ func init() {
 	prometheus.MustRegister(TotalRequests)
 	prometheus.MustRegister(TotalLookups)
 	prometheus.MustRegister(RequestTimes)
+	prometheus.MustRegister(BadIPTotal)
+	prometheus.MustRegister(ErrorTotal)
 }
 
 // SetupPrometheus sets up and runs a webserver to export prometheus metrics.

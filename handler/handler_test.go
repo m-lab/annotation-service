@@ -245,11 +245,11 @@ func TestBatchAnnotate(t *testing.T) {
 func TestGetMetadataForSingleIP(t *testing.T) {
 	tests := []struct {
 		req *api.RequestData
-		res *api.GeoData
+		res api.GeoData
 	}{
 		{
 			req: &api.RequestData{IP: "127.0.0.1", IPFormat: 4, Timestamp: time.Unix(0, 0)},
-			res: &api.GeoData{
+			res: api.GeoData{
 				Geo: &api.GeolocationIP{City: "Not A Real City", PostalCode: "10583"},
 				ASN: &api.IPASNData{}},
 		},
