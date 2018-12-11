@@ -36,7 +36,7 @@ func SelectArchivedDataset(requestDate time.Time) (string, error) {
 	}
 	CutOffDate, _ := time.Parse("January 2, 2006", GeoLite2CutOffDate)
 	lastFilename := ""
-	for _, fileName := range DatasetNames {
+	for _, fileName := range DatasetFilenames {
 		if requestDate.Before(CutOffDate) && (GeoLegacyRegex.MatchString(fileName) || GeoLegacyv6Regex.MatchString(fileName)) {
 			// search legacy dataset
 			fileDate, err := ExtractDateFromFilename(fileName)

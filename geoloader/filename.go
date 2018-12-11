@@ -20,8 +20,8 @@ const (
 	GeoLite2CutOffDate = "August 15, 2017"
 )
 
-// DatasetNames are list of datasets sorted in lexographical order in downloader bucket.
-var DatasetNames []string
+// DatasetFilenames are list of datasets sorted in lexographical order in downloader bucket.
+var DatasetFilenames []string
 
 // The date of lastest available dataset.
 var LatestDatasetDate time.Time
@@ -38,20 +38,21 @@ var GeoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
 // It will also set LatestDatasetDate as the date of lastest dataset.
 // If it encounters an error, it will halt the program.
 func UpdateArchivedFilenames() error {
+	DatasetFilenames = make([]string, 0)
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	if err != nil {
 		return err
 	}
 	prospectiveFiles := client.Bucket(api.MaxmindBucketName).Objects(ctx, &storage.Query{Prefix: api.MaxmindPrefix})
-	filename := ""
+	lastFilename := ""
 	for file, err := prospectiveFiles.Next(); err != iterator.Done; file, err = prospectiveFiles.Next() {
 		if err != nil {
 			return err
 		}
-		DatasetNames = append(DatasetNames, file.Name)
-		if file.Name > filename && GeoLite2Regex.MatchString(file.Name) {
-			filename = file.Name
+		DatasetFilenames = append(DatasetFilenames, file.Name)
+		if file.Name > lastFilename && GeoLite2Regex.MatchString(file.Name) {
+			lastFilename = file.Name
 		}
 	}
 	if err != nil {
@@ -59,7 +60,7 @@ func UpdateArchivedFilenames() error {
 	}
 
 	// Now set the lastest dataset
-	date, err := ExtractDateFromFilename(filename)
+	date, err := ExtractDateFromFilename(lastFilename)
 	if err != nil {
 		log.Println(err)
 		return err
