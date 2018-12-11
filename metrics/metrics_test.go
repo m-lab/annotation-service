@@ -13,8 +13,9 @@ import (
 )
 
 func TestPrometheusMetrics(t *testing.T) {
-	server := metrics.SetupPrometheus()
-	defer server.Shutdown(nil)
+	// server :=
+	metrics.SetupPrometheus()
+	// defer server.Shutdown(nil)  // This is causing crashes on Travis.
 
 	metricReader, err := http.Get("http://localhost:9090/metrics")
 	for err != nil && strings.Contains(err.Error(), "connection refused") {
