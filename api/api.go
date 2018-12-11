@@ -78,8 +78,8 @@ type RequestV2 struct {
 // ResponseV2 describes data returned in V2 responses (json encoded).
 type ResponseV2 struct {
 	// TODO should we include additional metadata about the annotator sources?  Perhaps map of filenames?
-	StartDate   time.Time           // The StartDate of the dataset used for the annotation
-	Annotations map[string]*GeoData // Map from human readable IP address to GeoData
+	AnnotatorDate time.Time           // The publication date of the dataset used for the annotation
+	Annotations   map[string]*GeoData // Map from human readable IP address to GeoData
 }
 
 /*************************************************************************
@@ -88,11 +88,10 @@ type ResponseV2 struct {
 
 // Annotator provides the GetAnnotation method, which retrieves the annotation for a given IP address.
 type Annotator interface {
-	// TODO use net.IP, and drop the bool
+	// TODO use simple string IP
 	GetAnnotation(request *RequestData) (GeoData, error)
-	// These return the date range covered by the annotator.
-	StartDate() time.Time
-	// TODO GetEndDate() time.Time
+	// The date associated with the dataset.
+	AnnotatorDate() time.Time
 }
 
 // AnnotationLoader provides the Load function, which loads an annotator.

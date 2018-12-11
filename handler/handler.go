@@ -119,7 +119,7 @@ var errNoAnnotator = errors.New("no Annotator found")
 
 // AnnotateLegacy uses a single `date` to select an annotator, and uses that annotator to annotate all
 // `ips`.  It uses the dates from the individual RequestData to form the keys for the result map.
-// Return values include the StartDate associated with the Annotator that was used.
+// Return values include the AnnotatorDate which is the publication date of the annotation dataset.
 // TODO move to annotatormanager package soon.
 // DEPRECATED: This will soon be replaced with AnnotateV2()
 func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoData, time.Time, error) {
@@ -180,7 +180,7 @@ func AnnotateV2(date time.Time, ips []string) (api.ResponseV2, error) {
 		}
 		responseMap[request.IP] = &annotation
 	}
-	return api.ResponseV2{StartDate: ann.StartDate(), Annotations: responseMap}, nil
+	return api.ResponseV2{AnnotatorDate: ann.AnnotatorDate(), Annotations: responseMap}, nil
 }
 
 // BatchAnnotate is a URL handler that expects the body of the request

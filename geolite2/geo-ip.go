@@ -125,9 +125,9 @@ func (ds *GeoDataset) GetAnnotation(request *api.RequestData) (api.GeoData, erro
 	return convertIPNodeToGeoData(node, ds.LocationNodes), nil
 }
 
-// StartDate returns the date that the dataset was published.
+// AnnotatorDate returns the date that the dataset was published.
 // TODO implement actual dataset time!!
-func (ds *GeoDataset) StartDate() time.Time {
+func (ds *GeoDataset) AnnotatorDate() time.Time {
 	return ds.start
 }
 
