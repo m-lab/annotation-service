@@ -281,7 +281,7 @@ func handleNewOrOld(w http.ResponseWriter, jsonBuffer []byte) {
 		handleOld(w, jsonBuffer)
 	} else {
 		switch wrapper.RequestType {
-		case api.RequestVersion2:
+		case api.RequestV2Tag:
 			handleV2(w, jsonBuffer)
 		default:
 			// TODO Add metric
