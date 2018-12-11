@@ -105,16 +105,17 @@ type Datasets struct {
 	v6Data *GeoIP
 }
 
-// GetRecord retrieves an individual record from a dataset.
-func (gi Datasets) GetRecord(ip string, isIP4 bool) *api.GeoData {
+// GetAnnotation looks up the IP address and returns the corresponding GeoData
+// TODO - improve the format handling.  Perhaps pass in a net.IP ?
+func (gi *Datasets) GetAnnotation(request *api.RequestData) (*api.GeoData, error) {
 	if gi.v4Data == nil || gi.v6Data == nil {
-		return nil
+		return nil, errors.New("Invalid dataset")
 	}
 	var record *GeoIPRecord
-	if isIP4 {
-		record = gi.v4Data.GetRecord(ip, isIP4)
+	if request.IPFormat == 4 {
+		record = gi.v4Data.GetRecord(request.IP, true)
 	} else {
-		record = gi.v6Data.GetRecord(ip, isIP4)
+		record = gi.v6Data.GetRecord(request.IP, false)
 	}
 
 	// It is very possible that the record missed some fields in legacy dataset.
@@ -134,9 +135,9 @@ func (gi Datasets) GetRecord(ip string, isIP4 bool) *api.GeoData {
 				Longitude:     round(record.Longitude),
 			},
 			ASN: &api.IPASNData{},
-		}
+		}, nil
 	}
-	return nil
+	return nil, errors.New("No record in dataset")
 }
 
 // LoadBundleDataset loads both IPv4 and IPv6 version of the requested dataset into memory.
