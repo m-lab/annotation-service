@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -148,7 +149,7 @@ func TestBatchValidateAndParse(t *testing.T) {
 		{
 			source: bytes.NewBufferString(`[{"ip": "Bad IP", "timestamp": "2002-10-02T15:00:00Z"}]`),
 			res:    nil,
-			err:    errors.New("Invalid IP address."),
+			err:    errors.New("invalid IP address"),
 		},
 		{
 			source: bytes.NewBufferString(`[{"ip": "127.0.0.1", "timestamp": "2002-10-02T15:00:00Z"},` +
@@ -160,13 +161,26 @@ func TestBatchValidateAndParse(t *testing.T) {
 			err: nil,
 		},
 	}
-	for _, test := range tests {
-		res, err := handler.BatchValidateAndParse(test.source)
+	for i, test := range tests {
+		jsonBuffer, err := ioutil.ReadAll(test.source)
+		if err != nil {
+			if err.Error() != test.err.Error() {
+				log.Printf("Expected %T\n", test.err)
+				t.Error(err)
+			}
+			continue
+		}
+		res, err := handler.BatchValidateAndParse(jsonBuffer)
 		if !reflect.DeepEqual(res, test.res) {
-			t.Errorf("Expected %+v, got %+v.", test.res, res)
+			t.Errorf("Test %d: Expected %+v, got %+v.", i, test.res, res)
 		}
 		if err != nil && test.err == nil || err == nil && test.err != nil {
-			t.Errorf("Expected %+v, got %+v.", test.err, err)
+			t.Errorf("Test %d: Expected %+v, got %+v.", i, test.err, err)
+			continue
+		}
+		if err != nil && test.err != nil && err.Error() != test.err.Error() {
+			t.Errorf("Test %d: Expected %+v, got %+v.", i, test.err, err)
+			continue
 		}
 	}
 
@@ -231,11 +245,11 @@ func TestBatchAnnotate(t *testing.T) {
 func TestGetMetadataForSingleIP(t *testing.T) {
 	tests := []struct {
 		req *api.RequestData
-		res *api.GeoData
+		res api.GeoData
 	}{
 		{
 			req: &api.RequestData{IP: "127.0.0.1", IPFormat: 4, Timestamp: time.Unix(0, 0)},
-			res: &api.GeoData{
+			res: api.GeoData{
 				Geo: &api.GeolocationIP{City: "Not A Real City", PostalCode: "10583"},
 				ASN: &api.IPASNData{}},
 		},
