@@ -82,12 +82,12 @@ func (ds *GeoDataset) SearchBinary(ipLookUp string, IsIP4 bool) (p IPNode, e err
 // locationNodes. It will then use that data to fill in a GeoData
 // struct and return its pointer.
 // TODO make this unexported
-func convertIPNodeToGeoData(ipNode IPNode, locationNodes []LocationNode) *api.GeoData {
+func convertIPNodeToGeoData(ipNode IPNode, locationNodes []LocationNode) api.GeoData {
 	locNode := LocationNode{}
 	if ipNode.LocationIndex >= 0 {
 		locNode = locationNodes[ipNode.LocationIndex]
 	}
-	return &api.GeoData{
+	return api.GeoData{
 		Geo: &api.GeolocationIP{
 			ContinentCode: locNode.ContinentCode,
 			CountryCode:   locNode.CountryCode,
@@ -108,7 +108,7 @@ func convertIPNodeToGeoData(ipNode IPNode, locationNodes []LocationNode) *api.Ge
 
 // GetAnnotation looks up the IP address and returns the corresponding GeoData
 // TODO - improve the format handling.  Perhaps pass in a net.IP ?
-func (ds *GeoDataset) GetAnnotation(request *api.RequestData) (*api.GeoData, error) {
+func (ds *GeoDataset) GetAnnotation(request *api.RequestData) (api.GeoData, error) {
 	var node IPNode
 	err := errors.New("unknown IP format")
 	node, err = ds.SearchBinary(request.IP, request.IPFormat == 4)
@@ -119,7 +119,7 @@ func (ds *GeoDataset) GetAnnotation(request *api.RequestData) (*api.GeoData, err
 			log.Println(err, request.IP)
 		}
 		//TODO metric here
-		return nil, err
+		return api.GeoData{}, err
 	}
 
 	return convertIPNodeToGeoData(node, ds.LocationNodes), nil

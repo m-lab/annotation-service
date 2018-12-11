@@ -114,14 +114,14 @@ func NewBatchResponse(size int) *BatchResponse {
 	return &BatchResponse{"", time.Time{}, responseMap}
 }
 
-// TODO move to annotatormanager package soon.
+// TODO use error messages defined in the annotator-map PR.
 var errNoAnnotator = errors.New("no Annotator found")
 
 // AnnotateLegacy uses a single `date` to select an annotator, and uses that annotator to annotate all
 // `ips`.  It uses the dates from the individual RequestData to form the keys for the result map.
 // Return values include the StartDate associated with the Annotator that was used.
 // TODO move to annotatormanager package soon.
-// DEPRECATED: This will soon be replaced with Annotate(), that will use net.IP instead of RequestData.
+// DEPRECATED: This will soon be replaced with AnnotateV2()
 func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoData, time.Time, error) {
 	responseMap := make(map[string]*api.GeoData)
 
@@ -142,43 +142,45 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 		// This requires that the caller should ignore the dateString.
 		// TODO - the unit tests do not catch this problem, so maybe it isn't a problem.
 		dateString := strconv.FormatInt(request.Timestamp.Unix(), encodingBase)
-		responseMap[request.IP+dateString] = annotation
+		responseMap[request.IP+dateString] = &annotation
 	}
 	// TODO use annotator's actual start date.
 	return responseMap, time.Time{}, nil
 }
 
-func AnnotateV2(date time.Time, ips []net.IP) (api.ResponseV2, error) {
+// AnnotateV2 finds an appropriate Annotator based on the requested Date, and creates a
+// response with annotations for all parseable IPs.
+func AnnotateV2(date time.Time, ips []string) (api.ResponseV2, error) {
 	responseMap := make(map[string]*api.GeoData, len(ips))
 
 	ann := manager.GetAnnotator(date)
 	if ann == nil {
-		// stop sending more request in the same batch because w/ high chance the dataset is not ready
+		// Just reject the request.  Caller should try again until successful, or different error.
 		return api.ResponseV2{}, errNoAnnotator
 	}
 
 	for i := range ips {
-		ip := ips[i]
+		ip := net.ParseIP(ips[i])
+		if ip == nil {
+			metrics.BadIPTotal.Inc()
+			continue
+		}
 		format := 4
 		if ip.To4() == nil {
 			format = 6
 		}
 		// TODO - this is kinda hacky.  Should change the GetAnnotation api instead.
-		request := api.RequestData{ip.String(), format, date}
+		request := api.RequestData{IP: ip.String(), IPFormat: format, Timestamp: date}
 		metrics.TotalLookups.Inc()
 
 		annotation, err := ann.GetAnnotation(&request)
 		if err != nil {
-			// TODO need better error handling.
+			metrics.ErrorTotal.Inc()
 			continue
 		}
-		// This requires that the caller should ignore the dateString.
-		// TODO - the unit tests do not catch this problem, so maybe it isn't a problem.
-		dateString := strconv.FormatInt(request.Timestamp.Unix(), encodingBase)
-		responseMap[request.IP+dateString] = annotation
+		responseMap[request.IP] = &annotation
 	}
-	// TODO use annotator's actual start date.
-	return api.ResponseV2{ann.StartDate(), responseMap}, nil
+	return api.ResponseV2{StartDate: ann.StartDate(), Annotations: responseMap}, nil
 }
 
 // BatchAnnotate is a URL handler that expects the body of the request
@@ -320,14 +322,14 @@ func BatchValidateAndParse(jsonBuffer []byte) ([]api.RequestData, error) {
 
 // GetMetadataForSingleIP takes a pointer to a api.RequestData
 // struct and will use it to fetch the appropriate associated
-// metadata, returning a pointer. It is gaurenteed to return a non-nil
+// metadata, returning a GeoData.
 // pointer, even if it cannot find the appropriate metadata.
-func GetMetadataForSingleIP(request *api.RequestData) (*api.GeoData, error) {
+func GetMetadataForSingleIP(request *api.RequestData) (api.GeoData, error) {
 	metrics.TotalLookups.Inc()
 	// TODO replace with generic GetAnnotator, that respects time.
 	ann := manager.GetAnnotator(request.Timestamp)
 	if ann == nil {
-		return nil, manager.ErrNilDataset
+		return api.GeoData{}, manager.ErrNilDataset
 	}
 
 	return ann.GetAnnotation(request)
