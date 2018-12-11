@@ -1,9 +1,11 @@
 package metrics
 
 import (
+	"net"
 	"net/http"
 	"net/http/pprof"
 
+	"github.com/m-lab/go/rtx"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -55,6 +57,13 @@ func SetupPrometheus() *http.Server {
 		Addr:    ":9090",
 		Handler: mux,
 	}
-	go server.ListenAndServe()
+
+	// Don't ListenAndServe because we want to be able to GET as soon as this function returns.
+	// Listen synchronously.
+	listener, err := net.Listen("tcp", server.Addr)
+	rtx.Must(err, "Could not open listening socket for Prometheus metrics")
+	// Serve asynchronously.
+	go server.Serve(listener.(*net.TCPListener))
+
 	return server
 }
