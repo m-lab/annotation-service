@@ -60,9 +60,10 @@ func SetupPrometheus() *http.Server {
 
 	// Don't ListenAndServe because we want to be able to GET as soon as this function returns.
 	// Listen synchronously.
-	listenSocket, err := net.Listen("tcp", server.Addr)
+	listener, err := net.Listen("tcp", server.Addr)
 	rtx.Must(err, "Could not open listening socket for Prometheus metrics")
 	// Serve asynchronously.
-	go server.Serve(listenSocket.(*net.TCPListener))
+	go server.Serve(listener.(*net.TCPListener))
+
 	return server
 }
