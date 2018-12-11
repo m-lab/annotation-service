@@ -1,3 +1,6 @@
+// Package geoloader provides the interface between manager and dataset handling
+// packages (geolite2 and legacy). manager only depends on geoloader and api.
+// geoloader only depends on geolite2, legacy and api.
 package geoloader
 
 import (
