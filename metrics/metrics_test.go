@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/m-lab/annotation-service/metrics"
 	"github.com/prometheus/prometheus/util/promlint"
@@ -15,8 +14,6 @@ func TestPrometheusMetrics(t *testing.T) {
 	server := metrics.SetupPrometheus()
 	defer server.Shutdown(nil)
 
-	// Wait 1 second to lose all race conditions.
-	time.Sleep(1 * time.Second)
 	metricReader, err := http.Get("http://localhost:9090/metrics")
 	if err != nil || metricReader == nil {
 		t.Errorf("Could not GET metrics: %v", err)
