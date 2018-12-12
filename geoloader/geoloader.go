@@ -25,7 +25,7 @@ func GetLatestData() api.Annotator {
 	return data
 }
 
-// SelectArchivedDataset returns the archived GelLite dataset filename given a date.
+// SelectArchivedDataset returns the archived GeoLite dataset filename given a date.
 // For any input date earlier than 2013/08/28, we will return 2013/08/28 dataset.
 // For any input date later than latest available dataset, we will return the latest dataset
 // Otherwise, we return the last dataset before the input date.
