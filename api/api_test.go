@@ -65,7 +65,7 @@ func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 }
 
-func TestDoRPC(t *testing.T) {
+func TestDoV2Request(t *testing.T) {
 	expectedJson := `{"AnnotatorDate":"2018-12-05T00:00:00Z","Annotations":{"147.1.2.3":{"Geo":{"continent_code":"NA","country_code":"US","country_name":"United States","latitude":37.751,"longitude":-97.822},"ASN":{}},"8.8.8.8":{"Geo":{"continent_code":"NA","country_code":"US","country_name":"United States","latitude":37.751,"longitude":-97.822},"ASN":{}}}}`
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -77,9 +77,8 @@ func TestDoRPC(t *testing.T) {
 	req := api.RequestV2{Date: time.Now()}
 	req.RequestType = api.RequestV2Tag
 	req.RequestInfo = "Test"
-	req.IPs = append(req.IPs, "8.8.8.8")
-	req.IPs = append(req.IPs, "147.1.2.3")
-	resp, err := api.DoRPC(context.Background(), url, req)
+	ips := []string{"8.8.8.8", "147.1.2.3"}
+	resp, err := api.DoV2Request(context.Background(), url, time.Now(), ips)
 	if err != nil {
 		t.Fatal(err)
 	}

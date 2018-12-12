@@ -79,6 +79,11 @@ type RequestV2 struct {
 	IPs         []string  // The IP addresses to be annotated
 }
 
+// NewRequestV2 returns a partially initialized requests.  Caller should fill in IPs.
+func NewRequestV2(date time.Time, ips []string) RequestV2 {
+	return RequestV2{Date: date, RequestType: RequestV2Tag, IPs: ips}
+}
+
 // ResponseV2 describes data returned in V2 responses (json encoded).
 type ResponseV2 struct {
 	// TODO should we include additional metadata about the annotator sources?  Perhaps map of filenames?
@@ -117,9 +122,10 @@ func ExtractDateFromFilename(filename string) (time.Time, error) {
 	return time.Parse(time.RFC3339, filedate[0][0:4]+"-"+filedate[0][4:6]+"-"+filedate[0][6:8]+"T00:00:00Z")
 }
 
-// DoRPC takes a url, and RequestV2, makes remote call, and returns parsed ResponseV2
+// DoV2Request takes a url, and RequestV2, makes remote call, and returns parsed ResponseV2
 // TODO(gfr) Should pass the annotator's request context through and use it here.
-func DoRPC(ctx context.Context, url string, req RequestV2) (*ResponseV2, error) {
+func DoV2Request(ctx context.Context, url string, date time.Time, ips []string) (*ResponseV2, error) {
+	req := NewRequestV2(date, ips)
 	encodedData, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
