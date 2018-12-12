@@ -53,3 +53,15 @@ func TestRequestWrapper(t *testing.T) {
 		t.Fatal("Should have produced json unmarshal error")
 	}
 }
+
+func TestOmitEmpty(t *testing.T) {
+	portland := api.GeolocationIP{}
+	portland.City = "Portland"
+	bytes, err := json.Marshal(portland)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(bytes) != 19 {
+		t.Fatal(len(bytes), string(bytes))
+	}
+}
