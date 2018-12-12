@@ -3,8 +3,12 @@
 package api
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
+	"io/ioutil"
+	"net/http"
 	"regexp"
 	"time"
 )
@@ -111,4 +115,49 @@ func ExtractDateFromFilename(filename string) (time.Time, error) {
 		return time.Time{}, errors.New("cannot extract date from input filename")
 	}
 	return time.Parse(time.RFC3339, filedate[0][0:4]+"-"+filedate[0][4:6]+"-"+filedate[0][6:8]+"T00:00:00Z")
+}
+
+// DoRPC takes a url, and RequestV2, makes remote call, and returns parsed ResponseV2
+// TODO(gfr) Should pass the annotator's request context through and use it here.
+func DoRPC(ctx context.Context, url string, req RequestV2) (*ResponseV2, error) {
+	encodedData, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+
+	var netClient = &http.Client{
+		// Median response time is < 10 msec, but 99th percentile is 0.6 seconds.
+		Timeout: 2 * time.Second,
+	}
+
+	httpReq, err := http.NewRequest("POST", url, bytes.NewReader(encodedData))
+	if err != nil {
+		return nil, err
+	}
+
+	// Make the actual request
+	httpResp, err := netClient.Do(httpReq.WithContext(ctx))
+	if err != nil {
+		return nil, err
+	}
+	defer httpResp.Body.Close()
+
+	// Catch errors reported by the service
+	if httpResp.StatusCode != http.StatusOK {
+		return nil, errors.New("URL:" + url + " gave response code " + httpResp.Status)
+	}
+
+	// Copy response into a byte slice
+	body, err := ioutil.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := ResponseV2{}
+
+	err = json.Unmarshal(body, &resp)
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
 }
