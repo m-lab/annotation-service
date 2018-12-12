@@ -76,6 +76,8 @@ type RequestV2 struct {
 }
 
 // ResponseV2 describes data returned in V2 responses (json encoded).
+// A map entry SHOULD be missing IFF the IP was invalid (or not routable) OR if the dataset had no entry for that IP.
+// TODO - verify that this is how the code actually behaves.
 type ResponseV2 struct {
 	// TODO should we include additional metadata about the annotator sources?  Perhaps map of filenames?
 	AnnotatorDate time.Time           // The publication date of the dataset used for the annotation
