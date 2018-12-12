@@ -17,7 +17,7 @@ const (
 	// This is the date we have the first GeoLite2 dataset.
 	// Any request earlier than this date using legacy binary datasets
 	// later than this date using GeoLite2 datasets
-	GeoLite2CutOffDate = "August 15, 2017"
+	GeoLite2StartDate = time.Unix(1494505756, 0) //"August 15, 2017"
 )
 
 // DatasetFilenames are list of datasets sorted in lexographical order in downloader bucket.
