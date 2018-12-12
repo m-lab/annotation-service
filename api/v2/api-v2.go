@@ -49,9 +49,9 @@ type Response struct {
 *                           Local Annotator API                          *
 *************************************************************************/
 
-// DoRequest takes a url, and Request, makes remote call, and returns parsed ResponseV2
+// GetAnnotations takes a url, and Request, makes remote call, and returns parsed ResponseV2
 // TODO(gfr) Should pass the annotator's request context through and use it here.
-func DoRequest(ctx context.Context, url string, date time.Time, ips []string) (*Response, error) {
+func GetAnnotations(ctx context.Context, url string, date time.Time, ips []string) (*Response, error) {
 	req := NewRequest(date, ips)
 	encodedData, err := json.Marshal(req)
 	if err != nil {

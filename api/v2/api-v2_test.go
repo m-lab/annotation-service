@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	v2 "github.com/m-lab/annotation-service/api/v2"
+	"github.com/m-lab/annotation-service/api/v2"
 )
 
 func init() {
@@ -29,12 +29,12 @@ func TestDoRequest(t *testing.T) {
 
 	//url = "https://annotator-dot-mlab-sandbox.appspot.com/batch_annotate"
 	ips := []string{"8.8.8.8", "147.1.2.3"}
-	resp, err := v2.DoRequest(context.Background(), url, time.Now(), ips)
+	resp, err := api.GetAnnotations(context.Background(), url, time.Now(), ips)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	expectedResponse := v2.Response{}
+	expectedResponse := api.Response{}
 	err = json.Unmarshal([]byte(expectedJson), &expectedResponse)
 	if err != nil {
 		t.Fatal(err)
