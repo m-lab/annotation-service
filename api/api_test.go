@@ -1,18 +1,19 @@
 package api_test
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"log"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
-	"github.com/go-test/deep"
 	"github.com/m-lab/annotation-service/api"
+	v2 "github.com/m-lab/annotation-service/api/v2"
 )
+
+func init() {
+	// Always prepend the filename and line number.
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+}
 
 func TestExtractDateFromFilename(t *testing.T) {
 	date, err := api.ExtractDateFromFilename("Maxmind/2017/05/08/20170508T080000Z-GeoLiteCity.dat.gz")
@@ -27,7 +28,7 @@ func TestExtractDateFromFilename(t *testing.T) {
 }
 
 func TestRequestWrapper(t *testing.T) {
-	req := api.RequestV2{RequestType: "foobar"}
+	req := v2.Request{RequestType: "foobar"}
 
 	bytes, err := json.Marshal(req)
 	if err != nil {
@@ -57,39 +58,5 @@ func TestRequestWrapper(t *testing.T) {
 	err = json.Unmarshal(bytes, &wrapper)
 	if err == nil {
 		t.Fatal("Should have produced json unmarshal error")
-	}
-}
-
-func init() {
-	// Always prepend the filename and line number.
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-}
-
-func TestDoV2Request(t *testing.T) {
-	expectedJson := `{"AnnotatorDate":"2018-12-05T00:00:00Z","Annotations":{"147.1.2.3":{"Geo":{"continent_code":"NA","country_code":"US","country_name":"United States","latitude":37.751,"longitude":-97.822},"ASN":{}},"8.8.8.8":{"Geo":{"continent_code":"NA","country_code":"US","country_name":"United States","latitude":37.751,"longitude":-97.822},"ASN":{}}}}`
-
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, expectedJson)
-	}))
-	url := ts.URL
-
-	//url = "https://annotator-dot-mlab-sandbox.appspot.com/batch_annotate"
-	req := api.RequestV2{Date: time.Now()}
-	req.RequestType = api.RequestV2Tag
-	req.RequestInfo = "Test"
-	ips := []string{"8.8.8.8", "147.1.2.3"}
-	resp, err := api.DoV2Request(context.Background(), url, time.Now(), ips)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	expectedResponse := api.ResponseV2{}
-	err = json.Unmarshal([]byte(expectedJson), &expectedResponse)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if diff := deep.Equal(expectedResponse, *resp); diff != nil {
-		t.Error(diff)
 	}
 }

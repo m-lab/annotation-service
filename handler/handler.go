@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
+	v2 "github.com/m-lab/annotation-service/api/v2"
 	"github.com/m-lab/annotation-service/manager"
 	"github.com/m-lab/annotation-service/metrics"
 )
@@ -150,13 +151,13 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 
 // AnnotateV2 finds an appropriate Annotator based on the requested Date, and creates a
 // response with annotations for all parseable IPs.
-func AnnotateV2(date time.Time, ips []string) (api.ResponseV2, error) {
+func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 	responseMap := make(map[string]*api.GeoData, len(ips))
 
 	ann := manager.GetAnnotator(date)
 	if ann == nil {
 		// Just reject the request.  Caller should try again until successful, or different error.
-		return api.ResponseV2{}, errNoAnnotator
+		return v2.Response{}, errNoAnnotator
 	}
 
 	for i := range ips {
@@ -180,7 +181,7 @@ func AnnotateV2(date time.Time, ips []string) (api.ResponseV2, error) {
 		}
 		responseMap[request.IP] = &annotation
 	}
-	return api.ResponseV2{AnnotatorDate: ann.AnnotatorDate(), Annotations: responseMap}, nil
+	return v2.Response{AnnotatorDate: ann.AnnotatorDate(), Annotations: responseMap}, nil
 }
 
 // BatchAnnotate is a URL handler that expects the body of the request
@@ -244,7 +245,7 @@ func handleOld(w http.ResponseWriter, jsonBuffer []byte) {
 }
 
 func handleV2(w http.ResponseWriter, jsonBuffer []byte) {
-	request := api.RequestV2{}
+	request := v2.Request{}
 
 	err := json.Unmarshal(jsonBuffer, &request)
 	if err != nil {
@@ -254,7 +255,7 @@ func handleV2(w http.ResponseWriter, jsonBuffer []byte) {
 	}
 
 	// No need to validate IP addresses, as they are net.IP
-	response := api.ResponseV2{}
+	response := v2.Response{}
 
 	// For now, use the date of the first item.  In future the items will not have individual timestamps.
 	if len(request.IPs) > 0 {
@@ -283,7 +284,7 @@ func handleNewOrOld(w http.ResponseWriter, jsonBuffer []byte) {
 		handleOld(w, jsonBuffer)
 	} else {
 		switch wrapper.RequestType {
-		case api.RequestV2Tag:
+		case v2.RequestTag:
 			handleV2(w, jsonBuffer)
 		default:
 			// TODO Add metric

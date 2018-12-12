@@ -3,12 +3,8 @@
 package api
 
 import (
-	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
-	"net/http"
 	"regexp"
 	"time"
 )
@@ -68,29 +64,6 @@ type RequestWrapper struct {
 	Body        json.RawMessage
 }
 
-// RequestV2Tag is the string associated with v2.0 requests.
-const RequestV2Tag = "Annotate v2.0"
-
-// RequestV2 describes the data we expect to receive (json encoded) in the request body.
-type RequestV2 struct {
-	RequestType string    // This should contain "Annotate v2.0"
-	RequestInfo string    // Arbitrary info about the requester, to be used, e.g., for stats.
-	Date        time.Time // The date to be used to annotate the addresses.
-	IPs         []string  // The IP addresses to be annotated
-}
-
-// NewRequestV2 returns a partially initialized requests.  Caller should fill in IPs.
-func NewRequestV2(date time.Time, ips []string) RequestV2 {
-	return RequestV2{Date: date, RequestType: RequestV2Tag, IPs: ips}
-}
-
-// ResponseV2 describes data returned in V2 responses (json encoded).
-type ResponseV2 struct {
-	// TODO should we include additional metadata about the annotator sources?  Perhaps map of filenames?
-	AnnotatorDate time.Time           // The publication date of the dataset used for the annotation
-	Annotations   map[string]*GeoData // Map from human readable IP address to GeoData
-}
-
 /*************************************************************************
 *                           Local Annotator API                          *
 *************************************************************************/
@@ -120,50 +93,4 @@ func ExtractDateFromFilename(filename string) (time.Time, error) {
 		return time.Time{}, errors.New("cannot extract date from input filename")
 	}
 	return time.Parse(time.RFC3339, filedate[0][0:4]+"-"+filedate[0][4:6]+"-"+filedate[0][6:8]+"T00:00:00Z")
-}
-
-// DoV2Request takes a url, and RequestV2, makes remote call, and returns parsed ResponseV2
-// TODO(gfr) Should pass the annotator's request context through and use it here.
-func DoV2Request(ctx context.Context, url string, date time.Time, ips []string) (*ResponseV2, error) {
-	req := NewRequestV2(date, ips)
-	encodedData, err := json.Marshal(req)
-	if err != nil {
-		return nil, err
-	}
-
-	var netClient = &http.Client{
-		// Median response time is < 10 msec, but 99th percentile is 0.6 seconds.
-		Timeout: 2 * time.Second,
-	}
-
-	httpReq, err := http.NewRequest("POST", url, bytes.NewReader(encodedData))
-	if err != nil {
-		return nil, err
-	}
-
-	// Make the actual request
-	httpResp, err := netClient.Do(httpReq.WithContext(ctx))
-	if err != nil {
-		return nil, err
-	}
-	defer httpResp.Body.Close()
-
-	// Catch errors reported by the service
-	if httpResp.StatusCode != http.StatusOK {
-		return nil, errors.New("URL:" + url + " gave response code " + httpResp.Status)
-	}
-
-	// Copy response into a byte slice
-	body, err := ioutil.ReadAll(httpResp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := ResponseV2{}
-
-	err = json.Unmarshal(body, &resp)
-	if err != nil {
-		return nil, err
-	}
-	return &resp, nil
 }
