@@ -2,11 +2,18 @@ package api_test
 
 import (
 	"encoding/json"
+	"log"
 	"testing"
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
+	v2 "github.com/m-lab/annotation-service/api/v2"
 )
+
+func init() {
+	// Always prepend the filename and line number.
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+}
 
 func TestExtractDateFromFilename(t *testing.T) {
 	date, err := api.ExtractDateFromFilename("Maxmind/2017/05/08/20170508T080000Z-GeoLiteCity.dat.gz")
@@ -21,7 +28,7 @@ func TestExtractDateFromFilename(t *testing.T) {
 }
 
 func TestRequestWrapper(t *testing.T) {
-	req := api.RequestV2{RequestType: "foobar"}
+	req := v2.Request{RequestType: "foobar"}
 
 	bytes, err := json.Marshal(req)
 	if err != nil {

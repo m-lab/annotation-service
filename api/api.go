@@ -64,24 +64,6 @@ type RequestWrapper struct {
 	Body        json.RawMessage
 }
 
-// RequestV2Tag is the string associated with v2.0 requests.
-const RequestV2Tag = "Annotate v2.0"
-
-// RequestV2 describes the data we expect to receive (json encoded) in the request body.
-type RequestV2 struct {
-	RequestType string    // This should contain "Annotate v2.0"
-	RequestInfo string    // Arbitrary info about the requester, to be used, e.g., for stats.
-	Date        time.Time // The date to be used to annotate the addresses.
-	IPs         []string  // The IP addresses to be annotated
-}
-
-// ResponseV2 describes data returned in V2 responses (json encoded).
-type ResponseV2 struct {
-	// TODO should we include additional metadata about the annotator sources?  Perhaps map of filenames?
-	AnnotatorDate time.Time           // The publication date of the dataset used for the annotation
-	Annotations   map[string]*GeoData // Map from human readable IP address to GeoData
-}
-
 /*************************************************************************
 *                           Local Annotator API                          *
 *************************************************************************/

@@ -10,11 +10,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/handler"
@@ -108,11 +108,11 @@ func TestValidateAndParse(t *testing.T) {
 	}
 	for _, test := range tests {
 		res, err := handler.ValidateAndParse(test.req)
-		if !reflect.DeepEqual(res, test.res) {
-			t.Errorf("Expected %+v, got %+v.", test.res, res)
+		if diff := deep.Equal(res, test.res); diff != nil {
+			t.Error(diff)
 		}
-		if !reflect.DeepEqual(err, test.err) {
-			t.Errorf("Expected %+v, got %+v.", test.err, err)
+		if diff := deep.Equal(err, test.err); diff != nil {
+			t.Error(diff)
 		}
 	}
 
@@ -171,9 +171,10 @@ func TestBatchValidateAndParse(t *testing.T) {
 			continue
 		}
 		res, err := handler.BatchValidateAndParse(jsonBuffer)
-		if !reflect.DeepEqual(res, test.res) {
-			t.Errorf("Test %d: Expected %+v, got %+v.", i, test.res, res)
+		if diff := deep.Equal(res, test.res); diff != nil {
+			t.Error(diff)
 		}
+		// TODO use deep.Equal for testing errors?
 		if err != nil && test.err == nil || err == nil && test.err != nil {
 			t.Errorf("Test %d: Expected %+v, got %+v.", i, test.err, err)
 			continue
@@ -279,8 +280,8 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 	}
 	for _, test := range tests {
 		res, _ := handler.GetMetadataForSingleIP(test.req)
-		if !reflect.DeepEqual(res, test.res) {
-			t.Errorf("Expected %v, got %v", test.res, res)
+		if diff := deep.Equal(res, test.res); diff != nil {
+			t.Error(diff)
 		}
 	}
 }
