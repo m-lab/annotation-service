@@ -38,3 +38,6 @@ network:
 
 env_variables:
   # TODO add custom service-account, instead of using default credentials.
+    # These should be substituted in the travis deployment script.
+  RELEASE_TAG: ${TRAVIS_TAG}
+  COMMIT_HASH: ${TRAVIS_COMMIT}

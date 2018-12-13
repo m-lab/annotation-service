@@ -38,3 +38,5 @@ network:
 
 env_variables:
   # TODO add custom service-account, instead of using default credentials.
+  RELEASE_TAG: ${TRAVIS_TAG}
+  COMMIT_HASH: ${TRAVIS_COMMIT}
