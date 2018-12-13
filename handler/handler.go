@@ -7,14 +7,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
+	v2 "github.com/m-lab/annotation-service/api/v2"
 	"github.com/m-lab/annotation-service/manager"
 	"github.com/m-lab/annotation-service/metrics"
 )
@@ -117,14 +118,14 @@ func NewBatchResponse(size int) *BatchResponse {
 	return &BatchResponse{"", time.Time{}, responseMap}
 }
 
-// TODO move to annotatormanager package soon.
+// TODO use error messages defined in the annotator-map PR.
 var errNoAnnotator = errors.New("no Annotator found")
 
 // AnnotateLegacy uses a single `date` to select an annotator, and uses that annotator to annotate all
 // `ips`.  It uses the dates from the individual RequestData to form the keys for the result map.
-// Return values include the StartDate associated with the Annotator that was used.
+// Return values include the AnnotatorDate which is the publication date of the annotation dataset.
 // TODO move to annotatormanager package soon.
-// DEPRECATED: This will soon be replaced with Annotate(), that will use net.IP instead of RequestData.
+// DEPRECATED: This will soon be replaced with AnnotateV2()
 func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoData, time.Time, error) {
 	responseMap := make(map[string]*api.GeoData)
 
@@ -145,10 +146,45 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 		// This requires that the caller should ignore the dateString.
 		// TODO - the unit tests do not catch this problem, so maybe it isn't a problem.
 		dateString := strconv.FormatInt(request.Timestamp.Unix(), encodingBase)
-		responseMap[request.IP+dateString] = annotation
+		responseMap[request.IP+dateString] = &annotation
 	}
 	// TODO use annotator's actual start date.
 	return responseMap, time.Time{}, nil
+}
+
+// AnnotateV2 finds an appropriate Annotator based on the requested Date, and creates a
+// response with annotations for all parseable IPs.
+func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
+	responseMap := make(map[string]*api.GeoData, len(ips))
+
+	ann := manager.GetAnnotator(date)
+	if ann == nil {
+		// Just reject the request.  Caller should try again until successful, or different error.
+		return v2.Response{}, errNoAnnotator
+	}
+
+	for i := range ips {
+		ip := net.ParseIP(ips[i])
+		if ip == nil {
+			metrics.BadIPTotal.Inc()
+			continue
+		}
+		format := 4
+		if ip.To4() == nil {
+			format = 6
+		}
+		// TODO - this is kinda hacky.  Should change the GetAnnotation api instead.
+		request := api.RequestData{IP: ip.String(), IPFormat: format, Timestamp: date}
+		metrics.TotalLookups.Inc()
+
+		annotation, err := ann.GetAnnotation(&request)
+		if err != nil {
+			metrics.ErrorTotal.Inc()
+			continue
+		}
+		responseMap[request.IP] = &annotation
+	}
+	return v2.Response{AnnotatorDate: ann.AnnotatorDate(), Annotations: responseMap}, nil
 }
 
 // BatchAnnotate is a URL handler that expects the body of the request
@@ -167,10 +203,22 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	metrics.TotalRequests.Inc()
 	defer metrics.ActiveRequests.Dec()
 
-	dataSlice, err := BatchValidateAndParse(r.Body)
+	jsonBuffer, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Println(err)
+		fmt.Fprintf(w, "Invalid Request!")
+		return
+	}
 	r.Body.Close()
 
+	handleNewOrOld(w, jsonBuffer)
+}
+
+// TODO Leave this here for now to make review easier, rearrange later.
+func handleOld(w http.ResponseWriter, jsonBuffer []byte) {
+	dataSlice, err := BatchValidateAndParse(jsonBuffer)
 	if err != nil {
+		// TODO Add metric
 		fmt.Fprintf(w, "Invalid Request!")
 		return
 	}
@@ -192,10 +240,60 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 
 	encodedResult, err := json.Marshal(responseMap)
 	if err != nil {
+		// TODO Add metric
 		fmt.Fprintf(w, "Unknown JSON Encoding Error")
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
+}
+
+func handleV2(w http.ResponseWriter, jsonBuffer []byte) {
+	request := v2.Request{}
+
+	err := json.Unmarshal(jsonBuffer, &request)
+	if err != nil {
+		// TODO Add metric
+		fmt.Fprintf(w, "Unable to parse V2.0 request %s", string(jsonBuffer))
+		return
+	}
+
+	// No need to validate IP addresses, as they are net.IP
+	response := v2.Response{}
+
+	// For now, use the date of the first item.  In future the items will not have individual timestamps.
+	if len(request.IPs) > 0 {
+		// For old request format, we use the date of the first RequestData
+		response, err = AnnotateV2(request.Date, request.IPs)
+		if err != nil {
+			fmt.Fprintf(w, err.Error())
+			return
+		}
+	}
+
+	encodedResult, err := json.Marshal(response)
+	if err != nil {
+		// TODO Add metric
+		fmt.Fprintf(w, "Unknown JSON Encoding Error")
+		return
+	}
+	fmt.Fprint(w, string(encodedResult))
+}
+
+func handleNewOrOld(w http.ResponseWriter, jsonBuffer []byte) {
+	// Check API version of the request
+	wrapper := api.RequestWrapper{}
+	err := json.Unmarshal(jsonBuffer, &wrapper)
+	if err != nil {
+		handleOld(w, jsonBuffer)
+	} else {
+		switch wrapper.RequestType {
+		case v2.RequestTag:
+			handleV2(w, jsonBuffer)
+		default:
+			// TODO Add metric
+			fmt.Fprintf(w, "Unknown API version %s", wrapper.RequestType)
+		}
+	}
 }
 
 // BatchValidateAndParse will take a reader (likely the body of a
@@ -203,14 +301,10 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 // api.RequestDatas. It will then validate that json and use it to
 // construct a slice of api.RequestDatas, which it will return. If
 // it encounters an error, then it will return nil and that error.
-func BatchValidateAndParse(source io.Reader) ([]api.RequestData, error) {
-	jsonBuffer, err := ioutil.ReadAll(source)
-	if err != nil {
-		return nil, err
-	}
+func BatchValidateAndParse(jsonBuffer []byte) ([]api.RequestData, error) {
 	uncheckedData := []api.RequestData{}
 
-	err = json.Unmarshal(jsonBuffer, &uncheckedData)
+	err := json.Unmarshal(jsonBuffer, &uncheckedData)
 	if err != nil {
 		return nil, err
 	}
@@ -232,14 +326,14 @@ func BatchValidateAndParse(source io.Reader) ([]api.RequestData, error) {
 
 // GetMetadataForSingleIP takes a pointer to a api.RequestData
 // struct and will use it to fetch the appropriate associated
-// metadata, returning a pointer. It is gaurenteed to return a non-nil
+// metadata, returning a GeoData.
 // pointer, even if it cannot find the appropriate metadata.
-func GetMetadataForSingleIP(request *api.RequestData) (*api.GeoData, error) {
+func GetMetadataForSingleIP(request *api.RequestData) (api.GeoData, error) {
 	metrics.TotalLookups.Inc()
 	// TODO replace with generic GetAnnotator, that respects time.
 	ann := manager.GetAnnotator(request.Timestamp)
 	if ann == nil {
-		return nil, manager.ErrNilDataset
+		return api.GeoData{}, manager.ErrNilDataset
 	}
 
 	return ann.GetAnnotation(request)

@@ -304,7 +304,17 @@ func LoadGeoLite2Dataset(filename string, bucketname string) (*GeoDataset, error
 	if err != nil {
 		return nil, err
 	}
-	return loadGeoLite2(zip)
+	dataset, err := loadGeoLite2(zip)
+	if err != nil {
+		return nil, err
+	}
+	date, err := api.ExtractDateFromFilename(filename)
+	if err != nil {
+		log.Println("Error extracting date:", filename)
+	} else {
+		dataset.start = date
+	}
+	return dataset, nil
 }
 
 // LoadLatestGeolite2File will check GCS for the latest file, download

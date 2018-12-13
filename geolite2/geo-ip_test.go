@@ -86,19 +86,19 @@ func TestConvertIPNodeToGeoData(t *testing.T) {
 	tests := []struct {
 		node geolite2.IPNode
 		locs []geolite2.LocationNode
-		res  *api.GeoData
+		res  api.GeoData
 	}{
 		{
 			node: geolite2.IPNode{LocationIndex: 0, PostalCode: "10583"},
 			locs: []geolite2.LocationNode{{CityName: "Not A Real City", RegionCode: "ME"}},
-			res: &api.GeoData{
+			res: api.GeoData{
 				Geo: &api.GeolocationIP{City: "Not A Real City", PostalCode: "10583", Region: "ME"},
 				ASN: &api.IPASNData{}},
 		},
 		{
 			node: geolite2.IPNode{LocationIndex: -1, PostalCode: "10583"},
 			locs: nil,
-			res: &api.GeoData{
+			res: api.GeoData{
 				Geo: &api.GeolocationIP{PostalCode: "10583"},
 				ASN: &api.IPASNData{}},
 		},

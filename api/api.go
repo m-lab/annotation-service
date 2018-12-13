@@ -5,6 +5,10 @@ package api
 import (
 	"os"
 	"time"
+	"encoding/json"
+	"errors"
+	"regexp"
+	"time"
 )
 
 const (
@@ -16,6 +20,10 @@ var (
 	// MaxmindBucketName is the bucket containing maxmind files.
 	MaxmindBucketName = "downloader-" + os.Getenv("GCLOUD_PROJECT")
 )
+
+/*************************************************************************
+*                             Annotation Structs                         *
+*************************************************************************/
 
 // The GeolocationIP struct contains all the information needed for the
 // geolocation data that will be inserted into big query. The fiels are
@@ -48,6 +56,10 @@ type GeoData struct {
 	ASN *IPASNData     // Holds the IP/ASN data
 }
 
+/*************************************************************************
+*                       Request/Response Structs                         *
+*************************************************************************/
+
 // The RequestData schema is the schema for the json that we will send
 // down the pipe to the annotation service.
 // DEPRECATED
@@ -58,12 +70,20 @@ type RequestData struct {
 	Timestamp time.Time // Holds the timestamp from an incoming request
 }
 
+// RequestWrapper will be used for all future request types.
+type RequestWrapper struct {
+	RequestType string
+	Body        json.RawMessage
+}
+
+/*************************************************************************
+*                           Local Annotator API                          *
+*************************************************************************/
+
 // Annotator provides the GetAnnotation method, which retrieves the annotation for a given IP address.
 type Annotator interface {
-	// TODO use net.IP, and drop the bool
-	// TODO return struct instead of pointer.
-	GetAnnotation(request *RequestData) (*GeoData, error)
-	// These return the date range covered by the annotator.
-	// TODO GetStartDate() time.Time
-	// TODO GetEndDate() time.Time
+	// TODO use simple string IP
+	GetAnnotation(request *RequestData) (GeoData, error)
+	// The date associated with the dataset.
+	AnnotatorDate() time.Time
 }
