@@ -30,13 +30,12 @@ func GetLatestData() api.Annotator {
 // For any input date later than latest available dataset, we will return the latest dataset
 // Otherwise, we return the last dataset before the input date.
 func SelectArchivedDataset(requestDate time.Time) (string, error) {
-	earliestArchiveDate, _ := time.Parse("January 2, 2006", "August 28, 2013")
-	if requestDate.Before(earliestArchiveDate) {
+	if requestDate.Before(EarliestArchiveDate) {
 		return "Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz", nil
 	}
 	lastFilename := ""
 	for _, fileName := range DatasetFilenames {
-		if requestDate.Before(GeoLite2StartDate) && (GeoLegacyRegex.MatchString(fileName) || GeoLegacyv6Regex.MatchString(fileName)) {
+		if requestDate.Before(GeoLite2StartDate) {
 			// search legacy dataset
 			fileDate, err := ExtractDateFromFilename(fileName)
 			if err != nil {
@@ -47,7 +46,7 @@ func SelectArchivedDataset(requestDate time.Time) (string, error) {
 				return lastFilename, nil
 			}
 			lastFilename = fileName
-		} else if !requestDate.Before(GeoLite2StartDate) && GeoLite2Regex.MatchString(fileName) {
+		} else {
 			// Search GeoLite2 dataset
 			fileDate, err := ExtractDateFromFilename(fileName)
 			if err != nil {
