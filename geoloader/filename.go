@@ -37,9 +37,9 @@ var GeoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
 // UpdateArchivedFilenames extracts the dataset filenames from downloader bucket
 // It also searches the latest Geolite2 files available in GCS.
 // It will also set LatestDatasetDate as the date of lastest dataset.
-// If it encounters an error, it will halt the program.
+// This job was run at the beginning of deployment and daily cron job.
 func UpdateArchivedFilenames() error {
-	DatasetFilenames = make([]string, 100)
+	DatasetFilenames = make([]string, 50)
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	if err != nil {
