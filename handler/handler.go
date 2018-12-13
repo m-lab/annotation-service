@@ -25,19 +25,17 @@ const (
 	encodingBase = 36
 )
 
-// SetupHandlers sets up any handlers that are needed, including url
-// handlers and pubsub handlers
-func SetupHandlers() {
-	http.HandleFunc("/annotate", Annotate)
-	http.HandleFunc("/batch_annotate", BatchAnnotate)
-	// This listens for pubsub messages about new downloader files, and loads them
-	// when they become available.
-	go waitForDownloaderMessages()
-}
-
-func Init() {
-    manager.InitDataset()
-    SetupHandlers()
+func InitHandler() {
+	manager.InitDataset()
+	go func() {
+		// sets up any handlers that are needed, including url
+		// handlers and pubsub handlers
+		http.HandleFunc("/annotate", Annotate)
+		http.HandleFunc("/batch_annotate", BatchAnnotate)
+		// This listens for pubsub messages about new downloader files, and loads them
+		// when they become available.
+		go waitForDownloaderMessages()
+	}()
 }
 
 // Annotate is a URL handler that looks up IP address and puts
