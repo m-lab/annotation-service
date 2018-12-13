@@ -4,7 +4,9 @@ package api
 
 import (
 	"encoding/json"
+        "errors"
 	"os"
+        "regexp"
 	"time"
 )
 
@@ -83,4 +85,16 @@ type Annotator interface {
 	GetAnnotation(request *RequestData) (GeoData, error)
 	// The date associated with the dataset.
 	AnnotatorDate() time.Time
+}
+
+// ExtractDateFromFilename return the date for a filename like
+// gs://downloader-mlab-oti/Maxmind/2017/05/08/20170508T080000Z-GeoLiteCity.dat.gz
+// TODO: both geoloader and geolite2 package use this func, so leave it here for now.
+func ExtractDateFromFilename(filename string) (time.Time, error) {
+	re := regexp.MustCompile(`[0-9]{8}T`)
+	filedate := re.FindAllString(filename, -1)
+	if len(filedate) != 1 {
+		return time.Time{}, errors.New("cannot extract date from input filename")
+	}
+	return time.Parse(time.RFC3339, filedate[0][0:4]+"-"+filedate[0][4:6]+"-"+filedate[0][6:8]+"T00:00:00Z")
 }

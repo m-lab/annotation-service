@@ -37,7 +37,7 @@ func SelectArchivedDataset(requestDate time.Time) (string, error) {
 	for _, fileName := range DatasetFilenames {
 		if requestDate.Before(GeoLite2StartDate) {
 			// search legacy dataset
-			fileDate, err := ExtractDateFromFilename(fileName)
+			fileDate, err := api.ExtractDateFromFilename(fileName)
 			if err != nil {
 				continue
 			}
@@ -48,7 +48,7 @@ func SelectArchivedDataset(requestDate time.Time) (string, error) {
 			lastFilename = fileName
 		} else {
 			// Search GeoLite2 dataset
-			fileDate, err := ExtractDateFromFilename(fileName)
+			fileDate, err := api.ExtractDateFromFilename(fileName)
 			if err != nil {
 				continue
 			}

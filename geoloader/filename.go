@@ -2,7 +2,6 @@ package geoloader
 
 import (
 	"context"
-	"errors"
 	"log"
 	"regexp"
 	"time"
@@ -55,7 +54,7 @@ func UpdateArchivedFilenames() error {
 			continue
 		}
 		// We archived but do not use legacy datasets after GeoLite2StartDate.
-		fileDate, err := ExtractDateFromFilename(file.Name)
+		fileDate, err := api.ExtractDateFromFilename(file.Name)
 		if err != nil {
 			continue
 		}
@@ -73,24 +72,11 @@ func UpdateArchivedFilenames() error {
 		log.Println(err)
 	}
 	// Now set the lastest dataset
-	date, err := ExtractDateFromFilename(lastFilename)
+	date, err := api.ExtractDateFromFilename(lastFilename)
 	if err != nil {
 		log.Println(err)
 		return err
 	}
 	LatestDatasetDate = date
 	return nil
-}
-
-// ExtractDateFromFilename return the date for a filename like
-// gs://downloader-mlab-oti/Maxmind/2017/05/08/20170508T080000Z-GeoLiteCity.dat.gz
-// TODO move this to maxmind package
-// TODO - actually, this now seems to be dead code.  But probably needed again soon, so leaving it here.
-func ExtractDateFromFilename(filename string) (time.Time, error) {
-	re := regexp.MustCompile(`[0-9]{8}T`)
-	filedate := re.FindAllString(filename, -1)
-	if len(filedate) != 1 {
-		return time.Time{}, errors.New("cannot extract date from input filename")
-	}
-	return time.Parse(time.RFC3339, filedate[0][0:4]+"-"+filedate[0][4:6]+"-"+filedate[0][6:8]+"T00:00:00Z")
 }
