@@ -13,7 +13,7 @@ import (
 	"github.com/m-lab/annotation-service/api"
 )
 
-const (
+var (
 	// This is the date we have the first GeoLite2 dataset.
 	// Any request earlier than this date using legacy binary datasets
 	// later than this date using GeoLite2 datasets
@@ -38,7 +38,7 @@ var GeoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
 // It will also set LatestDatasetDate as the date of lastest dataset.
 // If it encounters an error, it will halt the program.
 func UpdateArchivedFilenames() error {
-	DatasetFilenames = make([]string, 0)
+	DatasetFilenames = make([]string, 100)
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	if err != nil {
@@ -51,6 +51,8 @@ func UpdateArchivedFilenames() error {
 			return err
 		}
 		DatasetFilenames = append(DatasetFilenames, file.Name)
+		// Files are ordered lexicographically, and the naming convention means that
+		// the last file in the list will be the most recent
 		if file.Name > lastFilename && GeoLite2Regex.MatchString(file.Name) {
 			lastFilename = file.Name
 		}

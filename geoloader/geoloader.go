@@ -34,10 +34,9 @@ func SelectArchivedDataset(requestDate time.Time) (string, error) {
 	if requestDate.Before(earliestArchiveDate) {
 		return "Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz", nil
 	}
-	CutOffDate, _ := time.Parse("January 2, 2006", GeoLite2CutOffDate)
 	lastFilename := ""
 	for _, fileName := range DatasetFilenames {
-		if requestDate.Before(CutOffDate) && (GeoLegacyRegex.MatchString(fileName) || GeoLegacyv6Regex.MatchString(fileName)) {
+		if requestDate.Before(GeoLite2StartDate) && (GeoLegacyRegex.MatchString(fileName) || GeoLegacyv6Regex.MatchString(fileName)) {
 			// search legacy dataset
 			fileDate, err := ExtractDateFromFilename(fileName)
 			if err != nil {
@@ -48,7 +47,7 @@ func SelectArchivedDataset(requestDate time.Time) (string, error) {
 				return lastFilename, nil
 			}
 			lastFilename = fileName
-		} else if !requestDate.Before(CutOffDate) && GeoLite2Regex.MatchString(fileName) {
+		} else if !requestDate.Before(GeoLite2StartDate) && GeoLite2Regex.MatchString(fileName) {
 			// Search GeoLite2 dataset
 			fileDate, err := ExtractDateFromFilename(fileName)
 			if err != nil {
