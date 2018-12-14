@@ -1,47 +1,67 @@
 package manager_test
 
 import (
-	"errors"
+	"fmt"
+	"log"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/manager"
 )
 
+func init() {
+	// Always prepend the filename and line number.
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+}
+
 func fakeLoader(date string) (api.Annotator, error) {
+	time.Sleep(1 * time.Millisecond)
 	return &geolite2.GeoDataset{}, nil
 }
 
 func TestAnnotatorMap(t *testing.T) {
 	am := manager.NewAnnotatorMap(fakeLoader)
 
-	ann, err := am.GetAnnotator("Maxmind/2018/09/12/20180912T054119Z-GeoLite2-City-CSV.zip")
-	if err != manager.ErrPendingAnnotatorLoad {
-		t.Error("Should be", manager.ErrPendingAnnotatorLoad)
+	for i := 0; i < 10; i++ {
+		month := i + 10
+		dataset := fmt.Sprint("Maxmind/2018/09/", month, "/20180912T054119Z-GeoLite2-City-CSV.zip")
+		log.Println("Loading", dataset)
+		_, err := am.GetAnnotator(dataset)
+		if month < manager.MaxDatasetInMemory {
+			if err != manager.ErrPendingAnnotatorLoad {
+				t.Error("Should be", manager.ErrPendingAnnotatorLoad)
+			}
+		} else {
+			if err != manager.ErrTooManyAnnotators {
+				t.Error("Should be", manager.ErrTooManyAnnotators)
+			}
+		}
 	}
 
-	ann, err = am.GetAnnotator("Maxmind/2017/08/15/20170815T200946Z-GeoLite2-City-CSV.zip")
-	if err != manager.ErrPendingAnnotatorLoad {
-		t.Error("Should be", manager.ErrPendingAnnotatorLoad)
-	}
-
-	// Wait for both annotator to be available.
+	// Wait for all annotators to be available.
 	wg := &sync.WaitGroup{}
-	wg.Add(2)
-	go func(date string) {
-		err := errors.New("start")
-		for ; err != nil; _, err = am.GetAnnotator(date) {
-		}
-		wg.Done()
-	}("Maxmind/2018/09/12/20180912T054119Z-GeoLite2-City-CSV.zip")
-	go func(date string) {
-		err := errors.New("start")
-		for ; err != nil; _, err = am.GetAnnotator(date) {
-		}
-		wg.Done()
-	}("Maxmind/2017/08/15/20170815T200946Z-GeoLite2-City-CSV.zip")
+	for i := 0; i < manager.MaxDatasetInMemory; i++ {
+		month := i + 10
+		dataset := fmt.Sprint("Maxmind/2018/09/", month, "/20180912T054119Z-GeoLite2-City-CSV.zip")
+		wg.Add(1)
+		go func(date string) {
+			for _, err := am.GetAnnotator(date); err != nil; _, err = am.GetAnnotator(date) {
+				log.Println(err)
+				time.Sleep(1 * time.Millisecond)
+			}
+			wg.Done()
+		}(dataset)
+	}
+
+	// Try loading a different one.
+	ann, err := am.GetAnnotator("Maxmind/2017/08/30/20170815T200946Z-GeoLite2-City-CSV.zip")
+	if err != manager.ErrTooManyAnnotators {
+		t.Error("Should be", manager.ErrTooManyAnnotators)
+	}
+
 	wg.Wait()
 
 	ann, err = am.GetAnnotator("Maxmind/2017/08/15/20170815T200946Z-GeoLite2-City-CSV.zip")
