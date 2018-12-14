@@ -48,6 +48,8 @@ var (
 	// ErrPendingAnnotatorLoad is returned when a new annotator is requested, but not yet loaded.
 	ErrPendingAnnotatorLoad = errors.New("annotator is loading")
 
+	ErrTooManyAnnotators = errors.New("Too many annotators loaded")
+
 	// ErrAnnotatorLoadFailed is returned when a requested annotator has failed to load.
 	ErrAnnotatorLoadFailed = errors.New("unable to load annoator")
 
@@ -114,7 +116,7 @@ func (am *AnnotatorMap) setAnnotatorIfNil(key string, ann api.Annotator) error {
 	metrics.PendingLoads.Dec()
 	metrics.DatasetCount.Inc()
 	am.numPending--
-	log.Println("Loaded", key)
+	log.Println("Successfully loaded", key)
 	return nil
 }
 
@@ -168,6 +170,9 @@ func (am *AnnotatorMap) checkAndLoadAnnotator(key string) {
 	}
 	reserved := am.maybeSetNil(key)
 	if reserved {
+		// This is harmless in running system, and improves testing.
+		time.Sleep(10 * time.Millisecond)
+
 		// This goroutine now has exclusive ownership of the
 		// map entry, and the responsibility for loading the annotator.
 		go func(key string) {
@@ -191,6 +196,27 @@ func (am *AnnotatorMap) checkAndLoadAnnotator(key string) {
 				return
 			}
 		}(key)
+	}
+}
+
+// This should run asynchronously, and must recheck.
+func (am *AnnotatorMap) tryEvictOtherThan(key string) {
+	am.mutex.Lock()
+	defer am.mutex.Unlock()
+
+	if len(am.annotators) < MaxDatasetInMemory {
+		// No longer over limit.
+		return
+	}
+
+	// TODO - should choose the least recently used one.  See lru branch.
+	for candidate, ann := range am.annotators {
+		if candidate != key && ann != nil {
+			log.Println("Removing", candidate)
+			// TODO metrics
+			delete(am.annotators, candidate)
+			return
+		}
 	}
 }
 
