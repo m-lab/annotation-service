@@ -70,7 +70,7 @@ func TestAnnotatorMap(t *testing.T) {
 
 	ann, err := am.GetAnnotator(names[0])
 	if err != nil {
-		t.Error("Not expecting:", err)
+		t.Error("Not expecting:", err, "looking for", names[0])
 	}
 	if ann == nil {
 		t.Error("Expecting non-nil annotator")
