@@ -247,6 +247,7 @@ func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 		metrics.RejectionCount.WithLabelValues("Dataset Pending")
 		return nil, ErrPendingAnnotatorLoad
 	}
+	log.Println("returning correct annotator")
 	return ann, nil
 }
 
