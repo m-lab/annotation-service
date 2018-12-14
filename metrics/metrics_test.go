@@ -2,8 +2,11 @@ package metrics_test
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"runtime/debug"
 	"testing"
 
 	"github.com/m-lab/annotation-service/metrics"
@@ -30,4 +33,28 @@ func TestPrometheusMetrics(t *testing.T) {
 	for _, p := range problems {
 		t.Errorf("Bad metric %v: %v", p.Metric, p.Text)
 	}
+}
+
+func rePanic() {
+	defer func() {
+		metrics.CountPanics(recover(), "foobar")
+	}()
+	a := []int{1, 2, 3}
+	log.Println(a[4])
+	// This is never reached.
+	return
+}
+
+func TestCountPanics(t *testing.T) {
+	// When we call RePanic, the panic should cause a log and a metric
+	// increment, but should still panic.  This intercepts the panic,
+	// and errors if the panic doesn't happen.
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("The code did not panic")
+		}
+		fmt.Printf("%s\n", debug.Stack())
+	}()
+
+	rePanic()
 }
