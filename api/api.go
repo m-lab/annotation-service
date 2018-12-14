@@ -5,19 +5,8 @@ package api
 import (
 	"encoding/json"
 	"errors"
-	"os"
 	"regexp"
 	"time"
-)
-
-const (
-	// Folder containing the maxmind files
-	MaxmindPrefix = "Maxmind/"
-)
-
-var (
-	// MaxmindBucketName is the bucket containing maxmind files.
-	MaxmindBucketName = "downloader-" + os.Getenv("GCLOUD_PROJECT")
 )
 
 /*************************************************************************
@@ -87,9 +76,16 @@ type Annotator interface {
 	AnnotatorDate() time.Time
 }
 
+// AnnotationLoader provides the Load function, which loads an annotator.
+// TODO - do we really need this, or should we just have a single maxmind.Load function.
+type AnnotationLoader interface {
+	Load(date time.Time) (Annotator, error)
+}
+
 // ExtractDateFromFilename return the date for a filename like
 // gs://downloader-mlab-oti/Maxmind/2017/05/08/20170508T080000Z-GeoLiteCity.dat.gz
-// TODO: both geoloader and geolite2 package use this func, so leave it here for now.
+// TODO move this to maxmind package
+// TODO - actually, this now seems to be dead code.  But probably needed again soon, so leaving it here.
 func ExtractDateFromFilename(filename string) (time.Time, error) {
 	re := regexp.MustCompile(`[0-9]{8}T`)
 	filedate := re.FindAllString(filename, -1)

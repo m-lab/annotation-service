@@ -17,12 +17,12 @@ func fakeLoader(date string) (api.Annotator, error) {
 func TestAnnotatorMap(t *testing.T) {
 	am := manager.NewAnnotatorMap(fakeLoader)
 
-	ann, err := am.GetAnnotator("Maxmind/2018/09/12/20180912T054119Z-GeoLite2-City-CSV.zip")
+	ann, err := am.GetAnnotator("20110101")
 	if err != manager.ErrPendingAnnotatorLoad {
 		t.Error("Should be", manager.ErrPendingAnnotatorLoad)
 	}
 
-	ann, err = am.GetAnnotator("Maxmind/2017/08/15/20170815T200946Z-GeoLite2-City-CSV.zip")
+	ann, err = am.GetAnnotator("20110102")
 	if err != manager.ErrPendingAnnotatorLoad {
 		t.Error("Should be", manager.ErrPendingAnnotatorLoad)
 	}
@@ -35,16 +35,16 @@ func TestAnnotatorMap(t *testing.T) {
 		for ; err != nil; _, err = am.GetAnnotator(date) {
 		}
 		wg.Done()
-	}("Maxmind/2018/09/12/20180912T054119Z-GeoLite2-City-CSV.zip")
+	}("20110101")
 	go func(date string) {
 		err := errors.New("start")
 		for ; err != nil; _, err = am.GetAnnotator(date) {
 		}
 		wg.Done()
-	}("Maxmind/2017/08/15/20170815T200946Z-GeoLite2-City-CSV.zip")
+	}("20110102")
 	wg.Wait()
 
-	ann, err = am.GetAnnotator("Maxmind/2017/08/15/20170815T200946Z-GeoLite2-City-CSV.zip")
+	ann, err = am.GetAnnotator("20110102")
 	if err != nil {
 		t.Error("Not expecting:", err)
 	}

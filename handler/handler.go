@@ -26,14 +26,11 @@ const (
 	encodingBase = 36
 )
 
-func InitHandler() {
-	manager.InitDataset()
-
-	// sets up any handlers that are needed, including url
-	// handlers and pubsub handlers
+// SetupHandlers sets up any handlers that are needed, including url
+// handlers and pubsub handlers
+func SetupHandlers() {
 	http.HandleFunc("/annotate", Annotate)
 	http.HandleFunc("/batch_annotate", BatchAnnotate)
-
 	// This listens for pubsub messages about new downloader files, and loads them
 	// when they become available.
 	go waitForDownloaderMessages()

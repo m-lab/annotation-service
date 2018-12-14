@@ -1,5 +1,3 @@
-// Package manager provides interface between handler and lower level implementation
-// such as geoloader.
 package manager
 
 import (
@@ -9,11 +7,7 @@ import (
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
-	"github.com/m-lab/annotation-service/geoloader"
-)
-
-const (
-	MaxDatasetInMemory = 5
+	"github.com/m-lab/annotation-service/geolite2"
 )
 
 var (
@@ -37,10 +31,6 @@ var (
 	// CurrentAnnotator points to a GeoDataset struct containing the absolute
 	// latest data for the annotator to search and reply with
 	CurrentAnnotator api.Annotator
-
-	// ArchivedLoader points to a AnnotatorMap struct containing the archived
-	// Geolite2 dataset in memory.
-	archivedAnnotator = NewAnnotatorMap(geoloader.Geolite2Loader)
 )
 
 // AnnotatorMap manages all loading and fetching of Annotators.
@@ -53,7 +43,7 @@ var (
 //  the write lock, and writing an entry with a nil pointer.
 // TODO - still need a strategy for dealing with persistent errors.
 type AnnotatorMap struct {
-	// Keys are filename of the datasets.
+	// Keys are date strings in YYYYMMDD format.
 	annotators map[string]api.Annotator
 	// Lock to be held when reading or writing the map.
 	mutex  sync.RWMutex
@@ -62,90 +52,75 @@ type AnnotatorMap struct {
 
 // NewAnnotatorMap creates a new map that will use the provided loader for loading new Annotators.
 func NewAnnotatorMap(loader func(string) (api.Annotator, error)) *AnnotatorMap {
-	return &AnnotatorMap{annotators: make(map[string]api.Annotator), loader: loader}
+	return &AnnotatorMap{annotators: make(map[string]api.Annotator, 10), loader: loader}
 }
 
 // NOTE: Should only be called by checkAndLoadAnnotator.
 // The calling goroutine should "own" the responsibility for
 // setting the annotator.
-func (am *AnnotatorMap) setAnnotatorIfNil(key string, ann api.Annotator) error {
+func (am *AnnotatorMap) setAnnotatorIfNil(dateString string, ann api.Annotator) error {
 	am.mutex.Lock()
 	defer am.mutex.Unlock()
 
-	old, ok := am.annotators[key]
+	old, ok := am.annotators[dateString]
 	if !ok {
 		return ErrGoroutineNotOwner
 	}
 	if old != nil {
 		return ErrMapEntryAlreadySet
 	}
-	am.annotators[key] = ann
+	am.annotators[dateString] = ann
 	return nil
-
 }
 
-func (am *AnnotatorMap) maybeSetNil(key string) bool {
+func (am *AnnotatorMap) maybeSetNil(dateString string) bool {
 	am.mutex.Lock()
 	defer am.mutex.Unlock()
-	_, ok := am.annotators[key]
+	_, ok := am.annotators[dateString]
 	if ok {
 		// Another goroutine is already responsible for loading.
 		return false
 	}
 
 	// Place marker so that other requesters know it is loading.
-	am.annotators[key] = nil
+	am.annotators[dateString] = nil
 	return true
 }
 
 // This synchronously attempts to set map entry to nil, and
 // if successful, proceeds to asynchronously load the new dataset.
-func (am *AnnotatorMap) checkAndLoadAnnotator(key string) {
-	reserved := am.maybeSetNil(key)
+func (am *AnnotatorMap) checkAndLoadAnnotator(dateString string) {
+	reserved := am.maybeSetNil(dateString)
 	if reserved {
 		// This goroutine now has exclusive ownership of the
 		// map entry, and the responsibility for loading the annotator.
-		go func(key string) {
-			// Check the number of datasets in memory. Given the memory
-			// limit, some dataset may be removed from memory if needed.
-			if len(am.annotators) >= MaxDatasetInMemory {
-				for fileKey, _ := range am.annotators {
-					log.Println("remove Geolite2 dataset " + fileKey)
-					delete(am.annotators, fileKey)
-					break
-				}
-			}
-			if geoloader.GeoLite2Regex.MatchString(key) {
-				newAnn, err := am.loader(key)
-				if err != nil {
-					// TODO add a metric
-					log.Println(err)
-					return
-				}
-				// Set the new annotator value.  Entry should be nil.
-				err = am.setAnnotatorIfNil(key, newAnn)
-				if err != nil {
-					// TODO add a metric
-					log.Println(err)
-				}
-			} else {
-				// TODO load legacy binary dataset
+		go func(dateString string) {
+			newAnn, err := am.loader(dateString)
+			if err != nil {
+				// TODO add a metric
+				log.Println(err)
 				return
 			}
-		}(key)
+			// Set the new annotator value.  Entry should be nil.
+			err = am.setAnnotatorIfNil(dateString, newAnn)
+			if err != nil {
+				// TODO add a metric
+				log.Println(err)
+			}
+		}(dateString)
 	}
 }
 
 // GetAnnotator gets the named annotator, if already in the map.
 // If not already loaded, this will trigger loading, and return ErrPendingAnnotatorLoad
-func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
+func (am *AnnotatorMap) GetAnnotator(dateString string) (api.Annotator, error) {
 	am.mutex.RLock()
-	ann, ok := am.annotators[key]
+	ann, ok := am.annotators[dateString]
 	am.mutex.RUnlock()
 
 	if !ok {
 		// There is not yet any entry for this date.  Try to load it.
-		am.checkAndLoadAnnotator(key)
+		am.checkAndLoadAnnotator(dateString)
 		return nil, ErrPendingAnnotatorLoad
 	}
 	if ann == nil {
@@ -157,33 +132,25 @@ func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 
 // GetAnnotator returns the correct annotator to use for a given timestamp.
 func GetAnnotator(date time.Time) api.Annotator {
-	// key := strconv.FormatInt(date.Unix(), encodingBase)
-	if date.After(geoloader.LatestDatasetDate) {
-		currentDataMutex.RLock()
-		ann := CurrentAnnotator
-		currentDataMutex.RUnlock()
-		return ann
-	}
-	filename, err := geoloader.SelectArchivedDataset(date)
-
-	if err != nil {
-		return nil
-	}
-
-	ann, err := archivedAnnotator.GetAnnotator(filename)
-	if err == nil {
-		return ann
-	}
-	return nil
-
+	// TODO - use the requested date
+	// dateString := strconv.FormatInt(date.Unix(), encodingBase)
+	currentDataMutex.RLock()
+	ann := CurrentAnnotator
+	currentDataMutex.RUnlock()
+	return ann
 }
 
-// InitDataset will update the filename list of archived dataset in memory
-// and load the latest Geolite2 dataset in memory.
-func InitDataset() {
-	geoloader.UpdateArchivedFilenames()
-
+// PopulateLatestData will search to the latest Geolite2 files
+// available in GCS and will use them to create a new GeoDataset which
+// it will place into the global scope as the latest version. It will
+// do so safely with use of the currentDataMutex RW mutex. It it
+// encounters an error, it will halt the program.
+func PopulateLatestData() {
+	data, err := geolite2.LoadLatestGeolite2File()
+	if err != nil {
+		log.Fatal(err)
+	}
 	currentDataMutex.Lock()
-	CurrentAnnotator = geoloader.GetLatestData()
+	CurrentAnnotator = data
 	currentDataMutex.Unlock()
 }
