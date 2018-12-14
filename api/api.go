@@ -30,17 +30,17 @@ var (
 // are not.
 // This is in common because it is used by the etl repository.
 type GeolocationIP struct {
-	ContinentCode string  `json:"continent_code,,omitempty"` // Gives a shorthand for the continent
-	CountryCode   string  `json:"country_code,,omitempty"`   // Gives a shorthand for the country
-	CountryCode3  string  `json:"country_code3,,omitempty"`  // Gives a shorthand for the country
-	CountryName   string  `json:"country_name,,omitempty"`   // Name of the country
-	Region        string  `json:"region,,omitempty"`         // Region or State within the country
-	MetroCode     int64   `json:"metro_code,,omitempty"`     // Metro code within the country
-	City          string  `json:"city,,omitempty"`           // City within the region
-	AreaCode      int64   `json:"area_code,,omitempty"`      // Area code, similar to metro code
-	PostalCode    string  `json:"postal_code,,omitempty"`    // Postal code, again similar to metro
-	Latitude      float64 `json:"latitude,,omitempty"`       // Latitude
-	Longitude     float64 `json:"longitude,,omitempty"`      // Longitude
+	ContinentCode string  `json:"continent_code,,omitempty" bigquery:"continent_code"` // Gives a shorthand for the continent
+	CountryCode   string  `json:"country_code,,omitempty"   bigquery:"country_code"`   // Gives a shorthand for the country
+	CountryCode3  string  `json:"country_code3,,omitempty"  bigquery:"country_code3"`  // Gives a shorthand for the country
+	CountryName   string  `json:"country_name,,omitempty"   bigquery:"country_name"`   // Name of the country
+	Region        string  `json:"region,,omitempty"         bigquery:"region"`         // Region or State within the country
+	MetroCode     int64   `json:"metro_code,,omitempty"     bigquery:"metro_code"`     // Metro code within the country
+	City          string  `json:"city,,omitempty"           bigquery:"city"`           // City within the region
+	AreaCode      int64   `json:"area_code,,omitempty"      bigquery:"area_code"`      // Area code, similar to metro code
+	PostalCode    string  `json:"postal_code,,omitempty"    bigquery:"postal_code"`    // Postal code, again similar to metro
+	Latitude      float64 `json:"latitude,,omitempty"       bigquery:"latitude"`       // Latitude
+	Longitude     float64 `json:"longitude,,omitempty"      bigquery:"longitude"`      // Longitude
 }
 
 // IPASNData is the struct that will hold the IP/ASN data when it gets added to the
