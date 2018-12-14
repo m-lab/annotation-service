@@ -71,7 +71,6 @@ func NewAnnotatorMap(loader func(string) (api.Annotator, error)) *AnnotatorMap {
 func (am *AnnotatorMap) setAnnotatorIfNil(key string, ann api.Annotator) error {
 	am.mutex.Lock()
 	defer am.mutex.Unlock()
-
 	old, ok := am.annotators[key]
 	if !ok {
 		return ErrGoroutineNotOwner
@@ -101,21 +100,20 @@ func (am *AnnotatorMap) maybeSetNil(key string) bool {
 // This synchronously attempts to set map entry to nil, and
 // if successful, proceeds to asynchronously load the new dataset.
 func (am *AnnotatorMap) checkAndLoadAnnotator(key string) {
+	// hacking code here before we implement the legacy dataset loading.
+	if !geoloader.GeoLite2Regex.MatchString(key) {
+                log.Println("cannot load legacy " + key)
+		return
+	}
+
 	reserved := am.maybeSetNil(key)
 	if reserved {
 		// This goroutine now has exclusive ownership of the
 		// map entry, and the responsibility for loading the annotator.
 		go func(key string) {
-			// Check the number of datasets in memory. Given the memory
-			// limit, some dataset may be removed from memory if needed.
-			if len(am.annotators) >= MaxDatasetInMemory {
-				for fileKey, _ := range am.annotators {
-					log.Println("remove Geolite2 dataset " + fileKey)
-					delete(am.annotators, fileKey)
-					break
-				}
-			}
+                        log.Println(key)
 			if geoloader.GeoLite2Regex.MatchString(key) {
+				log.Println("plan to load " + key)
 				newAnn, err := am.loader(key)
 				if err != nil {
 					// TODO add a metric
@@ -128,6 +126,8 @@ func (am *AnnotatorMap) checkAndLoadAnnotator(key string) {
 					// TODO add a metric
 					log.Println(err)
 				}
+				log.Println("done with load " + key)
+				log.Println(am.annotators)
 			} else {
 				// TODO load legacy binary dataset
 				return
@@ -141,13 +141,45 @@ func (am *AnnotatorMap) checkAndLoadAnnotator(key string) {
 func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 	am.mutex.RLock()
 	ann, ok := am.annotators[key]
-	am.mutex.RUnlock()
+        am.mutex.RUnlock()
 
 	if !ok {
+		// Check the number of datasets in memory. Given the memory
+		// limit, some dataset may be removed from memory if needed.
+		MaxPendingDataset := 2
+		numInMemory := 0
+		numPending := 0
+		for fileKey, _ := range am.annotators {
+			if am.annotators[fileKey] == nil {
+				numPending++
+				log.Println("pending " + fileKey)
+			} else {
+				numInMemory++
+				log.Println("already loaded: " + fileKey)
+			}
+		}
+		if numPending >= MaxPendingDataset {
+			log.Println("already too many dataset pending")
+			return nil, errors.New("already too many dataset pending")
+		}
+		log.Printf("already in memory # %d", numInMemory)
+		log.Println(am.annotators)
+		if numInMemory >= MaxDatasetInMemory {
+			for fileKey, _ := range am.annotators {
+				log.Println("remove Geolite2 dataset " + fileKey)
+				if am.annotators[fileKey] != nil {
+					am.mutex.Lock()
+					delete(am.annotators, fileKey)
+					am.mutex.Unlock()
+					break
+				}
+			}
+		}
 		// There is not yet any entry for this date.  Try to load it.
 		am.checkAndLoadAnnotator(key)
 		return nil, ErrPendingAnnotatorLoad
 	}
+
 	if ann == nil {
 		// Another goroutine is already loading this entry.  Return error.
 		return nil, ErrPendingAnnotatorLoad
