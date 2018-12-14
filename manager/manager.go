@@ -236,6 +236,15 @@ func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 	am.mutex.RUnlock()
 
 	if !ok {
+		if !geoloader.GeoLite2Regex.MatchString(key) {
+			currentDataMutex.RLock()
+			defer currentDataMutex.RUnlock()
+			if CurrentAnnotator != nil {
+				return CurrentAnnotator, nil
+			}
+			// Pretend we are loading it.
+			return nil, ErrPendingAnnotatorLoad
+		}
 		// There is not yet any entry for this date.  Try to load it.
 		am.checkAndLoadAnnotator(key)
 		metrics.RejectionCount.WithLabelValues("New Dataset")
