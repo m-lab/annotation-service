@@ -286,7 +286,7 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 	}
 }
 
-func xTestE2ELoadMultipleDataset(t *testing.T) {
+func TestE2ELoadMultipleDataset(t *testing.T) {
 	manager.InitDataset()
 	tests := []struct {
 		ip   string
@@ -302,9 +302,20 @@ func xTestE2ELoadMultipleDataset(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := &http.Request{}
 		r.URL, _ = url.Parse("/annotate?ip_addr=" + url.QueryEscape(test.ip) + "&since_epoch=" + url.QueryEscape(test.time))
+		log.Println("Calling handler")
 		handler.Annotate(w, r)
+		if w.Result().StatusCode != http.StatusOK {
+			log.Println(w.Result().Status, w.Body.String())
+			time.Sleep(1 * time.Second)
+			w = httptest.NewRecorder()
+			handler.Annotate(w, r)
+		} else {
+			log.Println("StatusOK")
+		}
 
 		body := w.Body.String()
+		log.Println(body)
+
 		if string(body) != test.res {
 			t.Errorf("\nGot\n__%s__\nexpected\n__%s__\n", body, test.res)
 		}
