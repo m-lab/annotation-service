@@ -102,7 +102,7 @@ func (am *AnnotatorMap) maybeSetNil(key string) bool {
 func (am *AnnotatorMap) checkAndLoadAnnotator(key string) {
 	// hacking code here before we implement the legacy dataset loading.
 	if !geoloader.GeoLite2Regex.MatchString(key) {
-                log.Println("cannot load legacy " + key)
+		log.Println("cannot load legacy " + key)
 		return
 	}
 
@@ -111,7 +111,7 @@ func (am *AnnotatorMap) checkAndLoadAnnotator(key string) {
 		// This goroutine now has exclusive ownership of the
 		// map entry, and the responsibility for loading the annotator.
 		go func(key string) {
-                        log.Println(key)
+			log.Println(key)
 			if geoloader.GeoLite2Regex.MatchString(key) {
 				log.Println("plan to load " + key)
 				newAnn, err := am.loader(key)
@@ -141,7 +141,7 @@ func (am *AnnotatorMap) checkAndLoadAnnotator(key string) {
 func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 	am.mutex.RLock()
 	ann, ok := am.annotators[key]
-        am.mutex.RUnlock()
+	am.mutex.RUnlock()
 
 	if !ok {
 		// Check the number of datasets in memory. Given the memory
