@@ -1,6 +1,8 @@
 package metrics
 
 import (
+	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -36,6 +38,21 @@ var (
 		Name: "annotator_Error_total",
 		Help: "The total number annotation errors.",
 	})
+
+	// PanicCount counts the number of panics encountered in the pipeline.
+	//
+	// Provides metrics:
+	//   etl_panic_count{source}
+	// Example usage:
+	//   metrics.PanicCount.WithLabelValues("worker").Inc()
+	PanicCount = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "etl_panic_total",
+			Help: "Number of panics encountered.",
+		},
+		// Tag indicating where the panic was recovered.
+		[]string{"source"},
+	)
 )
 
 func init() {
@@ -45,6 +62,7 @@ func init() {
 	prometheus.MustRegister(RequestTimes)
 	prometheus.MustRegister(BadIPTotal)
 	prometheus.MustRegister(ErrorTotal)
+	prometheus.MustRegister(PanicCount)
 }
 
 // SetupPrometheus sets up and runs a webserver to export prometheus metrics.
@@ -76,4 +94,29 @@ func SetupPrometheus() *http.Server {
 	go server.Serve(listener.(*net.TCPListener))
 
 	return server
+}
+
+// CountPanics updates the PanicCount metric, then repanics.
+// It must be wrapped in a defer.
+// Examples:
+//  For function that returns an error:
+//    func foobar() () {
+//        defer func() {
+//		      etl.AddPanicMetric(recover(), "foobar")
+// 	      }()
+//        ...
+//        ...
+//    }
+// TODO - This is redundant with code in etl repo.  Should pull it into go repo.
+func CountPanics(r interface{}, tag string) {
+	if r != nil {
+		err, ok := r.(error)
+		if !ok {
+			log.Println("bad recovery conversion")
+			err = fmt.Errorf("pkg: %v", r)
+		}
+		log.Println("Adding metrics for panic:", err)
+		PanicCount.WithLabelValues(tag).Inc()
+		panic(r)
+	}
 }

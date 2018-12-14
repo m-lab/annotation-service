@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
@@ -25,6 +26,41 @@ const (
 	// are creating the keys for the mapt to return for batch requests
 	encodingBase = 36
 )
+
+// Basic throttling to restrict the number of tasks in flight.
+const defaultMaxInFlight = 100
+
+var maxInFlight int32 // Max number of concurrent workers (and tasks in flight).
+var inFlight int32    // Current number of tasks in flight.
+
+// Returns true if request should be rejected.
+// If the max concurrency (MC) exceeds (or matches) the instances*workers, then
+// most requests will be rejected, until the median number of workers is
+// less than the throttle.
+// ** So we should set max instances (MI) * max workers (MW) > max concurrency.
+//
+// We also want max_concurrency high enough that most instances have several
+// jobs.  With MI=20, MW=25, MC=100, the average workers/instance is only 4, and
+// we end up with many instances starved, so AppEngine was removing instances even
+// though the queue throughput was poor.
+// ** So we probably want MC/MI > MW/2, to prevent starvation.
+//
+// For now, assuming:
+//    MC: 180,  MI: 20, MW: 10
+//
+// TODO - replace the atomic with a channel based semaphore and non-blocking
+// select.
+func shouldThrottle() bool {
+	if atomic.AddInt32(&inFlight, 1) > maxInFlight {
+		atomic.AddInt32(&inFlight, -1)
+		return true
+	}
+	return false
+}
+
+func decrementInFlight() {
+	atomic.AddInt32(&inFlight, -1)
+}
 
 func InitHandler() {
 	manager.InitDataset()
@@ -42,6 +78,23 @@ func InitHandler() {
 // Annotate is a URL handler that looks up IP address and puts
 // metadata out to the response encoded in json format.
 func Annotate(w http.ResponseWriter, r *http.Request) {
+	// This will add metric count and log message from any panic.
+	// The panic will still propagate, and http will report it.
+	defer func() {
+		metrics.CountPanics(recover(), "worker")
+	}()
+
+	// Throttle by grabbing a semaphore from channel.
+	if shouldThrottle() {
+		metrics.TaskCount.WithLabelValues("unknown", "worker", "TooManyRequests").Inc()
+		rwr.WriteHeader(http.StatusTooManyRequests)
+		fmt.Fprintf(rwr, `{"message": "Too many tasks."}`)
+		return
+	}
+
+	// Decrement counter when worker finishes.
+	defer decrementInFlight()
+
 	// Setup timers and counters for prometheus metrics.
 	timerStart := time.Now()
 	defer func(tStart time.Time) {
@@ -203,6 +256,22 @@ func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 // encoded timestamp) and send them back, again JSON encoded.
 // TODO update this comment when we switch to new API.
 func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
+	// This will add metric count and log message from any panic.
+	// The panic will still propagate, and http will report it.
+	defer func() {
+		metrics.CountPanics(recover(), "worker")
+	}()
+
+	// Throttle by grabbing a semaphore from channel.
+	if shouldThrottle() {
+		metrics.TaskCount.WithLabelValues("unknown", "worker", "TooManyRequests").Inc()
+		rwr.WriteHeader(http.StatusTooManyRequests)
+		fmt.Fprintf(rwr, `{"message": "Too many tasks."}`)
+		return
+	}
+
+	// Decrement counter when worker finishes.
+	defer decrementInFlight()
 	// Setup timers and counters for prometheus metrics.
 	timerStart := time.Now()
 	defer func(tStart time.Time) {
