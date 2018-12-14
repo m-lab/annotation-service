@@ -43,7 +43,7 @@ var (
 	MaxPending         = 2 // Limit on number of concurrently loading datasets.
 
 	// ErrNilDataset is returned when CurrentAnnotator is nil.
-	ErrNilDataset = errors.New("CurrentAnnotator is nil")
+	ErrNilDataset = errors.New("Annotator not loaded")
 
 	// ErrPendingAnnotatorLoad is returned when a new annotator is requested, but not yet loaded.
 	ErrPendingAnnotatorLoad = errors.New("annotator is loading")
