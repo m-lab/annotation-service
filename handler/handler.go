@@ -86,9 +86,8 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 
 	// Throttle by grabbing a semaphore from channel.
 	if shouldThrottle() {
-		metrics.TaskCount.WithLabelValues("unknown", "worker", "TooManyRequests").Inc()
-		rwr.WriteHeader(http.StatusTooManyRequests)
-		fmt.Fprintf(rwr, `{"message": "Too many tasks."}`)
+		w.WriteHeader(http.StatusTooManyRequests)
+		fmt.Fprintf(w, `{"message": "Too many tasks."}`)
 		return
 	}
 
@@ -264,9 +263,8 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 
 	// Throttle by grabbing a semaphore from channel.
 	if shouldThrottle() {
-		metrics.TaskCount.WithLabelValues("unknown", "worker", "TooManyRequests").Inc()
-		rwr.WriteHeader(http.StatusTooManyRequests)
-		fmt.Fprintf(rwr, `{"message": "Too many tasks."}`)
+		w.WriteHeader(http.StatusTooManyRequests)
+		fmt.Fprintf(w, `{"message": "Too many tasks."}`)
 		return
 	}
 
