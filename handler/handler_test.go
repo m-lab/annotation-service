@@ -310,7 +310,7 @@ func TestE2ELoadMultipleDataset(t *testing.T) {
 		}
 	}
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(20 * time.Second)
 
 	tests2 := []struct {
 		ip   string
