@@ -186,6 +186,8 @@ func (am *AnnotatorMap) checkAndLoadAnnotator(key string) {
 					// TODO add a metric
 					log.Println(err)
 				}
+				log.Println("done with load " + key)
+				log.Println(am.annotators)
 			} else {
 				// TODO load legacy binary dataset
 				return
@@ -202,6 +204,37 @@ func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 	am.mutex.RUnlock()
 
 	if !ok {
+		// Check the number of datasets in memory. Given the memory
+		// limit, some dataset may be removed from memory if needed.
+		MaxPendingDataset := 2
+		numInMemory := 0
+		numPending := 0
+		for fileKey, _ := range am.annotators {
+			if am.annotators[fileKey] == nil {
+				numPending++
+				log.Println("pending " + fileKey)
+			} else {
+				numInMemory++
+				log.Println("already loaded: " + fileKey)
+			}
+		}
+		if numPending >= MaxPendingDataset {
+			log.Println("already too many dataset pending")
+			return nil, errors.New("already too many dataset pending")
+		}
+		log.Printf("already in memory # %d", numInMemory)
+		log.Println(am.annotators)
+		if numInMemory >= MaxDatasetInMemory {
+			for fileKey, _ := range am.annotators {
+				log.Println("remove Geolite2 dataset " + fileKey)
+				if am.annotators[fileKey] != nil {
+					am.mutex.Lock()
+					delete(am.annotators, fileKey)
+					am.mutex.Unlock()
+					break
+				}
+			}
+		}
 		// There is not yet any entry for this date.  Try to load it.
 		am.checkAndLoadAnnotator(key)
 		metrics.RejectionCount.WithLabelValues("New Dataset")
