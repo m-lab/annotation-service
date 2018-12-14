@@ -96,6 +96,17 @@ func (am *AnnotatorMap) maybeSetNil(key string) bool {
 		return false
 	}
 
+	nilCount := 0
+	for _, v := range am.annotators {
+		if v == nil {
+			nilCount++
+			if nilCount > 2 {
+				// TODO - enable this without breaking unit test
+				// return false  // Too busy, wait for another time.
+			}
+		}
+	}
+
 	// Place marker so that other requesters know it is loading.
 	am.annotators[key] = nil
 	return true
@@ -186,6 +197,7 @@ func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 		// Another goroutine is already loading this entry.  Return error.
 		return nil, ErrPendingAnnotatorLoad
 	}
+	log.Println("returning correct annotator")
 	return ann, nil
 }
 
