@@ -304,8 +304,13 @@ func TestE2ELoadMultipleDataset(t *testing.T) {
 		r.URL, _ = url.Parse("/annotate?ip_addr=" + url.QueryEscape(test.ip) + "&since_epoch=" + url.QueryEscape(test.time))
 		log.Println("Calling handler")
 		handler.Annotate(w, r)
+		i := 20
 		for w.Result().StatusCode != http.StatusOK {
 			log.Println("Try again", w.Result().Status, w.Body.String())
+			i--
+			if i == 0 {
+				break
+			}
 			time.Sleep(1 * time.Second)
 			w = httptest.NewRecorder()
 			handler.Annotate(w, r)
