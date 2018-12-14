@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	MaxDatasetInMemory = 2
+	MaxDatasetInMemory = 5
 )
 
 var (
@@ -138,6 +138,12 @@ func (am *AnnotatorMap) tryEvictOtherThan(key string) {
 	am.mutex.Lock()
 	defer am.mutex.Unlock()
 
+	_, ok := am.annotators[key]
+	if ok {
+		log.Println("Already loading", key)
+		return // No need to evict.
+	}
+
 	if len(am.annotators) < MaxDatasetInMemory {
 		// No longer over limit.
 		return
@@ -145,11 +151,13 @@ func (am *AnnotatorMap) tryEvictOtherThan(key string) {
 
 	// TODO - should choose the least recently used one.  See lru branch.
 	for candidate, ann := range am.annotators {
-		if candidate != key && ann != nil {
-			log.Println("Removing", candidate)
+		if ann != nil {
+			log.Println("Removing", candidate, "to make room for", key)
 			// TODO metrics
 			delete(am.annotators, candidate)
 			return
+		} else {
+			log.Println("Ignoring (loading)", candidate)
 		}
 	}
 }
