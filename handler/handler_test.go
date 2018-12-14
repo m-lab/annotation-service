@@ -1,22 +1,22 @@
 package handler_test
 
 import (
-	//"bytes"
-	//"errors"
-	//"io"
-	//"io/ioutil"
+	"bytes"
+	"errors"
+	"io"
+	"io/ioutil"
 	"log"
-	//"net"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	//"strings"
+	"strings"
 	"testing"
 	"time"
 
-	//"github.com/go-test/deep"
-	//"github.com/m-lab/annotation-service/api"
-	//"github.com/m-lab/annotation-service/geolite2"
+	"github.com/go-test/deep"
+	"github.com/m-lab/annotation-service/api"
+	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/manager"
 )
@@ -26,7 +26,6 @@ func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 }
 
-/*
 func TestAnnotate(t *testing.T) {
 	tests := []struct {
 		ip   string
@@ -286,7 +285,7 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 		}
 	}
 }
-*/
+
 func TestE2ELoadMultipleDataset(t *testing.T) {
 	manager.InitDataset()
 
