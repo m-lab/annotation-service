@@ -29,7 +29,18 @@ var DatasetDates []string
 // The date of lastest available dataset.
 var LatestDatasetDate time.Time
 
+var (
+	root       = `^(.*)/`
+	dir        = `(\d{4}/\d{2}/\d{2})/`
+	dateTime   = `(\d{8})T(.*)Z-`
+	fn         = `(GeoLite.*?)`
+	v6         = `(v6)?\.`
+	fext       = `(.*)$`
+	filenameRE = regexp.MustCompile(root + dir + dateTime + fn + v6 + fext)
+)
+
 // This is the regex used to filter for which files we want to consider acceptable for using with Geolite2
+// TODO deprecate these and use filenameRE instead
 var GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
 
 // This is the regex used to filter for which files we want to consider acceptable for using with legacy dataset
@@ -53,6 +64,8 @@ func UpdateArchivedFilenames() error {
 		if err != nil {
 			return err
 		}
+		// TODO use this instead of the individual regular expressions
+		log.Printf("%v\n", filenameRE.FindAllString(file.Name, -1))
 		if !GeoLite2Regex.MatchString(file.Name) && !GeoLegacyRegex.MatchString(file.Name) && !GeoLegacyv6Regex.MatchString(file.Name) {
 			continue
 		}
