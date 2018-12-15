@@ -6,6 +6,7 @@ package geoloader
 import (
 	"errors"
 	"log"
+	"sort"
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
@@ -38,6 +39,7 @@ func SelectArchivedDataset(requestDate time.Time) (string, error) {
 	for k := range DatasetFilenames {
 		keys = append(keys, k)
 	}
+	sort.Strings(keys)
 	dateString := requestDate.Format("20060102")
 	for _, date := range keys {
 		// return the last dataset that is earlier than requestDate
