@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"regexp"
+	"sort"
 	"time"
 
 	"cloud.google.com/go/storage"
@@ -23,6 +24,7 @@ var EarliestArchiveDate = time.Unix(1377648000, 0) // "August 28, 2013")
 // DatasetFilenames are list of datasets sorted in lexographical order in downloader bucket.
 // TODO make this an object
 var DatasetFilenames map[string]string
+var DatasetDates []string
 
 // The date of lastest available dataset.
 var LatestDatasetDate time.Time
@@ -73,6 +75,13 @@ func UpdateArchivedFilenames() error {
 	if err != nil {
 		log.Println(err)
 	}
+
+	DatasetDates = make([]string, 0, len(DatasetFilenames))
+	for k := range DatasetFilenames {
+		DatasetDates = append(DatasetDates, k)
+	}
+	sort.Strings(DatasetDates)
+
 	// Now set the lastest dataset
 	date, err := api.ExtractDateFromFilename(lastFilename)
 	if err != nil {
