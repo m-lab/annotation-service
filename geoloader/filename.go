@@ -21,7 +21,8 @@ var GeoLite2StartDate = time.Unix(1502755200, 0) //"August 15, 2017"
 var EarliestArchiveDate = time.Unix(1377648000, 0) // "August 28, 2013")
 
 // DatasetFilenames are list of datasets sorted in lexographical order in downloader bucket.
-var DatasetFilenames []string
+// TODO make this an object
+var DatasetFilenames map[string]string
 
 // The date of lastest available dataset.
 var LatestDatasetDate time.Time
@@ -38,7 +39,7 @@ var GeoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
 // It will also set LatestDatasetDate as the date of lastest dataset.
 // This job was run at the beginning of deployment and daily cron job.
 func UpdateArchivedFilenames() error {
-	DatasetFilenames = make([]string, 50)
+	DatasetFilenames = make(map[string]string, 50)
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	if err != nil {
@@ -61,7 +62,8 @@ func UpdateArchivedFilenames() error {
 		if !fileDate.Before(GeoLite2StartDate) && !GeoLite2Regex.MatchString(file.Name) {
 			continue
 		}
-		DatasetFilenames = append(DatasetFilenames, file.Name)
+		dateString := fileDate.Format("20060102")
+		DatasetFilenames[dateString] = file.Name
 		// Files are ordered lexicographically, and the naming convention means that
 		// the last file in the list will be the most recent
 		if file.Name > lastFilename && GeoLite2Regex.MatchString(file.Name) {
