@@ -217,6 +217,7 @@ func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 		if numPending >= MaxPendingDataset {
 			return nil, errors.New("already too many dataset pending")
 		}
+		// TODO - this is a BUG!!!
 		if numInMemory >= MaxDatasetInMemory {
 			for fileKey, _ := range am.annotators {
 				if am.annotators[fileKey] != nil {
