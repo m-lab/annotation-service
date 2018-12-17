@@ -121,10 +121,10 @@ func (am *AnnotatorMap) setAnnotatorIfNil(key string, ann api.Annotator) error {
 // This creates a reservation for loading a dataset, IFF map entry is empty (not nil or populated)
 //   If the dataset is not loaded or pending, check:
 //      A: If there are already MaxPending loads in process:
-//        Do nothing and reply with ErrPendingAnnotatorLoad (even though this isn't true)
+//        Do nothing and reply false
 //      B: If there is room to load it?
-//       YES: start loading it, and return ErrPendingAnnotatorLoad
-//        NO: kick out an existing dataset and return ErrPendingAnnotatorLoad.
+//       YES: make the reservation (by setting entry to nil) and return true.
+//        NO: kick out an existing dataset and return false.
 func (am *AnnotatorMap) maybeSetNil(key string) bool {
 	am.mutex.Lock()
 	defer am.mutex.Unlock()
