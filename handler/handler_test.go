@@ -289,6 +289,7 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 func TestE2ELoadMultipleDataset(t *testing.T) {
 	manager.InitDataset()
 
+	// TODO replace this unittest with better implementation.
 	tests := []struct {
 		ip   string
 		time string

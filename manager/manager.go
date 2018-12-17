@@ -100,12 +100,6 @@ func (am *AnnotatorMap) maybeSetNil(key string) bool {
 // This synchronously attempts to set map entry to nil, and
 // if successful, proceeds to asynchronously load the new dataset.
 func (am *AnnotatorMap) checkAndLoadAnnotator(key string) {
-	// hacking code here before we implement the legacy dataset loading.
-	if !geoloader.GeoLite2Regex.MatchString(key) {
-		log.Println("cannot load legacy " + key)
-		return
-	}
-
 	reserved := am.maybeSetNil(key)
 	if reserved {
 		// This goroutine now has exclusive ownership of the
@@ -142,6 +136,18 @@ func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 	am.mutex.RUnlock()
 
 	if !ok {
+		// TODO: use the latest dataset for request of legacy dataset. Will replace it
+		// when we add legacy implementation.
+		if !geoloader.GeoLite2Regex.MatchString(key) {
+			currentDataMutex.RLock()
+			defer currentDataMutex.RUnlock()
+			if CurrentAnnotator != nil {
+				return CurrentAnnotator, nil
+			}
+			// Pretend we are loading it.
+			return nil, ErrPendingAnnotatorLoad
+		}
+
 		// Check the number of datasets in memory. Given the memory
 		// limit, some dataset may be removed from memory if needed.
 		MaxPendingDataset := 2
