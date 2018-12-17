@@ -202,34 +202,6 @@ func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 	am.mutex.RUnlock()
 
 	if !ok {
-		// Check the number of datasets in memory. Given the memory
-		// limit, some dataset may be removed from memory if needed.
-		MaxPendingDataset := 2
-		numInMemory := 0
-		numPending := 0
-		for fileKey, _ := range am.annotators {
-			if am.annotators[fileKey] == nil {
-				numPending++
-			} else {
-				numInMemory++
-			}
-		}
-		if numPending >= MaxPendingDataset {
-			return nil, errors.New("already too many dataset pending")
-		}
-
-		am.mutex.Lock()
-		if numInMemory >= MaxDatasetInMemory {
-			for fileKey := range am.annotators {
-				if am.annotators[fileKey] != nil {
-					log.Println("remove Geolite2 dataset " + fileKey)
-					delete(am.annotators, fileKey)
-					break
-				}
-			}
-		}
-		am.mutex.Unlock()
-
 		// There is not yet any entry for this date.  Try to load it.
 		am.checkAndLoadAnnotator(key)
 		metrics.RejectionCount.WithLabelValues("New Dataset")
