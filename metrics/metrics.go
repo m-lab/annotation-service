@@ -32,10 +32,34 @@ var (
 		Name: "annotator_Bad_IP_Addresses_total",
 		Help: "The total number of ip parse failures.",
 	})
-	ErrorTotal = prometheus.NewCounter(prometheus.CounterOpts{
+	ErrorTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "annotator_Error_total",
 		Help: "The total number annotation errors.",
+	}, []string{"type"})
+
+	DatasetCount = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "annotator_dataset_count",
+		Help: "Number of datasets loaded in cache.",
 	})
+
+	PendingLoads = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "annotator_pending_load_count",
+		Help: "Number of datasets currently being loaded.",
+	})
+
+	EvictionCount = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "annotator_evictions_total",
+		Help: "The total number datasets evicted.",
+	})
+	LoadCount = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "annotator_loads_total",
+		Help: "The total number of datasets loaded.",
+	})
+
+	RejectionCount = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "annotator_rejections_total",
+		Help: "The total number of rejected requests.",
+	}, []string{"type"})
 )
 
 func init() {
@@ -45,6 +69,11 @@ func init() {
 	prometheus.MustRegister(RequestTimes)
 	prometheus.MustRegister(BadIPTotal)
 	prometheus.MustRegister(ErrorTotal)
+
+	prometheus.MustRegister(DatasetCount)
+	prometheus.MustRegister(PendingLoads)
+	prometheus.MustRegister(EvictionCount)
+	prometheus.MustRegister(LoadCount)
 }
 
 // SetupPrometheus sets up and runs a webserver to export prometheus metrics.
