@@ -13,27 +13,27 @@ import (
 //These vars are the prometheus metrics
 var (
 	ActiveRequests = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "annotator_Running_Annotation_Requests_Count",
+		Name: "annotator_running_annotation_requests_Count",
 		Help: "The current number of unfulfilled annotation service requests.",
 	})
 	RequestTimes = prometheus.NewSummary(prometheus.SummaryOpts{
-		Name: "annotator_Request_Response_Time_Summary",
+		Name: "annotator_request_response_time_summary",
 		Help: "The response time of each request, in nanoseconds.",
 	})
 	TotalRequests = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "annotator_Annotation_Requests_total",
+		Name: "annotator_annotation_requests_total",
 		Help: "The total number of annotation service requests.",
 	})
 	TotalLookups = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "annotator_Annotation_Lookups_total",
+		Name: "annotator_annotation_lookups_total",
 		Help: "The total number of ip lookups.",
 	})
 	BadIPTotal = prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "annotator_Bad_IP_Addresses_total",
+		Name: "annotator_bad_ip_addresses_total",
 		Help: "The total number of ip parse failures.",
 	})
 	ErrorTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: "annotator_Error_total",
+		Name: "annotator_error_total",
 		Help: "The total number annotation errors.",
 	}, []string{"type"})
 
