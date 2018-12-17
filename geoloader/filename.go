@@ -65,7 +65,7 @@ func UpdateArchivedFilenames() error {
 			return err
 		}
 		// TODO use this instead of the individual regular expressions
-		log.Printf("%v\n", filenameRE.FindAllString(file.Name, -1))
+		log.Printf("%v\n", filenameRE.FindAllStringSubmatch(file.Name, -1)[1:])
 		if !GeoLite2Regex.MatchString(file.Name) && !GeoLegacyRegex.MatchString(file.Name) && !GeoLegacyv6Regex.MatchString(file.Name) {
 			continue
 		}
