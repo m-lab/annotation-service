@@ -31,8 +31,7 @@ func TestAnnotatorMap(t *testing.T) {
 		"Maxmind/2018/01/02/20180201T054119Z-GeoLite2-City-CSV.zip",
 		"Maxmind/2018/01/03/20180301T054119Z-GeoLite2-City-CSV.zip",
 		"Maxmind/2018/01/04/20180401T054119Z-GeoLite2-City-CSV.zip",
-		"Maxmind/2018/01/05/20180501T054119Z-GeoLite2-City-CSV.zip",
-		"Maxmind/2018/01/06/20180601T054119Z-GeoLite2-City-CSV.zip"}
+		"Maxmind/2018/01/05/20180501T054119Z-GeoLite2-City-CSV.zip"}
 
 	// These are all fake names.
 	_, err := am.GetAnnotator(names[0])
