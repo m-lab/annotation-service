@@ -191,6 +191,12 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 		currentDataMutex.RUnlock()
 		return ann, nil
 	}
+	if date.Before(geoloader.GeoLite2StartDate) {
+		currentDataMutex.RLock()
+		ann := CurrentAnnotator
+		currentDataMutex.RUnlock()
+		return ann, nil
+	}
 	filename, err := geoloader.SelectArchivedDataset(date)
 
 	if err != nil {
