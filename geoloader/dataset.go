@@ -2,9 +2,9 @@ package geoloader
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"regexp"
-	"sort"
 	"strings"
 	"time"
 
@@ -14,40 +14,51 @@ import (
 	"github.com/m-lab/annotation-service/api"
 )
 
-type DatasetFile struct {
-	path       string
-	dir        string
-	dateString string
-	fnRoot     string // The root of the filename, (before any '.')
-	fnExt      string
-	version    int  // 1 = legacy, 2 = GeoLite2
-	isV6       bool // True if this is a legacy V6 dataset
+// DatasetInfo stores all info related to a dataset file.
+// Note that in future, Annotator for legacy dataset will wrap two files.
+type DatasetInfo struct {
+	Path     string
+	Exp      string
+	DateDir  string
+	DateTime string
+	FnRoot   string // The root of the filename, (before any '.')
+	Latest   string
+	FnExt    string
+	Version  int  // 1 = legacy, 2 = GeoLite2
+	IsV6     bool // True if this is a legacy V6 dataset
 }
 
 var (
-	root       = `^(.*)/`
-	dir        = `(\d{4}/\d{2}/\d{2})/`
-	dateTime   = `(\d{8})T(.*)Z-`
-	fn         = `(GeoLite.*?)`
-	v6         = `([vV]6)?\.`
-	fext       = `(.*)$`
-	filenameRE = regexp.MustCompile(root + dir + dateTime + fn + v6 + fext)
+	root       = `^(.*)/`               // 1
+	dir        = `(\d{4}/\d{2}/\d{2})/` // 2
+	dateTime   = `(\d{8})T(.*)Z-`       // 3 4
+	fn         = `(GeoLite.*?)`         // 5
+	latest     = `(-latest)?`           // 6
+	v6         = `([vV]6)?\.`           // 7
+	fext       = `(.*)$`                // 8
+	filenameRE = regexp.MustCompile(root + dir + dateTime + fn + latest + v6 + fext)
 )
 
-func ParseFilename(fn string) DatasetFile {
+// ParseDataset parses a dataset filename and returns a DatasetInfo
+func ParseDataset(fn string) DatasetInfo {
 	parts := filenameRE.FindStringSubmatch(fn)
 	switch len(parts) {
 	case 0:
-		return DatasetFile{}
+		return DatasetInfo{}
 	case 1:
-		return DatasetFile{path: parts[0]}
+		return DatasetInfo{Path: parts[0]}
 	default:
-		df := DatasetFile{path: parts[0], dir: parts[1] + parts[2] + parts[3] + parts[4], fnRoot: parts[5], fnExt: parts[7]}
-		df.isV6 = strings.ToLower(parts[6]) == "v6"
-		if df.fnRoot == "GeoLiteCity" {
-			df.version = 1
+		df := DatasetInfo{Path: parts[0],
+			Exp:      parts[1],
+			DateDir:  parts[2],
+			DateTime: fmt.Sprintf("%sT%sZ", parts[3], parts[4]),
+			Latest:   parts[6],
+			FnRoot:   parts[5], FnExt: parts[8]}
+		df.IsV6 = strings.ToLower(parts[7]) == "v6"
+		if df.FnRoot == "GeoLiteCity" {
+			df.Version = 1
 		} else {
-			df.version = 2
+			df.Version = 2
 		}
 		return df
 	}
@@ -92,8 +103,8 @@ func UpdateArchivedFilenames() error {
 			return err
 		}
 		// TODO use this instead of the individual regular expressions
-		df := ParseFilename(file.Name)
-		log.Printf("%+v\n", df)
+		df := ParseDataset(file.Name)
+		log.Printf("%s\n", df.Path)
 
 		if !GeoLite2Regex.MatchString(file.Name) && !GeoLegacyRegex.MatchString(file.Name) && !GeoLegacyv6Regex.MatchString(file.Name) {
 			continue
