@@ -2,6 +2,19 @@
 // such as geoloader.
 package manager
 
+// The implementation is currently rather naive.  Eviction is done based only on whether
+// there is a pending request, and there are already the max number of datasets loaded.
+// A later implementation will use LRU and dead time to make this determination.
+
+// Please modify with extreme caution.  The lock MUST be held when ACCESSING any field
+// of AnnotatorMap.
+
+// Note that the system may evict up to the number of pending loads, so at any given time,
+// there may only be MaxDatasetInMemory = MaxPending actually loaded.
+
+// Also note that anyone holding an annotator will prevent it from being collected by the
+// GC, so simply evicting it is not a guarantee that the memory will be reclaimed.
+
 import (
 	"errors"
 	"log"
@@ -14,8 +27,8 @@ import (
 
 var (
 	// These are vars instead of consts to facilitate testing.
-	MaxDatasetInMemory = 5
-	MaxPending         = 2
+	MaxDatasetInMemory = 5 // Limit on number of loaded datasets
+	MaxPending         = 2 // Limit on number of concurrently loading datasets.
 
 	// ErrNilDataset is returned when CurrentAnnotator is nil.
 	ErrNilDataset = errors.New("CurrentAnnotator is nil")
@@ -86,7 +99,6 @@ func (am *AnnotatorMap) setAnnotatorIfNil(key string, ann api.Annotator) error {
 	am.numLoaded++
 	log.Println("Loaded", key)
 	return nil
-
 }
 
 func (am *AnnotatorMap) maybeSetNil(key string) bool {
