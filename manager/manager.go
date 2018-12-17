@@ -217,18 +217,19 @@ func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 		if numPending >= MaxPendingDataset {
 			return nil, errors.New("already too many dataset pending")
 		}
-		// TODO - this is a BUG!!!
+
+		am.mutex.Lock()
 		if numInMemory >= MaxDatasetInMemory {
-			for fileKey, _ := range am.annotators {
+			for fileKey := range am.annotators {
 				if am.annotators[fileKey] != nil {
 					log.Println("remove Geolite2 dataset " + fileKey)
-					am.mutex.Lock()
 					delete(am.annotators, fileKey)
-					am.mutex.Unlock()
 					break
 				}
 			}
 		}
+		am.mutex.Unlock()
+
 		// There is not yet any entry for this date.  Try to load it.
 		am.checkAndLoadAnnotator(key)
 		metrics.RejectionCount.WithLabelValues("New Dataset")
