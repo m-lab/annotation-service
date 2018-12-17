@@ -70,7 +70,6 @@ type AnnotatorMap struct {
 	annotators map[string]api.Annotator
 	// Lock to be held when reading or writing the map.
 	mutex      sync.RWMutex
-	numLoaded  int
 	numPending int
 	loader     func(string) (api.Annotator, error)
 }
@@ -96,7 +95,6 @@ func (am *AnnotatorMap) setAnnotatorIfNil(key string, ann api.Annotator) error {
 		return ErrMapEntryAlreadySet
 	}
 	am.annotators[key] = ann
-	am.numLoaded++
 	log.Println("Loaded", key)
 	return nil
 }
@@ -116,12 +114,11 @@ func (am *AnnotatorMap) maybeSetNil(key string) bool {
 	}
 	// Check the number of datasets in memory. Given the memory
 	// limit, some dataset may be removed from memory if needed.
-	if am.numPending+am.numLoaded >= MaxDatasetInMemory {
+	if len(am.annotators) >= MaxDatasetInMemory {
 		for fileKey := range am.annotators {
 			if am.annotators[fileKey] != nil {
 				log.Println("removing Geolite2 dataset " + fileKey)
 				delete(am.annotators, fileKey)
-				am.numLoaded--
 				break
 			}
 		}
