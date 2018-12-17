@@ -53,18 +53,21 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 
 	data, err := ValidateAndParse(r)
 	if err != nil {
+		w.WriteHeader(http.StatusNotAcceptable)
 		fmt.Fprintf(w, "Invalid request")
 		return
 	}
 
 	result, err := GetMetadataForSingleIP(data)
 	if err != nil {
-		fmt.Fprintf(w, "Cannot get meta data")
+		w.WriteHeader(http.StatusRequestTimeout)
+		fmt.Fprintf(w, err.Error())
 		return
 	}
 
 	encodedResult, err := json.Marshal(result)
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "Unknown JSON Encoding Error")
 		return
 	}
