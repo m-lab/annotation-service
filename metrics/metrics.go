@@ -43,7 +43,7 @@ var (
 	})
 
 	PendingLoads = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "annotator_pending_load_count",
+		Name: "annotator_pending_load_total",
 		Help: "Number of datasets currently being loaded.",
 	})
 
