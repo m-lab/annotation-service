@@ -5,7 +5,18 @@ package manager
 // The implementation is currently rather naive.  Eviction is done based only on whether
 // there is a pending request, and there are already the max number of datasets loaded.
 // A later implementation will use LRU and dead time to make this determination.
-
+//
+// Behavior:
+//   If a legacy dataset is requests, return the CurrentAnnotator instead.
+//   If the requested dataset is loaded, return it.
+//   If the requested dataset is loading, return ErrPendingAnnotatorLoad
+//   If the dataset is not loaded or pending, check:
+//      A: If there are already MaxPending loads in process:
+//        Do nothing and reply with ErrPendingAnnotatorLoad (even though this isn't true)
+//      B: If there is room to load it?
+//       YES: start loading it, and return ErrPendingAnnotatorLoad
+//        NO: kick out an existing dataset and return ErrPendingAnnotatorLoad.
+//
 // Please modify with extreme caution.  The lock MUST be held when ACCESSING any field
 // of AnnotatorMap.
 
@@ -23,6 +34,7 @@ import (
 
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/geoloader"
+	"github.com/m-lab/annotation-service/metrics"
 )
 
 var (
@@ -89,19 +101,30 @@ func (am *AnnotatorMap) setAnnotatorIfNil(key string, ann api.Annotator) error {
 	old, ok := am.annotators[key]
 	if !ok {
 		log.Println("This should never happen", ErrGoroutineNotOwner)
+		metrics.ErrorTotal.WithLabelValues("WrongOwner").Inc()
 		return ErrGoroutineNotOwner
 	}
 	if old != nil {
 		log.Println("This should never happen", ErrMapEntryAlreadySet)
+		metrics.ErrorTotal.WithLabelValues("MapEntryAlreadySet").Inc()
 		return ErrMapEntryAlreadySet
 	}
 
 	am.annotators[key] = ann
+	metrics.PendingLoads.Dec()
+	metrics.DatasetCount.Inc()
 	am.numPending--
 	log.Println("Loaded", key)
 	return nil
 }
 
+// This creates a reservation for loading a dataset, IFF map entry is empty (not nil or populated)
+//   If the dataset is not loaded or pending, check:
+//      A: If there are already MaxPending loads in process:
+//        Do nothing and reply with ErrPendingAnnotatorLoad (even though this isn't true)
+//      B: If there is room to load it?
+//       YES: start loading it, and return ErrPendingAnnotatorLoad
+//        NO: kick out an existing dataset and return ErrPendingAnnotatorLoad.
 func (am *AnnotatorMap) maybeSetNil(key string) bool {
 	am.mutex.Lock()
 	defer am.mutex.Unlock()
@@ -122,6 +145,8 @@ func (am *AnnotatorMap) maybeSetNil(key string) bool {
 			if am.annotators[fileKey] != nil {
 				log.Println("removing Geolite2 dataset " + fileKey)
 				delete(am.annotators, fileKey)
+				metrics.EvictionCount.Inc()
+				metrics.DatasetCount.Dec()
 				break
 			}
 		}
@@ -130,6 +155,7 @@ func (am *AnnotatorMap) maybeSetNil(key string) bool {
 
 	// Place marker so that other requesters know it is loading.
 	am.annotators[key] = nil
+	metrics.PendingLoads.Inc()
 	am.numPending++
 	return true
 }
@@ -178,17 +204,20 @@ func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 	if !ok {
 		// There is not yet any entry for this date.  Try to load it.
 		am.checkAndLoadAnnotator(key)
+		metrics.RejectionCount.WithLabelValues("New Dataset")
 		return nil, ErrPendingAnnotatorLoad
 	}
 
 	if ann == nil {
 		// Another goroutine is already loading this entry.  Return error.
+		metrics.RejectionCount.WithLabelValues("Dataset Pending")
 		return nil, ErrPendingAnnotatorLoad
 	}
 	return ann, nil
 }
 
 // GetAnnotator returns the correct annotator to use for a given timestamp.
+// TODO: Update to properly handle legacy datasets.
 func GetAnnotator(date time.Time) (api.Annotator, error) {
 	// key := strconv.FormatInt(date.Unix(), encodingBase)
 	if date.After(geoloader.LatestDatasetDate) {
@@ -197,6 +226,7 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 		currentDataMutex.RUnlock()
 		return ann, nil
 	}
+	// TODO HACK: This is a temporary measure until we have support for the legacy datasets.
 	if date.Before(geoloader.GeoLite2StartDate) {
 		currentDataMutex.RLock()
 		ann := CurrentAnnotator
@@ -206,6 +236,7 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 	filename, err := geoloader.SelectArchivedDataset(date)
 
 	if err != nil {
+		metrics.RejectionCount.WithLabelValues("Selection Error")
 		return nil, err
 	}
 
