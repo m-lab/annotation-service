@@ -85,16 +85,19 @@ func NewAnnotatorMap(loader func(string) (api.Annotator, error)) *AnnotatorMap {
 func (am *AnnotatorMap) setAnnotatorIfNil(key string, ann api.Annotator) error {
 	am.mutex.Lock()
 	defer am.mutex.Unlock()
-	am.numPending--
 
 	old, ok := am.annotators[key]
 	if !ok {
+		log.Println("This should never happen", ErrGoroutineNotOwner)
 		return ErrGoroutineNotOwner
 	}
 	if old != nil {
+		log.Println("This should never happen", ErrMapEntryAlreadySet)
 		return ErrMapEntryAlreadySet
 	}
+
 	am.annotators[key] = ann
+	am.numPending--
 	log.Println("Loaded", key)
 	return nil
 }
