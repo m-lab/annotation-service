@@ -175,6 +175,7 @@ func stringToFloat(str, field string) (float64, error) {
 
 var capsRE = regexp.MustCompile("^[0-9A-Z]*$")
 
+// checkCaps ensures that field name contains only upper case A-Z and digits 0-9.
 func checkCaps(str, field string) (string, error) {
 	if capsRE.MatchString(str) {
 		return str, nil
