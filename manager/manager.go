@@ -12,12 +12,11 @@ import (
 	"github.com/m-lab/annotation-service/geoloader"
 )
 
-const (
+var (
+	// These are vars instead of consts to facilitate testing.
 	MaxDatasetInMemory = 5
 	MaxPending         = 2
-)
 
-var (
 	// ErrNilDataset is returned when CurrentAnnotator is nil.
 	ErrNilDataset = errors.New("CurrentAnnotator is nil")
 
@@ -74,6 +73,7 @@ func NewAnnotatorMap(loader func(string) (api.Annotator, error)) *AnnotatorMap {
 func (am *AnnotatorMap) setAnnotatorIfNil(key string, ann api.Annotator) error {
 	am.mutex.Lock()
 	defer am.mutex.Unlock()
+	am.numPending--
 
 	old, ok := am.annotators[key]
 	if !ok {
@@ -83,6 +83,8 @@ func (am *AnnotatorMap) setAnnotatorIfNil(key string, ann api.Annotator) error {
 		return ErrMapEntryAlreadySet
 	}
 	am.annotators[key] = ann
+	am.numLoaded++
+	log.Println("Loaded", key)
 	return nil
 
 }
@@ -97,6 +99,7 @@ func (am *AnnotatorMap) maybeSetNil(key string) bool {
 	}
 
 	if am.numPending >= MaxPending {
+		log.Println("Too many pending", key)
 		return false
 	}
 	// Check the number of datasets in memory. Given the memory
@@ -104,7 +107,7 @@ func (am *AnnotatorMap) maybeSetNil(key string) bool {
 	if am.numPending+am.numLoaded >= MaxDatasetInMemory {
 		for fileKey := range am.annotators {
 			if am.annotators[fileKey] != nil {
-				log.Println("remove Geolite2 dataset " + fileKey)
+				log.Println("removing Geolite2 dataset " + fileKey)
 				delete(am.annotators, fileKey)
 				am.numLoaded--
 				break
