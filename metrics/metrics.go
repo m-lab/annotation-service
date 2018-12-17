@@ -12,6 +12,7 @@ import (
 
 //These vars are the prometheus metrics
 var (
+	// TODO make this an integer gauge
 	ActiveRequests = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "annotator_Running_Annotation_Requests_Count",
 		Help: "The current number of unfulfilled annotation service requests.",
@@ -37,13 +38,15 @@ var (
 		Help: "The total number annotation errors.",
 	}, []string{"type"})
 
+	// TODO make this an integer gauge
 	DatasetCount = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "annotator_dataset_count",
+		Name: "annotator_num_datasets",
 		Help: "Number of datasets loaded in cache.",
 	})
 
+	// TODO make this an integer gauge
 	PendingLoads = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "annotator_pending_load_count",
+		Name: "annotator_num_pending_load",
 		Help: "Number of datasets currently being loaded.",
 	})
 
