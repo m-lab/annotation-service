@@ -5,6 +5,7 @@ import (
 	"log"
 	"regexp"
 	"sort"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/storage"
@@ -12,6 +13,45 @@ import (
 
 	"github.com/m-lab/annotation-service/api"
 )
+
+type DatasetFile struct {
+	path       string
+	dir        string
+	dateString string
+	fnRoot     string // The root of the filename, (before any '.')
+	fnExt      string
+	version    int  // 1 = legacy, 2 = GeoLite2
+	isV6       bool // True if this is a legacy V6 dataset
+}
+
+var (
+	root       = `^(.*)/`
+	dir        = `(\d{4}/\d{2}/\d{2})/`
+	dateTime   = `(\d{8})T(.*)Z-`
+	fn         = `(GeoLite.*?)`
+	v6         = `([vV]6)?\.`
+	fext       = `(.*)$`
+	filenameRE = regexp.MustCompile(root + dir + dateTime + fn + v6 + fext)
+)
+
+func ParseFilename(fn string) DatasetFile {
+	parts := filenameRE.FindStringSubmatch(fn)
+	switch len(parts) {
+	case 0:
+		return DatasetFile{}
+	case 1:
+		return DatasetFile{path: parts[0]}
+	default:
+		df := DatasetFile{path: parts[0], dir: parts[1] + parts[2] + parts[3] + parts[4], fnRoot: parts[5], fnExt: parts[7]}
+		df.isV6 = strings.ToLower(parts[6]) == "v6"
+		if df.fnRoot == "GeoLiteCity" {
+			df.version = 1
+		} else {
+			df.version = 2
+		}
+		return df
+	}
+}
 
 // GeoLite2StartDate is the date we have the first GeoLite2 dataset.
 // Any request earlier than this date using legacy binary datasets
@@ -28,16 +68,6 @@ var DatasetDates []string
 
 // The date of lastest available dataset.
 var LatestDatasetDate time.Time
-
-var (
-	root       = `^(.*)/`
-	dir        = `(\d{4}/\d{2}/\d{2})/`
-	dateTime   = `(\d{8})T(.*)Z-`
-	fn         = `(GeoLite.*?)`
-	v6         = `(v6)?\.`
-	fext       = `(.*)$`
-	filenameRE = regexp.MustCompile(root + dir + dateTime + fn + v6 + fext)
-)
 
 // This is the regex used to filter for which files we want to consider acceptable for using with Geolite2
 // TODO deprecate these and use filenameRE instead
@@ -65,7 +95,9 @@ func UpdateArchivedFilenames() error {
 			return err
 		}
 		// TODO use this instead of the individual regular expressions
-		log.Printf("%v\n", filenameRE.FindAllStringSubmatch(file.Name, -1)[1:])
+		df := ParseFilename(file.Name)
+		log.Printf("%+v\n", df)
+
 		if !GeoLite2Regex.MatchString(file.Name) && !GeoLegacyRegex.MatchString(file.Name) && !GeoLegacyv6Regex.MatchString(file.Name) {
 			continue
 		}
