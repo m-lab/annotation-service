@@ -188,7 +188,7 @@ func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 
 		annotation, err := ann.GetAnnotation(&request)
 		if err != nil {
-			metrics.ErrorTotal.Inc()
+			metrics.ErrorTotal.WithLabelValues("GetAnnotation Error").Inc()
 			continue
 		}
 		responseMap[request.IP] = &annotation
