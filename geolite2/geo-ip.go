@@ -173,9 +173,10 @@ func stringToFloat(str, field string) (float64, error) {
 	return flt, nil
 }
 
+var capsRE = regexp.MustCompile("^[0-9A-Z]*$")
+
 func checkCaps(str, field string) (string, error) {
-	match, _ := regexp.MatchString("^[0-9A-Z]*$", str)
-	if match {
+	if capsRE.MatchString(str) {
 		return str, nil
 	}
 	log.Println(field, "should be all capitals and no punctuation: ", str)
