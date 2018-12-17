@@ -14,6 +14,7 @@ import (
 
 const (
 	MaxDatasetInMemory = 5
+	MaxPending         = 2
 )
 
 var (
@@ -56,8 +57,10 @@ type AnnotatorMap struct {
 	// Keys are filename of the datasets.
 	annotators map[string]api.Annotator
 	// Lock to be held when reading or writing the map.
-	mutex  sync.RWMutex
-	loader func(string) (api.Annotator, error)
+	mutex      sync.RWMutex
+	numLoaded  int
+	numPending int
+	loader     func(string) (api.Annotator, error)
 }
 
 // NewAnnotatorMap creates a new map that will use the provided loader for loading new Annotators.
@@ -93,29 +96,43 @@ func (am *AnnotatorMap) maybeSetNil(key string) bool {
 		return false
 	}
 
+	if am.numPending >= MaxPending {
+		return false
+	}
+	// Check the number of datasets in memory. Given the memory
+	// limit, some dataset may be removed from memory if needed.
+	if am.numPending+am.numLoaded >= MaxDatasetInMemory {
+		for fileKey := range am.annotators {
+			if am.annotators[fileKey] != nil {
+				log.Println("remove Geolite2 dataset " + fileKey)
+				delete(am.annotators, fileKey)
+				am.numLoaded--
+				break
+			}
+		}
+		return false
+	}
+
 	// Place marker so that other requesters know it is loading.
 	am.annotators[key] = nil
+	am.numPending++
 	return true
 }
 
 // This synchronously attempts to set map entry to nil, and
 // if successful, proceeds to asynchronously load the new dataset.
 func (am *AnnotatorMap) checkAndLoadAnnotator(key string) {
+	if !geoloader.GeoLite2Regex.MatchString(key) {
+		return
+	}
 	reserved := am.maybeSetNil(key)
 	if reserved {
 		// This goroutine now has exclusive ownership of the
 		// map entry, and the responsibility for loading the annotator.
 		go func(key string) {
-			// Check the number of datasets in memory. Given the memory
-			// limit, some dataset may be removed from memory if needed.
-			if len(am.annotators) >= MaxDatasetInMemory {
-				for fileKey, _ := range am.annotators {
-					log.Println("remove Geolite2 dataset " + fileKey)
-					delete(am.annotators, fileKey)
-					break
-				}
-			}
+			// TODO - this is currently redundant, as we already checked this.
 			if geoloader.GeoLite2Regex.MatchString(key) {
+				log.Println("plan to load " + key)
 				newAnn, err := am.loader(key)
 				if err != nil {
 					// TODO add a metric
@@ -148,6 +165,7 @@ func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 		am.checkAndLoadAnnotator(key)
 		return nil, ErrPendingAnnotatorLoad
 	}
+
 	if ann == nil {
 		// Another goroutine is already loading this entry.  Return error.
 		return nil, ErrPendingAnnotatorLoad
@@ -156,26 +174,27 @@ func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 }
 
 // GetAnnotator returns the correct annotator to use for a given timestamp.
-func GetAnnotator(date time.Time) api.Annotator {
+func GetAnnotator(date time.Time) (api.Annotator, error) {
 	// key := strconv.FormatInt(date.Unix(), encodingBase)
 	if date.After(geoloader.LatestDatasetDate) {
 		currentDataMutex.RLock()
 		ann := CurrentAnnotator
 		currentDataMutex.RUnlock()
-		return ann
+		return ann, nil
+	}
+	if date.Before(geoloader.GeoLite2StartDate) {
+		currentDataMutex.RLock()
+		ann := CurrentAnnotator
+		currentDataMutex.RUnlock()
+		return ann, nil
 	}
 	filename, err := geoloader.SelectArchivedDataset(date)
 
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
-	ann, err := archivedAnnotator.GetAnnotator(filename)
-	if err == nil {
-		return ann
-	}
-	return nil
-
+	return archivedAnnotator.GetAnnotator(filename)
 }
 
 // InitDataset will update the filename list of archived dataset in memory

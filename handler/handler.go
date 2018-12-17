@@ -132,7 +132,10 @@ var errNoAnnotator = errors.New("no Annotator found")
 func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoData, time.Time, error) {
 	responseMap := make(map[string]*api.GeoData)
 
-	ann := manager.GetAnnotator(date)
+	ann, err := manager.GetAnnotator(date)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
 	if ann == nil {
 		// stop sending more request in the same batch because w/ high chance the dataset is not ready
 		return nil, time.Time{}, errNoAnnotator
@@ -160,7 +163,10 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 	responseMap := make(map[string]*api.GeoData, len(ips))
 
-	ann := manager.GetAnnotator(date)
+	ann, err := manager.GetAnnotator(date)
+	if err != nil {
+		return v2.Response{}, err
+	}
 	if ann == nil {
 		// Just reject the request.  Caller should try again until successful, or different error.
 		return v2.Response{}, errNoAnnotator
@@ -334,8 +340,12 @@ func BatchValidateAndParse(jsonBuffer []byte) ([]api.RequestData, error) {
 func GetMetadataForSingleIP(request *api.RequestData) (api.GeoData, error) {
 	metrics.TotalLookups.Inc()
 	// TODO replace with generic GetAnnotator, that respects time.
-	ann := manager.GetAnnotator(request.Timestamp)
+	ann, err := manager.GetAnnotator(request.Timestamp)
+	if err != nil {
+		return api.GeoData{}, err
+	}
 	if ann == nil {
+		log.Println("This shouldn't happen")
 		return api.GeoData{}, manager.ErrNilDataset
 	}
 
