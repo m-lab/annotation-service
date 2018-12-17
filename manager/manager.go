@@ -157,6 +157,7 @@ func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 		if numPending >= MaxPendingDataset {
 			return nil, errors.New("already too many dataset pending")
 		}
+		// TODO - this is a BUG!!!
 		if numInMemory >= MaxDatasetInMemory {
 			for fileKey, _ := range am.annotators {
 				if am.annotators[fileKey] != nil {
@@ -181,26 +182,21 @@ func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 }
 
 // GetAnnotator returns the correct annotator to use for a given timestamp.
-func GetAnnotator(date time.Time) api.Annotator {
+func GetAnnotator(date time.Time) (api.Annotator, error) {
 	// key := strconv.FormatInt(date.Unix(), encodingBase)
 	if date.After(geoloader.LatestDatasetDate) {
 		currentDataMutex.RLock()
 		ann := CurrentAnnotator
 		currentDataMutex.RUnlock()
-		return ann
+		return ann, nil
 	}
 	filename, err := geoloader.SelectArchivedDataset(date)
 
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
-	ann, err := archivedAnnotator.GetAnnotator(filename)
-	if err == nil {
-		return ann
-	}
-	return nil
-
+	return archivedAnnotator.GetAnnotator(filename)
 }
 
 // InitDataset will update the filename list of archived dataset in memory
