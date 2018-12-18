@@ -12,6 +12,7 @@ import (
 
 //These vars are the prometheus metrics
 var (
+	// TODO make this an integer gauge
 	ActiveRequests = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "annotator_Running_Annotation_Requests_Count",
 		Help: "The current number of unfulfilled annotation service requests.",
@@ -32,10 +33,36 @@ var (
 		Name: "annotator_Bad_IP_Addresses_total",
 		Help: "The total number of ip parse failures.",
 	})
-	ErrorTotal = prometheus.NewCounter(prometheus.CounterOpts{
+	ErrorTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "annotator_Error_total",
 		Help: "The total number annotation errors.",
+	}, []string{"type"})
+
+	// TODO make this an integer gauge
+	DatasetCount = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "annotator_num_datasets",
+		Help: "Number of datasets loaded in cache.",
 	})
+
+	// TODO make this an integer gauge
+	PendingLoads = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "annotator_num_pending_load",
+		Help: "Number of datasets currently being loaded.",
+	})
+
+	EvictionCount = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "annotator_evictions_total",
+		Help: "The total number datasets evicted.",
+	})
+	LoadCount = prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "annotator_loads_total",
+		Help: "The total number of datasets loaded.",
+	})
+
+	RejectionCount = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "annotator_rejections_total",
+		Help: "The total number of rejected requests.",
+	}, []string{"type"})
 )
 
 func init() {
@@ -45,6 +72,11 @@ func init() {
 	prometheus.MustRegister(RequestTimes)
 	prometheus.MustRegister(BadIPTotal)
 	prometheus.MustRegister(ErrorTotal)
+
+	prometheus.MustRegister(DatasetCount)
+	prometheus.MustRegister(PendingLoads)
+	prometheus.MustRegister(EvictionCount)
+	prometheus.MustRegister(LoadCount)
 }
 
 // SetupPrometheus sets up and runs a webserver to export prometheus metrics.

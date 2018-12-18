@@ -19,8 +19,8 @@ resources:
 
 automatic_scaling:
   # We expect negligible load, so this is unlikely to trigger.
-  min_num_instances: 20
-  max_num_instances: 40
+  min_num_instances: 5
+  max_num_instances: 20
   cool_down_period_sec: 1800
   cpu_utilization:
     target_utilization: 0.60
@@ -38,3 +38,6 @@ network:
 
 env_variables:
   # TODO add custom service-account, instead of using default credentials.
+    # These should be substituted in the travis deployment script.
+  RELEASE_TAG: ${TRAVIS_TAG}
+  COMMIT_HASH: ${TRAVIS_COMMIT}

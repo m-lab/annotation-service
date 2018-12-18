@@ -29,6 +29,7 @@ const (
 var (
 	// This is the regex used to filter for which files we want to consider acceptable for using with Geolite2
 	geoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
+	countryRE     = regexp.MustCompile(`^[^0-9]*$`)
 )
 
 func loadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
@@ -160,8 +161,7 @@ func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 			}
 			continue
 		}
-		match, _ := regexp.MatchString(`^[^0-9]*$`, record[5])
-		if match {
+		if countryRE.MatchString(record[5]) {
 			lNode.CountryName = record[5]
 		} else {
 			log.Println("Country name should be letters only : ", record[5])
