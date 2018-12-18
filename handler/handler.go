@@ -34,9 +34,12 @@ func InitHandler() {
 	http.HandleFunc("/annotate", Annotate)
 	http.HandleFunc("/batch_annotate", BatchAnnotate)
 
+	// DEPRECATED
+	// This code is disabled, to deal with a confusing pubsub subscription quota.
+	// It is no longer needed because Ya implemented an external cron trigger.
 	// This listens for pubsub messages about new downloader files, and loads them
 	// when they become available.
-	go waitForDownloaderMessages()
+	// go waitForDownloaderMessages()
 }
 
 // Annotate is a URL handler that looks up IP address and puts
