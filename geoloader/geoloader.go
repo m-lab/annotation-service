@@ -30,25 +30,18 @@ func GetLatestData() api.Annotator {
 // For any input date earlier than 2013/08/28, we will return 2013/08/28 dataset.
 // For any input date later than latest available dataset, we will return the latest dataset
 // Otherwise, we return the last dataset before the input date.
+// TODO this is now superfluous.  Merge content into Directory
 func SelectArchivedDataset(requestDate time.Time) (string, error) {
 	if requestDate.Before(EarliestArchiveDate) {
 		return "Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz", nil
 	}
-	lastFilename := ""
-	dateString := requestDate.Format("20060102")
-	for _, date := range DatasetDates {
-		// return the last dataset that is earlier than requestDate
-		if date > dateString {
-			return lastFilename, nil
-		}
-		lastFilename = DatasetFilenames[date]
-	}
+	filename := AllDatasets.LastBefore(requestDate)
 
 	// If there is no filename selected, return the latest dataset
-	if lastFilename == "" {
+	if filename == "" {
 		return "", errors.New("cannot find proper dataset")
 	}
-	return lastFilename, nil
+	return filename, nil
 }
 
 func ArchivedLoader(filename string) (api.Annotator, error) {
