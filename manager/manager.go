@@ -39,8 +39,8 @@ import (
 
 var (
 	// These are vars instead of consts to facilitate testing.
-	MaxDatasetInMemory = 5 // Limit on number of loaded datasets
-	MaxPending         = 2 // Limit on number of concurrently loading datasets.
+	MaxDatasetInMemory = 12 // Limit on number of loaded datasets
+	MaxPending         = 2  // Limit on number of concurrently loading datasets.
 
 	// ErrNilDataset is returned when CurrentAnnotator is nil.
 	ErrNilDataset = errors.New("CurrentAnnotator is nil")
