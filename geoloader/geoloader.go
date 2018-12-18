@@ -34,31 +34,15 @@ func SelectArchivedDataset(requestDate time.Time) (string, error) {
 		return "Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz", nil
 	}
 	lastFilename := ""
-	for _, fileName := range DatasetFilenames {
-		if requestDate.Before(GeoLite2StartDate) {
-			// search legacy dataset
-			fileDate, err := api.ExtractDateFromFilename(fileName)
-			if err != nil {
-				continue
-			}
-			// return the last dataset that is earlier than requestDate
-			if fileDate.After(requestDate) {
-				return lastFilename, nil
-			}
-			lastFilename = fileName
-		} else {
-			// Search GeoLite2 dataset
-			fileDate, err := api.ExtractDateFromFilename(fileName)
-			if err != nil {
-				continue
-			}
-			// return the last dataset that is earlier than requestDate
-			if fileDate.After(requestDate) {
-				return lastFilename, nil
-			}
-			lastFilename = fileName
+	dateString := requestDate.Format("20060102")
+	for _, date := range DatasetDates {
+		// return the last dataset that is earlier than requestDate
+		if date > dateString {
+			return lastFilename, nil
 		}
+		lastFilename = DatasetFilenames[date]
 	}
+
 	// If there is no filename selected, return the latest dataset
 	if lastFilename == "" {
 		return "", errors.New("cannot find proper dataset")
