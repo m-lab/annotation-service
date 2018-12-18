@@ -305,12 +305,10 @@ func LoadGeoLite2Dataset(filename string, bucketname string) (*GeoDataset, error
 		log.Println("cannot create zip reader")
 		return nil, err
 	}
-	log.Println("begin to load " + filename)
 	dataset, err := loadGeoLite2(zip)
 	if err != nil {
 		return nil, err
 	}
-	log.Println("loaded " + filename)
 	date, err := api.ExtractDateFromFilename(filename)
 	if err != nil {
 		log.Println("Error extracting date:", filename)
