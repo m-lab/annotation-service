@@ -64,11 +64,8 @@ var (
 	CurrentAnnotator api.Annotator
 
 	// ArchivedLoader points to a AnnotatorMap struct containing the archived
-	// Geolite2 dataset in memory.
+	// Geolite2 and legacy dataset in memory.
 	archivedAnnotator = NewAnnotatorMap(geoloader.Geolite2Loader)
-
-	// LegacyLoader points to a AnnotatorMap struct containing the legacy dataset in memory.
-	legacyAnnotator = NewAnnotatorMap(geoloader.LegacyLoader)
 )
 
 // AnnotatorMap manages all loading and fetching of Annotators.
@@ -228,11 +225,7 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 		return nil, err
 	}
 
-	if geoloader.GeoLite2Regex.MatchString(filename) {
-		return archivedAnnotator.GetAnnotator(filename)
-	} else {
-		return legacyAnnotator.GetAnnotator(filename)
-	}
+	return archivedAnnotator.GetAnnotator(filename)
 }
 
 // InitDataset will update the filename list of archived dataset in memory
