@@ -302,7 +302,6 @@ func determineFilenameOfLatestGeolite2File() (string, error) {
 func LoadGeoLite2Dataset(filename string, bucketname string) (*GeoDataset, error) {
 	zip, err := loader.CreateZipReader(context.Background(), bucketname, filename)
 	if err != nil {
-		log.Println("cannot create zip reader")
 		return nil, err
 	}
 	dataset, err := loadGeoLite2(zip)
