@@ -248,7 +248,8 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 func InitDataset() {
 	geoloader.UpdateArchivedFilenames()
 
+	ann := geoloader.GetLatestData()
 	currentDataMutex.Lock()
-	CurrentAnnotator = geoloader.GetLatestData()
+	CurrentAnnotator = ann
 	currentDataMutex.Unlock()
 }
