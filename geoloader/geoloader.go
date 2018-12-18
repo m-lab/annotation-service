@@ -10,6 +10,7 @@ import (
 
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/geolite2"
+	"github.com/m-lab/annotation-service/legacy"
 )
 
 // PopulateLatestData will search to the latest Geolite2 files
@@ -54,3 +55,6 @@ func Geolite2Loader(filename string) (api.Annotator, error) {
 	return geolite2.LoadGeoLite2Dataset(filename, api.MaxmindBucketName)
 }
 
+func LegacyLoader(filename string) (api.Annotator, error) {
+	return legacy.LoadBundleDataset(filename, api.MaxmindBucketName)
+}

@@ -66,6 +66,9 @@ var (
 	// ArchivedLoader points to a AnnotatorMap struct containing the archived
 	// Geolite2 dataset in memory.
 	archivedAnnotator = NewAnnotatorMap(geoloader.Geolite2Loader)
+
+	// LegacyLoader points to a AnnotatorMap struct containing the legacy dataset in memory.
+	legacyAnnotator = NewAnnotatorMap(geoloader.LegacyLoader)
 )
 
 // AnnotatorMap manages all loading and fetching of Annotators.
@@ -163,32 +166,23 @@ func (am *AnnotatorMap) maybeSetNil(key string) bool {
 // This synchronously attempts to set map entry to nil, and
 // if successful, proceeds to asynchronously load the new dataset.
 func (am *AnnotatorMap) checkAndLoadAnnotator(key string) {
-	if !geoloader.GeoLite2Regex.MatchString(key) {
-		return
-	}
 	reserved := am.maybeSetNil(key)
+	log.Println(key)
 	if reserved {
 		// This goroutine now has exclusive ownership of the
 		// map entry, and the responsibility for loading the annotator.
 		go func(key string) {
-			// TODO - this is currently redundant, as we already checked this.
-			if geoloader.GeoLite2Regex.MatchString(key) {
-				log.Println("plan to load " + key)
-				newAnn, err := am.loader(key)
-				if err != nil {
-					// TODO add a metric
-					log.Println(err)
-					return
-				}
-				// Set the new annotator value.  Entry should be nil.
-				err = am.setAnnotatorIfNil(key, newAnn)
-				if err != nil {
-					// TODO add a metric
-					log.Println(err)
-				}
-			} else {
-				// TODO load legacy binary dataset
+			newAnn, err := am.loader(key)
+			if err != nil {
+				// TODO add a metric
+				log.Println(err)
 				return
+			}
+			// Set the new annotator value.  Entry should be nil.
+			err = am.setAnnotatorIfNil(key, newAnn)
+			if err != nil {
+				// TODO add a metric
+				log.Println(err)
 			}
 		}(key)
 	}
@@ -202,7 +196,7 @@ func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 	am.mutex.RUnlock()
 
 	if !ok {
-		// There is not yet any entry for this date.  Try to load it.
+		log.Println("There is not yet any entry for this date.  Try to load " + key)
 		am.checkAndLoadAnnotator(key)
 		metrics.RejectionCount.WithLabelValues("New Dataset")
 		return nil, ErrPendingAnnotatorLoad
@@ -226,13 +220,7 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 		currentDataMutex.RUnlock()
 		return ann, nil
 	}
-	// TODO HACK: This is a temporary measure until we have support for the legacy datasets.
-	if date.Before(geoloader.GeoLite2StartDate) {
-		currentDataMutex.RLock()
-		ann := CurrentAnnotator
-		currentDataMutex.RUnlock()
-		return ann, nil
-	}
+
 	filename, err := geoloader.SelectArchivedDataset(date)
 
 	if err != nil {
@@ -240,7 +228,11 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 		return nil, err
 	}
 
-	return archivedAnnotator.GetAnnotator(filename)
+	if geoloader.GeoLite2Regex.MatchString(filename) {
+		return archivedAnnotator.GetAnnotator(filename)
+	} else {
+		return legacyAnnotator.GetAnnotator(filename)
+	}
 }
 
 // InitDataset will update the filename list of archived dataset in memory
