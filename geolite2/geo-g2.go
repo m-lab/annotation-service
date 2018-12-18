@@ -19,7 +19,7 @@ import (
 
 const (
 	ipNumColumnsGlite2        = 10
-	locationNumColumnsGlite2  = 13
+	glite2LocationMinColumns  = 13
 	gLite2Prefix              = "GeoLite2-City"
 	geoLite2BlocksFilenameIP4 = "GeoLite2-City-Blocks-IPv4.csv"  // Filename of ipv4 blocks file
 	geoLite2BlocksFilenameIP6 = "GeoLite2-City-Blocks-IPv6.csv"  // Filename of ipv6 blocks file
@@ -108,16 +108,14 @@ func LoadLocListGLite2(reader io.Reader) ([]LocationNode, map[int]int, error) {
 	}
 	// TODO - this is a bit hacky.  May want to improve it.
 	// Older geoLite2 have 13 columns, but since 2018/03, they have 14 columns.
-	// This will print a log every time it loads a newer location file.
-	if len(first) != locationNumColumnsGlite2 {
-		log.Println("Incorrect number of columns in header, got: ", len(first), " wanted: ", locationNumColumnsGlite2)
-		log.Println(first)
-		if len(first) < locationNumColumnsGlite2 {
+	// Added last column is is_in_european_union
+	if len(first) != glite2LocationMinColumns {
+		if len(first) < glite2LocationMinColumns {
 			return nil, nil, errors.New("Corrupted Data: wrong number of columns")
 		}
 	}
 	// FieldsPerRecord is the expected column length
-	// r.FieldsPerRecord = locationNumColumnsGlite2
+	// r.FieldsPerRecord = glite2LocationMinColumns
 	errorCount := 0
 	maxErrorCount := 50
 	for {
