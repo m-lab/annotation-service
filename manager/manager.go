@@ -65,7 +65,7 @@ var (
 
 	// ArchivedLoader points to a AnnotatorMap struct containing the archived
 	// Geolite2 and legacy dataset in memory.
-	archivedAnnotator = NewAnnotatorMap(geoloader.Geolite2Loader)
+	archivedAnnotator = NewAnnotatorMap(geoloader.ArchivedLoader)
 )
 
 // AnnotatorMap manages all loading and fetching of Annotators.
