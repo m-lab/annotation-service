@@ -71,6 +71,9 @@ func (dir *Directory) LastBefore(date time.Time) string {
 		return ""
 	}
 
+	// Add one day, so that we use dataset for same date published
+	// TODO perhaps we should use the previous dataset???
+	date = date.Add(24 * time.Hour)
 	dateString := date.Format("20060102")
 	// TODO use sort.SearchString()
 	index := sort.SearchStrings(dir.dates, dateString)
