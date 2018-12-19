@@ -67,7 +67,7 @@ func SelectArchivedDataset(requestDate time.Time) (string, error) {
 	return lastFilename, nil
 }
 
-func Geolite2Loader(filename string) (api.Annotator, error) {
+func ArchivedLoader(filename string) (api.Annotator, error) {
 	if GeoLite2Regex.MatchString(filename) {
 		return geolite2.LoadGeoLite2Dataset(filename, api.MaxmindBucketName)
 	} else {
