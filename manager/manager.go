@@ -111,6 +111,7 @@ func (am *AnnotatorMap) setAnnotatorIfNil(key string, ann api.Annotator) error {
 	}
 
 	am.annotators[key] = ann
+	metrics.LoadCount.Inc()
 	metrics.PendingLoads.Dec()
 	metrics.DatasetCount.Inc()
 	am.numPending--
@@ -195,13 +196,13 @@ func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 	if !ok {
 		log.Println("There is not yet any entry for this date.  Try to load " + key)
 		am.checkAndLoadAnnotator(key)
-		metrics.RejectionCount.WithLabelValues("New Dataset")
+		metrics.RejectionCount.WithLabelValues("New Dataset").Inc()
 		return nil, ErrPendingAnnotatorLoad
 	}
 
 	if ann == nil {
 		// Another goroutine is already loading this entry.  Return error.
-		metrics.RejectionCount.WithLabelValues("Dataset Pending")
+		metrics.RejectionCount.WithLabelValues("Dataset Pending").Inc()
 		return nil, ErrPendingAnnotatorLoad
 	}
 	return ann, nil
@@ -221,7 +222,7 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 	filename, err := geoloader.SelectArchivedDataset(date)
 
 	if err != nil {
-		metrics.RejectionCount.WithLabelValues("Selection Error")
+		metrics.RejectionCount.WithLabelValues("Selection Error").Inc()
 		return nil, err
 	}
 
