@@ -136,7 +136,6 @@ func (am *AnnotatorMap) maybeSetNil(key string) bool {
 	}
 
 	if am.numPending >= MaxPending {
-		log.Println("Too many pending", key)
 		return false
 	}
 	// Check the number of datasets in memory. Given the memory
@@ -165,21 +164,20 @@ func (am *AnnotatorMap) maybeSetNil(key string) bool {
 // if successful, proceeds to asynchronously load the new dataset.
 func (am *AnnotatorMap) checkAndLoadAnnotator(key string) {
 	reserved := am.maybeSetNil(key)
-	log.Println(key)
 	if reserved {
 		// This goroutine now has exclusive ownership of the
 		// map entry, and the responsibility for loading the annotator.
 		go func(key string) {
 			newAnn, err := am.loader(key)
 			if err != nil {
-				// TODO add a metric
+				metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
 				log.Println(err)
 				return
 			}
 			// Set the new annotator value.  Entry should be nil.
 			err = am.setAnnotatorIfNil(key, newAnn)
 			if err != nil {
-				// TODO add a metric
+				metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
 				log.Println(err)
 			}
 		}(key)
@@ -194,7 +192,6 @@ func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 	am.mutex.RUnlock()
 
 	if !ok {
-		log.Println("There is not yet any entry for this date.  Try to load " + key)
 		am.checkAndLoadAnnotator(key)
 		metrics.RejectionCount.WithLabelValues("New Dataset").Inc()
 		return nil, ErrPendingAnnotatorLoad
@@ -222,7 +219,7 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 	filename, err := geoloader.SelectArchivedDataset(date)
 
 	if err != nil {
-		metrics.RejectionCount.WithLabelValues("Selection Error").Inc()
+		metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
 		return nil, err
 	}
 
