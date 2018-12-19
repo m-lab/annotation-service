@@ -211,7 +211,7 @@ func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 // TODO: Update to properly handle legacy datasets.
 func GetAnnotator(date time.Time) (api.Annotator, error) {
 	// key := strconv.FormatInt(date.Unix(), encodingBase)
-	if date.After(geoloader.AllDatasets.Latest()) {
+	if date.After(geoloader.Latest()) {
 		currentDataMutex.RLock()
 		ann := CurrentAnnotator
 		currentDataMutex.RUnlock()
@@ -231,7 +231,7 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 // InitDataset will update the filename list of archived dataset in memory
 // and load the latest Geolite2 dataset in memory.
 func InitDataset() {
-	geoloader.AllDatasets.UpdateArchivedFilenames()
+	geoloader.UpdateArchivedFilenames()
 
 	ann := geoloader.GetLatestData()
 	currentDataMutex.Lock()

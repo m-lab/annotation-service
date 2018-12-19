@@ -10,7 +10,7 @@ import (
 
 func TestSelectArchivedDataset(t *testing.T) {
 	// TODO use a new dataset instead of the var.
-	err := geoloader.AllDatasets.UpdateArchivedFilenames()
+	err := geoloader.UpdateArchivedFilenames()
 	if err != nil {
 		// TODO: make dataset produce rich error types to allow us to
 		// distinguish between auth error (which should cause us to
