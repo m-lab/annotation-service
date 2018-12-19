@@ -137,7 +137,7 @@ func (gi *Datasets) GetAnnotation(request *api.RequestData) (api.GeoData, error)
 	var record *GeoIPRecord
 	if request.IPFormat == 4 {
 		record = gi.v4Data.GetRecord(request.IP, true)
-	} else { 
+	} else {
 		record = gi.v6Data.GetRecord(request.IP, false)
 	}
 
