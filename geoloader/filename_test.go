@@ -23,10 +23,18 @@ func TestDir(t *testing.T) {
 	dir.Insert(date("20170404", t), "file4")
 	dir.Insert(date("20170303", t), "file3")
 
-	if dir.LastBefore(date("20170102", t)) != "file1" {
-		t.Error("wrong date", dir.LastBefore(time.Now()))
+	if dir.LastFilenameEarlierThan(date("20170102", t)) != "file1" {
+		t.Error("wrong date", dir.LastFilenameEarlierThan(time.Now()))
 	}
-	if dir.LastBefore(date("20170305", t)) != "file3" {
-		t.Error("wrong date", dir.LastBefore(date("20170305", t)))
+	if dir.LastFilenameEarlierThan(date("20170305", t)) != "file3" {
+		t.Error("wrong date", dir.LastFilenameEarlierThan(date("20170305", t)))
+	}
+	// Should always choose date prior to, not equal to, provided date.
+	if dir.LastFilenameEarlierThan(date("20170303", t)) != "file2" {
+		t.Error("wrong date", dir.LastFilenameEarlierThan(date("20170303", t)))
+	}
+	// For very early dates, should get the first available.
+	if dir.LastFilenameEarlierThan(date("20100101", t)) != "file1" {
+		t.Error("wrong date", dir.LastFilenameEarlierThan(date("20100101", t)))
 	}
 }

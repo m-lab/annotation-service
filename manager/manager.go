@@ -52,9 +52,15 @@ var (
 	ErrAnnotatorLoadFailed = errors.New("unable to load annoator")
 
 	// These are UNEXPECTED errors!!
-	ErrGoroutineNotOwner  = errors.New("Goroutine not owner")
+
+	// ErrNoAppropriateDataset is returned when directory is empty.
+	ErrNoAppropriateDataset = errors.New("No Appropriate Dataset")
+	// ErrGoroutineNotOwner indicates multithreaded code problem with reservation.
+	ErrGoroutineNotOwner = errors.New("Goroutine not owner")
+	// ErrMapEntryAlreadySet indicates multithreaded code problem setting map entry.
 	ErrMapEntryAlreadySet = errors.New("Map entry already set")
 
+	// TODO remove these and keep current in the map.
 	// A mutex to make sure that we are not reading from the CurrentAnnotator
 	// pointer while trying to update it
 	currentDataMutex = &sync.RWMutex{}
@@ -209,18 +215,18 @@ func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 // TODO: Update to properly handle legacy datasets.
 func GetAnnotator(date time.Time) (api.Annotator, error) {
 	// key := strconv.FormatInt(date.Unix(), encodingBase)
-	if date.After(geoloader.Latest()) {
+	if date.After(geoloader.LatestDatasetDate()) {
 		currentDataMutex.RLock()
 		ann := CurrentAnnotator
 		currentDataMutex.RUnlock()
 		return ann, nil
 	}
 
-	filename, err := geoloader.SelectArchivedDataset(date)
+	filename := geoloader.BestAnnotatorName(date)
 
-	if err != nil {
-		metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
-		return nil, err
+	if filename == "" {
+		metrics.ErrorTotal.WithLabelValues("No Appropriate Dataset").Inc()
+		return nil, errors.New("No Appropriate Dataset")
 	}
 
 	return archivedAnnotator.GetAnnotator(filename)

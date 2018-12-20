@@ -28,7 +28,7 @@ var earliestArchiveDate = time.Unix(1377648000, 0) // "August 28, 2013")
 // The current directory is regarded as immutable, but the pointer is dynamically updated, so accesses
 // should only be done through GetDirectory().
 var datasetDir = &directory{}
-var mutex sync.RWMutex // lock to be held when accessing or updating datasetDir pointer.
+var datasetDirLock sync.RWMutex // lock to be held when accessing or updating datasetDir pointer.
 
 type dateEntry struct {
 	date      time.Time
@@ -59,14 +59,14 @@ func (dir *directory) Insert(date time.Time, fn string) {
 		dir.dates[index] = dateString
 
 		// Create new entry for the date.
-		entry = &dateEntry{filenames: make([]string, 0, 3), date: date}
+		entry = &dateEntry{filenames: make([]string, 0, 2), date: date}
 		dir.entries[dateString] = entry
 	}
 
 	entry.filenames = append(entry.filenames, fn)
 }
 
-func (dir *directory) lastDate() time.Time {
+func (dir *directory) latestDate() time.Time {
 	if len(dir.dates) < 1 {
 		return time.Time{}
 	}
@@ -74,15 +74,14 @@ func (dir *directory) lastDate() time.Time {
 	return dir.entries[d].date
 }
 
-// LastBefore returns the filename associated with the provided date.
-func (dir *directory) LastBefore(date time.Time) string {
+// LastFilenameEarlierThan returns the filename associated with the provided date.
+// Except for dates prior to 2013, it will return the latest filename with date prior
+// to the provided date.
+// Returns empty string if the directory is empty.
+func (dir *directory) LastFilenameEarlierThan(date time.Time) string {
 	if len(dir.dates) == 0 {
 		return ""
 	}
-
-	// Add one day, so that we use dataset for same date published
-	// TODO perhaps we should use the previous dataset???
-	date = date.Add(24 * time.Hour)
 
 	dateString := date.Format("20060102")
 	index := sort.SearchStrings(dir.dates, dateString)
@@ -135,28 +134,28 @@ func UpdateArchivedFilenames() error {
 		log.Println(err)
 	}
 
-	mutex.Lock()
+	datasetDirLock.Lock()
 	datasetDir = &dir
-	mutex.Unlock()
+	datasetDirLock.Unlock()
 
 	return nil
 }
 
 func getDirectory() *directory {
-	mutex.RLock()
-	defer mutex.RUnlock()
+	datasetDirLock.RLock()
+	defer datasetDirLock.RUnlock()
 	return datasetDir
 }
 
 // Latest returns the date of the latest dataset.
 // May return time.Time{} if no dates have been loaded.
-func Latest() time.Time {
+func LatestDatasetDate() time.Time {
 	dd := getDirectory()
-	return dd.lastDate()
+	return dd.latestDate()
 }
 
-// LastBefore returns the dataset filename for annotating the requested date.
-func LastBefore(date time.Time) string {
+// BestAnnotatorName returns the dataset filename for annotating the requested date.
+func BestAnnotatorName(date time.Time) string {
 	dd := getDirectory()
-	return dd.LastBefore(date)
+	return dd.LastFilenameEarlierThan(date)
 }

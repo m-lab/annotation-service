@@ -300,6 +300,7 @@ func determineFilenameOfLatestGeolite2File() (string, error) {
 // LoadGeoLite2Dataset load the Geolite2 dataset with filename from bucket.
 func LoadGeoLite2Dataset(filename string, bucketname string) (*GeoDataset, error) {
 	zip, err := loader.CreateZipReader(context.Background(), bucketname, filename)
+	log.Println("Loading dataset from", filename)
 	if err != nil {
 		return nil, err
 	}
