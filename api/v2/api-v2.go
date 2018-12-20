@@ -49,6 +49,32 @@ type Response struct {
 *                           Local Annotator API                          *
 *************************************************************************/
 
+func post(ctx context.Context, url string, encodedData []byte) (*http.Response, error) {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	httpReq, err := http.NewRequest("POST", url, bytes.NewReader(encodedData))
+	if err != nil {
+		return nil, err
+	}
+
+	// Make the actual request
+	return http.DefaultClient.Do(httpReq.WithContext(ctx))
+}
+
+func postWithRetry(ctx context.Context, url string, encodedData []byte) (*http.Response, error) {
+	resp, err := post(ctx, url, encodedData)
+
+	for err == nil && resp.StatusCode == http.StatusServiceUnavailable {
+		time.Sleep(1 * time.Second)
+		if ctx.Err() != nil {
+			return resp, err
+		}
+		resp, err = post(ctx, url, encodedData)
+	}
+	return resp, err
+}
+
 // GetAnnotations takes a url, and Request, makes remote call, and returns parsed ResponseV2
 // TODO(gfr) Should pass the annotator's request context through and use it here.
 func GetAnnotations(ctx context.Context, url string, date time.Time, ips []string) (*Response, error) {
@@ -58,18 +84,7 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 		return nil, err
 	}
 
-	var netClient = &http.Client{
-		// Median response time is < 10 msec, but 99th percentile is 0.6 seconds.
-		Timeout: 2 * time.Second,
-	}
-
-	httpReq, err := http.NewRequest("POST", url, bytes.NewReader(encodedData))
-	if err != nil {
-		return nil, err
-	}
-
-	// Make the actual request
-	httpResp, err := netClient.Do(httpReq.WithContext(ctx))
+	httpResp, err := postWithRetry(ctx, url, encodedData)
 	if err != nil {
 		return nil, err
 	}
@@ -77,9 +92,8 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 
 	// Catch errors reported by the service
 	if httpResp.StatusCode != http.StatusOK {
-		return nil, errors.New("URL:" + url + " gave response code " + httpResp.Status)
+		return nil, errors.New(httpResp.Status)
 	}
-
 	// Copy response into a byte slice
 	body, err := ioutil.ReadAll(httpResp.Body)
 	if err != nil {

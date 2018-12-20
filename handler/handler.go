@@ -272,11 +272,15 @@ func handleV2(w http.ResponseWriter, jsonBuffer []byte) {
 	// No need to validate IP addresses, as they are net.IP
 	response := v2.Response{}
 
-	// For now, use the date of the first item.  In future the items will not have individual timestamps.
 	if len(request.IPs) > 0 {
-		// For old request format, we use the date of the first RequestData
 		response, err = AnnotateV2(request.Date, request.IPs)
 		if err != nil {
+			switch err {
+			case manager.ErrPendingAnnotatorLoad:
+				w.WriteHeader(http.StatusServiceUnavailable)
+			default:
+				w.WriteHeader(http.StatusInternalServerError)
+			}
 			fmt.Fprintf(w, err.Error())
 			return
 		}
