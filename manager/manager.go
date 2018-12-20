@@ -1,30 +1,14 @@
-// Package manager provides interface between handler and lower level implementation
-// such as geoloader.
 package manager
 
-// The implementation is currently rather naive.  Eviction is done based only on whether
-// there is a pending request, and there are already the max number of datasets loaded.
-// A later implementation will use LRU and dead time to make this determination.
-//
-// Behavior:
-//   If a legacy dataset is requests, return the CurrentAnnotator instead.
-//   If the requested dataset is loaded, return it.
-//   If the requested dataset is loading, return ErrPendingAnnotatorLoad
-//   If the dataset is not loaded or pending, check:
-//      A: If there are already MaxPending loads in process:
-//        Do nothing and reply with ErrPendingAnnotatorLoad (even though this isn't true)
-//      B: If there is room to load it?
-//       YES: start loading it, and return ErrPendingAnnotatorLoad
-//        NO: kick out an existing dataset and return ErrPendingAnnotatorLoad.
-//
-// Please modify with extreme caution.  The lock MUST be held when ACCESSING any field
-// of AnnotatorMap.
+// The AnnotatorCache is an LRU cache that handles loading and eviction of annotators in
+// response to requests for specific dates.
+// Configuration parameters are:
+//   minEvictionAge - the minimum period that an annotator should be idle before eviction.
+//   maxPendingLoads - the maximum number of concurrent loads allowed.
+//   maxEntries - the maximum number of entries allowed, to avoid OOM problems.
+//   loader - the function that handles loading of a new annotator.
 
-// Note that the system may evict up to the number of pending loads, so at any given time,
-// there may only be MaxDatasetInMemory = MaxPending actually loaded.
-
-// Also note that anyone holding an annotator will prevent it from being collected by the
-// GC, so simply evicting it is not a guarantee that the memory will be reclaimed.
+// TODO - consider preloading the NEXT annotator whenever there is room available.
 
 import (
 	"errors"
@@ -37,193 +21,209 @@ import (
 	"github.com/m-lab/annotation-service/metrics"
 )
 
-var (
-	// These are vars instead of consts to facilitate testing.
-	MaxDatasetInMemory = 12 // Limit on number of loaded datasets
-	MaxPending         = 2  // Limit on number of concurrently loading datasets.
+// CacheError is the error type for all errors related to the Annotator cache.
+type CacheError interface {
+	error
+}
 
+func newCacheError(msg string) CacheError {
+	return CacheError(errors.New(msg))
+}
+
+var (
 	// ErrNilDataset is returned when CurrentAnnotator is nil.
-	ErrNilDataset = errors.New("CurrentAnnotator is nil")
+	ErrNilDataset = newCacheError("CurrentAnnotator is nil")
 
 	// ErrPendingAnnotatorLoad is returned when a new annotator is requested, but not yet loaded.
-	ErrPendingAnnotatorLoad = errors.New("annotator is loading")
+	ErrPendingAnnotatorLoad = newCacheError("annotator is loading")
 
 	// ErrAnnotatorLoadFailed is returned when a requested annotator has failed to load.
-	ErrAnnotatorLoadFailed = errors.New("unable to load annoator")
+	ErrAnnotatorLoadFailed = newCacheError("unable to load annotator")
 
 	// These are UNEXPECTED errors!!
+	// ErrGoroutineNotOwner is returned when goroutine attempts to set annotator entry, but is not the owner.
+	ErrGoroutineNotOwner = newCacheError("goroutine not owner")
+	// ErrMapEntryAlreadySet is returned when goroutine attempts to set annotator, but entry is non-null.
+	ErrMapEntryAlreadySet = newCacheError("map entry already set")
+	// ErrNilEntry is returned when map has a nil entry, which should never happen.
+	ErrNilEntry = newCacheError("Map entry is nil")
 
-	// ErrNoAppropriateDataset is returned when directory is empty.
-	ErrNoAppropriateDataset = errors.New("No Appropriate Dataset")
-	// ErrGoroutineNotOwner indicates multithreaded code problem with reservation.
-	ErrGoroutineNotOwner = errors.New("Goroutine not owner")
-	// ErrMapEntryAlreadySet indicates multithreaded code problem setting map entry.
-	ErrMapEntryAlreadySet = errors.New("Map entry already set")
-
-	// TODO remove these and keep current in the map.
-	// A mutex to make sure that we are not reading from the CurrentAnnotator
-	// pointer while trying to update it
-	currentDataMutex = &sync.RWMutex{}
-
-	// CurrentAnnotator points to a GeoDataset struct containing the absolute
-	// latest data for the annotator to search and reply with
-	CurrentAnnotator api.Annotator
-
-	// ArchivedLoader points to a AnnotatorMap struct containing the archived
-	// Geolite2 and legacy dataset in memory.
-	archivedAnnotator = NewAnnotatorMap(geoloader.ArchivedLoader)
+	allAnnotators *AnnotatorCache
 )
 
-// AnnotatorMap manages all loading and fetching of Annotators.
-// TODO - should we call this AnnotatorCache?
+// NOT THREADSAFE.  Should be called once at initialization time.
+func SetAnnotatorCacheForTest(ac *AnnotatorCache) {
+	allAnnotators = ac
+}
+
+type cacheEntry struct {
+	ann      api.Annotator
+	lastUsed time.Time
+	//
+	err CacheError
+}
+
+// AnnotatorCache manages all loading and fetching of Annotators.
 // TODO - should this be a generic cache of interface{}?
 //
 // Synchronization:
-//  All accesses must hold the mutex.  If an element is not found, the
-//  goroutine may attempt to take responsibility for loading it by obtaining
-//  the write lock, and writing an entry with a nil pointer.
+//  All accesses must hold the mutex.  If an element is not found, the goroutine
+//  may take ownership of the loading job by writing a new empty entry into the
+//  map.  It should then start a new goroutine to load the annotator and populate
+//  the entry.
 // TODO - still need a strategy for dealing with persistent errors.
-type AnnotatorMap struct {
-	// Keys are filename of the datasets.
-	annotators map[string]api.Annotator
-	// Lock to be held when reading or writing the map.
-	mutex      sync.RWMutex
-	numPending int
-	loader     func(string) (api.Annotator, error)
+type AnnotatorCache struct {
+	// Lock to be held when reading or writing the map or oldestIndex.
+	lock sync.Mutex
+	// Keys are date strings in YYYYMMDD format.
+	annotators  map[string]*cacheEntry
+	numPending  int    // Number of pending loads.
+	oldestIndex string // The index of the oldest entry.
+
+	// These are static and can be accessed without holding the lock
+	loader         func(string) (api.Annotator, error)
+	maxEntries     int
+	maxPending     int
+	minEvictionAge time.Duration // Minimum unused period before eviction
 }
 
-// NewAnnotatorMap creates a new map that will use the provided loader for loading new Annotators.
-func NewAnnotatorMap(loader func(string) (api.Annotator, error)) *AnnotatorMap {
-	return &AnnotatorMap{annotators: make(map[string]api.Annotator), loader: loader}
+// NewAnnotatorCache creates a new map that will use the provided loader for loading new Annotators.
+func NewAnnotatorCache(maxEntries int, maxPending int, minAge time.Duration, loader func(string) (api.Annotator, error)) *AnnotatorCache {
+	return &AnnotatorCache{annotators: make(map[string]*cacheEntry, 20), loader: loader,
+		maxEntries: maxEntries, maxPending: maxPending, minEvictionAge: minAge}
 }
 
-// NOTE: Should only be called by checkAndLoadAnnotator.
+// NOTE: Should only be called by loadAnnotator.
 // The calling goroutine should "own" the responsibility for
 // setting the annotator.
-func (am *AnnotatorMap) setAnnotatorIfNil(key string, ann api.Annotator) error {
-	am.mutex.Lock()
-	defer am.mutex.Unlock()
+// TODO Add unit tests for load error cases.
+func (am *AnnotatorCache) validateAndSetAnnotator(dateString string, ann api.Annotator, err error) error {
+	am.lock.Lock()
+	defer am.lock.Unlock()
 
-	old, ok := am.annotators[key]
-	if !ok {
+	entry, ok := am.annotators[dateString]
+	if !ok || entry == nil {
 		log.Println("This should never happen", ErrGoroutineNotOwner)
-		metrics.ErrorTotal.WithLabelValues("WrongOwner").Inc()
 		return ErrGoroutineNotOwner
 	}
-	if old != nil {
+	if entry.ann != nil {
 		log.Println("This should never happen", ErrMapEntryAlreadySet)
-		metrics.ErrorTotal.WithLabelValues("MapEntryAlreadySet").Inc()
 		return ErrMapEntryAlreadySet
 	}
+	entry.ann = ann
+	entry.err = err
+	entry.lastUsed = time.Now()
 
-	am.annotators[key] = ann
 	metrics.LoadCount.Inc()
 	metrics.PendingLoads.Dec()
 	metrics.DatasetCount.Inc()
 	am.numPending--
-	log.Println("Loaded", key)
+	log.Println("Loaded", dateString)
+
 	return nil
 }
 
-// This creates a reservation for loading a dataset, IFF map entry is empty (not nil or populated)
-//   If the dataset is not loaded or pending, check:
-//      A: If there are already MaxPending loads in process:
-//        Do nothing and reply false
-//      B: If there is room to load it?
-//       YES: make the reservation (by setting entry to nil) and return true.
-//        NO: kick out an existing dataset and return false.
-func (am *AnnotatorMap) maybeSetNil(key string) bool {
-	am.mutex.Lock()
-	defer am.mutex.Unlock()
-	_, ok := am.annotators[key]
-	if ok {
-		// Another goroutine is already responsible for loading.
-		return false
+// This loads and saves the new dataset.
+// It should only be called asynchronously from GetAnnotator.
+func (am *AnnotatorCache) loadAnnotator(dateString string) {
+	ann, err := am.loader(dateString)
+	if err != nil {
+		metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
 	}
-
-	if am.numPending >= MaxPending {
-		return false
+	// Set the new annotator value.  Entry should be nil.
+	err = am.validateAndSetAnnotator(dateString, ann, err)
+	if err != nil {
+		metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
 	}
-	// Check the number of datasets in memory. Given the memory
-	// limit, some dataset may be removed from memory if needed.
-	if len(am.annotators) >= MaxDatasetInMemory {
-		for fileKey := range am.annotators {
-			ann, ok := am.annotators[fileKey]
-			if ok {
-				log.Println("removing dataset " + fileKey)
-				ann.Unload()
-				delete(am.annotators, fileKey)
-				metrics.EvictionCount.Inc()
-				metrics.DatasetCount.Dec()
-				break
-			}
-		}
-		return false
-	}
-
-	// Place marker so that other requesters know it is loading.
-	am.annotators[key] = nil
-	metrics.PendingLoads.Inc()
-	am.numPending++
-	return true
 }
 
-// This synchronously attempts to set map entry to nil, and
-// if successful, proceeds to asynchronously load the new dataset.
-func (am *AnnotatorMap) checkAndLoadAnnotator(key string) {
-	reserved := am.maybeSetNil(key)
-	if reserved {
-		// This goroutine now has exclusive ownership of the
-		// map entry, and the responsibility for loading the annotator.
-		go func(key string) {
-			newAnn, err := am.loader(key)
-			if err != nil {
-				metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
-				log.Println(err)
-				return
-			}
-			// Set the new annotator value.  Entry should be nil.
-			err = am.setAnnotatorIfNil(key, newAnn)
-			if err != nil {
-				metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
-				log.Println(err)
-			}
-		}(key)
+// Client must hold write lock.
+func (am *AnnotatorCache) updateOldest() {
+	am.oldestIndex = ""
+	if len(am.annotators) == 0 {
+		return
+	}
+	oldest := time.Now()
+	// Scan through the map keys to find the oldest key.
+	for k, e := range am.annotators {
+		if e.lastUsed.Before(oldest) {
+			oldest = e.lastUsed
+			am.oldestIndex = k
+		}
 	}
 }
 
 // GetAnnotator gets the named annotator, if already in the map.
-// If not already loaded, this will trigger loading, and return ErrPendingAnnotatorLoad
-func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
-	am.mutex.RLock()
-	ann, ok := am.annotators[key]
-	am.mutex.RUnlock()
-
+// If not already loaded, this will trigger loading, and return ErrPendingAnnotatorLoad.
+// However, if eviction is required, this will synchronously attempt eviction, and return
+// ErrPendingAnnotatorLoad if successful, or ErrAnnotatorLoadFailed if eviction was unsuccessful.
+func (am *AnnotatorCache) GetAnnotator(dateString string) (api.Annotator, error) {
+	am.lock.Lock()
+	defer am.lock.Unlock()
+	entry, ok := am.annotators[dateString]
 	if !ok {
-		am.checkAndLoadAnnotator(key)
+		metrics.RejectionCount.WithLabelValues("New Dataset").Inc()
+		if am.numPending >= am.maxPending {
+			log.Println("Too many loading")
+			return nil, ErrPendingAnnotatorLoad
+		}
+		if len(am.annotators) >= am.maxEntries {
+			if !am.tryEvictOldest() {
+				return nil, ErrAnnotatorLoadFailed
+			}
+			return nil, ErrPendingAnnotatorLoad
+		}
+		// There is no entry yet for this date, so we take ownership by
+		// creating an entry.
+		am.annotators[dateString] = &cacheEntry{}
+		metrics.PendingLoads.Inc()
+		am.numPending++
+		go am.loadAnnotator(dateString)
+		return nil, ErrPendingAnnotatorLoad
+	}
+
+	if entry == nil {
+		return nil, ErrNilEntry
+	} else if entry.err != nil {
+		return nil, entry.err
+	} else if entry.ann == nil {
+		// Another goroutine is already loading this entry.  Return error.
 		metrics.RejectionCount.WithLabelValues("New Dataset").Inc()
 		return nil, ErrPendingAnnotatorLoad
 	}
 
-	if ann == nil {
-		// Another goroutine is already loading this entry.  Return error.
-		metrics.RejectionCount.WithLabelValues("Dataset Pending").Inc()
-		return nil, ErrPendingAnnotatorLoad
+	// Update the LRU time.
+	entry.lastUsed = time.Now()
+	if am.oldestIndex == dateString || am.oldestIndex == "" {
+		am.updateOldest()
 	}
-	return ann, nil
+
+	return entry.ann, nil
 }
 
-// GetAnnotator returns the correct annotator to use for a given timestamp.
-// TODO: Update to properly handle legacy datasets.
-func GetAnnotator(date time.Time) (api.Annotator, error) {
-	// key := strconv.FormatInt(date.Unix(), encodingBase)
-	if date.After(geoloader.LatestDatasetDate()) {
-		currentDataMutex.RLock()
-		ann := CurrentAnnotator
-		currentDataMutex.RUnlock()
-		return ann, nil
+// tryEvictOldest evicts the oldest entry, IFF it has not been referenced in minEvictionAge
+// Caller must hold the lock.
+func (am *AnnotatorCache) tryEvictOldest() bool {
+	if am.oldestIndex == "" {
+		return false
 	}
 
+	e := am.annotators[am.oldestIndex]
+	if time.Since(e.lastUsed) < am.minEvictionAge {
+		// TODO add metric for failed eviction requests.
+		return false
+	}
+	log.Println("evicting", am.oldestIndex)
+	delete(am.annotators, am.oldestIndex)
+	am.updateOldest()
+	metrics.EvictionCount.Inc()
+	metrics.DatasetCount.Dec()
+
+	return true
+}
+
+// GetAnnotator gets the current annotator.
+func GetAnnotator(date time.Time) (api.Annotator, error) {
 	filename := geoloader.BestAnnotatorName(date)
 
 	if filename == "" {
@@ -231,16 +231,17 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 		return nil, errors.New("No Appropriate Dataset")
 	}
 
-	return archivedAnnotator.GetAnnotator(filename)
+	return allAnnotators.GetAnnotator(filename)
 }
 
 // InitDataset will update the filename list of archived dataset in memory
 // and load the latest Geolite2 dataset in memory.
+// Initialized allAnnotators if not already initialized.
 func InitDataset() {
+	if allAnnotators == nil {
+		allAnnotators = NewAnnotatorCache(12, 1, 5*time.Minute, geoloader.ArchivedLoader)
+	}
 	geoloader.UpdateArchivedFilenames()
 
-	ann := geoloader.GetLatestData()
-	currentDataMutex.Lock()
-	CurrentAnnotator = ann
-	currentDataMutex.Unlock()
+	// TODO - preload the most recent?
 }
