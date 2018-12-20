@@ -29,7 +29,7 @@ var earliestArchiveDate = time.Unix(1377648000, 0) // "August 28, 2013")
 // provide the LatestDate() function.
 // The current directory is regarded as immutable, but the pointer is dynamically updated, so accesses
 // should only be done through getDirectory() and setDirectory().
-var datasetDir = &directory{}
+var datasetDir *directory
 var datasetDirLock sync.RWMutex // lock to be held when accessing or updating datasetDir pointer.
 
 func getDirectory() *directory {
@@ -56,6 +56,14 @@ var (
 	// ErrNilEntry is returned when map has a nil entry, which should never happen.
 	ErrNilEntry = errors.New("map entry is nil")
 )
+
+// This sets up a default directory for testing purposes.
+func init() {
+	dir := newDirectory(10)
+	date, _ := time.Parse("20060102", "20130828")
+	dir.Insert(date, "Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz")
+	setDirectory(&dir)
+}
 
 type directoryEntry struct {
 	// date and filenames are immutable.
@@ -118,6 +126,7 @@ func (dir *directory) latestDate() time.Time {
 // Returns empty string if the directory is empty.
 func (dir *directory) LastFilenameEarlierThan(date time.Time) string {
 	if len(dir.dates) == 0 {
+		log.Println("ERROR - no filenames")
 		return ""
 	}
 
@@ -185,13 +194,6 @@ func UpdateArchivedFilenames() error {
 	setDirectory(&dir)
 
 	return nil
-}
-
-// Latest returns the date of the latest dataset.
-// May return time.Time{} if no dates have been loaded.
-func LatestDatasetDate() time.Time {
-	dd := getDirectory()
-	return dd.latestDate()
 }
 
 // BestAnnotatorName returns the dataset filename for annotating the requested date.

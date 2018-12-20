@@ -17,9 +17,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/m-lab/go/osx"
+
 	"github.com/go-test/deep"
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/geolite2"
+	"github.com/m-lab/annotation-service/geoloader"
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/manager"
 )
@@ -29,6 +32,21 @@ func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 }
 
+// This sets up a cache that uses a fake loader to load ANY annotator.
+// For testing, the directory is initialized by the filename.go init() function
+func setupCacheForTest(ann api.Annotator) {
+	loader := func(string) (api.Annotator, error) {
+		return ann, nil
+	}
+	cache := manager.NewAnnotatorCache(1, 3, time.Minute, loader)
+	fn := geoloader.BestAnnotatorName(time.Now())
+	_, err := cache.GetAnnotator(fn)
+	for err != nil {
+		_, err = cache.GetAnnotator(fn)
+		time.Sleep(100 * time.Millisecond)
+	}
+	manager.SetAnnotatorCacheForTest(cache)
+}
 func TestAnnotate(t *testing.T) {
 	tests := []struct {
 		ip   string
@@ -39,7 +57,7 @@ func TestAnnotate(t *testing.T) {
 		{"This will be an error.", "1000", "invalid IP address"},
 	}
 	// TODO - make and use an annotator generator
-	manager.CurrentAnnotator = &geolite2.GeoDataset{
+	setupCacheForTest(&geolite2.GeoDataset{
 		IP4Nodes: []geolite2.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),
@@ -65,7 +83,8 @@ func TestAnnotate(t *testing.T) {
 				CityName: "Not A Real City", RegionCode: "ME",
 			},
 		},
-	}
+	})
+
 	for _, test := range tests {
 		w := httptest.NewRecorder()
 		r := &http.Request{}
@@ -210,7 +229,7 @@ func TestBatchAnnotate(t *testing.T) {
 		},
 	}
 	// TODO - make a test utility in geolite2 package.
-	manager.CurrentAnnotator = &geolite2.GeoDataset{
+	setupCacheForTest(&geolite2.GeoDataset{
 		IP4Nodes: []geolite2.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),
@@ -232,7 +251,7 @@ func TestBatchAnnotate(t *testing.T) {
 				CityName: "Not A Real City", RegionCode: "ME",
 			},
 		},
-	}
+	})
 	for _, test := range tests {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("POST", "/batch_annotate", strings.NewReader(test.body))
@@ -258,7 +277,7 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 				ASN: nil},
 		},
 	}
-	manager.CurrentAnnotator = &geolite2.GeoDataset{
+	setupCacheForTest(&geolite2.GeoDataset{
 		IP4Nodes: []geolite2.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),
@@ -280,7 +299,7 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 				CityName: "Not A Real City",
 			},
 		},
-	}
+	})
 	for _, test := range tests {
 		res, _ := handler.GetMetadataForSingleIP(test.req)
 		if diff := deep.Equal(res, test.res); diff != nil {
@@ -293,6 +312,10 @@ func TestE2ELoadMultipleDataset(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping test that uses GCS")
 	}
+	restore := osx.MustSetenv("GCLOUD_PROJECT", "mlab-testing")
+	defer restore()
+
+	manager.SetAnnotatorCacheForTest(nil)
 	manager.InitDataset()
 	tests := []struct {
 		ip   string
