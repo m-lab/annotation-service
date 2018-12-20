@@ -47,7 +47,12 @@ type GeoIP struct {
 
 // Free the memory hold by GeoIP dataset. Mutex should be held for this operation.
 func (gi *GeoIP) Free() {
-	if gi == nil || gi.db == nil {
+	if gi == nil {
+		log.Println("Attempt to free from nil GeoIP pointer")
+		return
+	}
+	if gi.db == nil {
+		log.Println("GeoIP db already nil")
 		return
 	}
 	log.Println("free memory for legacy dataset: " + gi.name)

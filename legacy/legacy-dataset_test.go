@@ -2,12 +2,19 @@ package legacy_test
 
 import (
 	"log"
+	"testing"
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/legacy"
 	check "gopkg.in/check.v1"
 )
+
+// Hook up gocheck into the gotest runner.
+func Test(t *testing.T) { check.TestingT(t) }
+
+type GeoIPSuite struct {
+}
 
 var _ = check.Suite(&GeoIPSuite{})
 
