@@ -47,7 +47,8 @@ func newDirectory(size int) directory {
 
 // Insert inserts a new filename into the directory at the given date.
 // NOTE: This does not detect or eliminate duplicates.
-func (dir *directory) insert(date time.Time, fn string) {
+// TODO - make this local.
+func (dir *directory) Insert(date time.Time, fn string) {
 	dateString := date.Format("20060102")
 	entry, ok := dir.entries[dateString]
 	if !ok {
@@ -128,7 +129,7 @@ func UpdateArchivedFilenames() error {
 			continue
 		}
 
-		dir.insert(fileDate, file.Name)
+		dir.Insert(fileDate, file.Name)
 	}
 	if err != nil {
 		log.Println(err)
