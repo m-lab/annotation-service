@@ -1,10 +1,10 @@
 cron:
-- description: "Load the list of dataset filenames daily at 3:00 UTC"
+- description: "Load the list of dataset filenames for annotator daily at 3:00 UTC"
   url: /cron/update_maxmind_datasets
   schedule: every day 03:00
   target: annotator
 
-- description: "Load the list of dataset filenames daily at 3:00 UTC"
+- description: "Load the list of dataset filenames for sidestream annotator daily at 3:00 UTC"
   url: /cron/update_maxmind_datasets
   schedule: every day 03:00
   target: annotatorss
