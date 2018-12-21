@@ -8,7 +8,7 @@ import (
 	"github.com/m-lab/annotation-service/geoloader"
 )
 
-func TestBestAnnotatorName(t *testing.T) {
+func xTestBestAnnotatorName(t *testing.T) {
 	// TODO use a new dataset instead of the var.
 	err := geoloader.UpdateArchivedFilenames()
 	if err != nil {
