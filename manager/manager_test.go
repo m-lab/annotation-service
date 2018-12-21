@@ -26,11 +26,8 @@ func fakeLoader(date string) (api.Annotator, error) {
 	return &geolite2.GeoDataset{}, nil
 }
 
-func TestAnnotatorMap(t *testing.T) {
-	manager.MaxPending = 2
-	manager.MaxDatasetInMemory = 3
-
-	am := manager.NewAnnotatorMap(fakeLoader)
+func TestAnnotatorCache(t *testing.T) {
+	am := manager.NewAnnotatorMap(3, 2, 0, fakeLoader)
 	names := []string{"Maxmind/2018/01/01/20180101T054119Z-GeoLite2-City-CSV.zip",
 		"Maxmind/2018/01/02/20180201T054119Z-GeoLite2-City-CSV.zip",
 		"Maxmind/2018/01/03/20180301T054119Z-GeoLite2-City-CSV.zip",
@@ -40,18 +37,18 @@ func TestAnnotatorMap(t *testing.T) {
 	// These are all fake names.
 	_, err := am.GetAnnotator(names[0])
 	if err != manager.ErrPendingAnnotatorLoad {
-		t.Fatal("Should be", manager.ErrPendingAnnotatorLoad)
+		t.Fatal("Got", err)
 	}
 
 	_, err = am.GetAnnotator(names[1])
 	if err != manager.ErrPendingAnnotatorLoad {
-		t.Fatal("Should be", manager.ErrPendingAnnotatorLoad)
+		t.Fatal("Got", err)
 	}
 
 	// This one should NOT kick off a load, because numPending already max.
 	_, err = am.GetAnnotator(names[2])
 	if err != manager.ErrPendingAnnotatorLoad {
-		t.Fatal("Should be", manager.ErrPendingAnnotatorLoad)
+		t.Fatal("Got", err)
 	}
 
 	// Wait for both annotator to be available.
@@ -93,7 +90,7 @@ func TestAnnotatorMap(t *testing.T) {
 	// Verify that third is NOT available.  This kicks off loading.
 	_, err = am.GetAnnotator(names[2])
 	if err != manager.ErrPendingAnnotatorLoad {
-		t.Fatal("Should be", manager.ErrPendingAnnotatorLoad)
+		t.Fatal("Got", err)
 	}
 
 	// Wait until it has loaded.
@@ -107,10 +104,10 @@ func TestAnnotatorMap(t *testing.T) {
 	// And now load the fourth.  This should cause synchronous eviction, and NOT cause loading.
 	_, err = am.GetAnnotator(names[3])
 	if err != manager.ErrPendingAnnotatorLoad {
-		t.Fatal("Should be", manager.ErrPendingAnnotatorLoad)
+		t.Fatal("Got", err)
 	}
 
-	// Loading two more will have caused one to be evicted, so exactly one of these
+	// Last load attempt should have caused one to be evicted, so exactly one of these
 	// should no longer be loaded, and return an ErrPendingAnnotatorLoad.
 	// One of these checks will also trigger another load, but that is OK.
 	_, err0 := am.GetAnnotator(names[0])
@@ -118,7 +115,7 @@ func TestAnnotatorMap(t *testing.T) {
 	_, err2 := am.GetAnnotator(names[2])
 	switch {
 	case err0 == nil && err1 == nil && err2 == nil:
-		t.Error("One of the items should have been evicted")
+		t.Error("One of the items should have been evicted", err0, err1, err2)
 	case err0 == manager.ErrPendingAnnotatorLoad:
 		if err1 != nil || err2 != nil {
 			t.Error("More than one nil", err0, err1, err2)
