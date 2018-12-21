@@ -26,9 +26,21 @@ var earliestArchiveDate = time.Unix(1377648000, 0) // "August 28, 2013")
 // datasetDir stores info on all the available datasets.  It is initially empty, just to
 // provide the LatestDate() function.
 // The current directory is regarded as immutable, but the pointer is dynamically updated, so accesses
-// should only be done through GetDirectory().
+// should only be done through getDirectory() and setDirectory().
 var datasetDir = &directory{}
 var datasetDirLock sync.RWMutex // lock to be held when accessing or updating datasetDir pointer.
+
+func getDirectory() *directory {
+	datasetDirLock.RLock()
+	defer datasetDirLock.RUnlock()
+	return datasetDir
+}
+
+func setDirectory(dir *directory) {
+	datasetDirLock.Lock()
+	defer datasetDirLock.Unlock()
+	datasetDir = dir
+}
 
 type dateEntry struct {
 	date      time.Time
@@ -139,17 +151,9 @@ func UpdateArchivedFilenames() error {
 		log.Println(err)
 	}
 
-	datasetDirLock.Lock()
-	datasetDir = &dir
-	datasetDirLock.Unlock()
+	setDirectory(&dir)
 
 	return nil
-}
-
-func getDirectory() *directory {
-	datasetDirLock.RLock()
-	defer datasetDirLock.RUnlock()
-	return datasetDir
 }
 
 // Latest returns the date of the latest dataset.
