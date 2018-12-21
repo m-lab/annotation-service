@@ -3,27 +3,24 @@ package legacy_test
 import (
 	"testing"
 
-	. "gopkg.in/check.v1"
-
 	"github.com/m-lab/annotation-service/legacy"
 )
 
-// Hook up gocheck into the gotest runner.
-func Test(t *testing.T) { TestingT(t) }
-
-type GeoIPSuite struct {
-}
-
-var _ = Suite(&GeoIPSuite{})
-
-func (s *GeoIPSuite) TestOpenAndFree(c *C) {
+func TestOpenAndFree(t *testing.T) {
 	file := "./testdata/GeoLiteCity.dat"
 
 	gi, err := legacy.Open(file, "GeoLiteCity.dat")
 
-	c.Check(gi, NotNil)
-	c.Check(err, IsNil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if gi == nil {
+		t.Fatal("legacy file not loaded")
+	}
 	gi.Free()
 
-	c.Check(gi.Check(), Equals, false)
+	if gi.Check() {
+		t.Error("Not correctly freed")
+	}
 }

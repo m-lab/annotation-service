@@ -39,8 +39,8 @@ import (
 
 var (
 	// These are vars instead of consts to facilitate testing.
-	MaxDatasetInMemory = 5 // Limit on number of loaded datasets
-	MaxPending         = 2 // Limit on number of concurrently loading datasets.
+	MaxDatasetInMemory = 12 // Limit on number of loaded datasets
+	MaxPending         = 2  // Limit on number of concurrently loading datasets.
 
 	// ErrNilDataset is returned when CurrentAnnotator is nil.
 	ErrNilDataset = errors.New("CurrentAnnotator is nil")
@@ -52,9 +52,15 @@ var (
 	ErrAnnotatorLoadFailed = errors.New("unable to load annoator")
 
 	// These are UNEXPECTED errors!!
-	ErrGoroutineNotOwner  = errors.New("Goroutine not owner")
+
+	// ErrNoAppropriateDataset is returned when directory is empty.
+	ErrNoAppropriateDataset = errors.New("No Appropriate Dataset")
+	// ErrGoroutineNotOwner indicates multithreaded code problem with reservation.
+	ErrGoroutineNotOwner = errors.New("Goroutine not owner")
+	// ErrMapEntryAlreadySet indicates multithreaded code problem setting map entry.
 	ErrMapEntryAlreadySet = errors.New("Map entry already set")
 
+	// TODO remove these and keep current in the map.
 	// A mutex to make sure that we are not reading from the CurrentAnnotator
 	// pointer while trying to update it
 	currentDataMutex = &sync.RWMutex{}
@@ -111,6 +117,7 @@ func (am *AnnotatorMap) setAnnotatorIfNil(key string, ann api.Annotator) error {
 	}
 
 	am.annotators[key] = ann
+	metrics.LoadCount.Inc()
 	metrics.PendingLoads.Dec()
 	metrics.DatasetCount.Inc()
 	am.numPending--
@@ -135,7 +142,6 @@ func (am *AnnotatorMap) maybeSetNil(key string) bool {
 	}
 
 	if am.numPending >= MaxPending {
-		log.Println("Too many pending", key)
 		return false
 	}
 	// Check the number of datasets in memory. Given the memory
@@ -164,21 +170,20 @@ func (am *AnnotatorMap) maybeSetNil(key string) bool {
 // if successful, proceeds to asynchronously load the new dataset.
 func (am *AnnotatorMap) checkAndLoadAnnotator(key string) {
 	reserved := am.maybeSetNil(key)
-	log.Println(key)
 	if reserved {
 		// This goroutine now has exclusive ownership of the
 		// map entry, and the responsibility for loading the annotator.
 		go func(key string) {
 			newAnn, err := am.loader(key)
 			if err != nil {
-				// TODO add a metric
+				metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
 				log.Println(err)
 				return
 			}
 			// Set the new annotator value.  Entry should be nil.
 			err = am.setAnnotatorIfNil(key, newAnn)
 			if err != nil {
-				// TODO add a metric
+				metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
 				log.Println(err)
 			}
 		}(key)
@@ -193,15 +198,14 @@ func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 	am.mutex.RUnlock()
 
 	if !ok {
-		log.Println("There is not yet any entry for this date.  Try to load " + key)
 		am.checkAndLoadAnnotator(key)
-		metrics.RejectionCount.WithLabelValues("New Dataset")
+		metrics.RejectionCount.WithLabelValues("New Dataset").Inc()
 		return nil, ErrPendingAnnotatorLoad
 	}
 
 	if ann == nil {
 		// Another goroutine is already loading this entry.  Return error.
-		metrics.RejectionCount.WithLabelValues("Dataset Pending")
+		metrics.RejectionCount.WithLabelValues("Dataset Pending").Inc()
 		return nil, ErrPendingAnnotatorLoad
 	}
 	return ann, nil
@@ -211,18 +215,18 @@ func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 // TODO: Update to properly handle legacy datasets.
 func GetAnnotator(date time.Time) (api.Annotator, error) {
 	// key := strconv.FormatInt(date.Unix(), encodingBase)
-	if date.After(geoloader.LatestDatasetDate) {
+	if date.After(geoloader.LatestDatasetDate()) {
 		currentDataMutex.RLock()
 		ann := CurrentAnnotator
 		currentDataMutex.RUnlock()
 		return ann, nil
 	}
 
-	filename, err := geoloader.SelectArchivedDataset(date)
+	filename := geoloader.BestAnnotatorName(date)
 
-	if err != nil {
-		metrics.RejectionCount.WithLabelValues("Selection Error")
-		return nil, err
+	if filename == "" {
+		metrics.ErrorTotal.WithLabelValues("No Appropriate Dataset").Inc()
+		return nil, errors.New("No Appropriate Dataset")
 	}
 
 	return archivedAnnotator.GetAnnotator(filename)
