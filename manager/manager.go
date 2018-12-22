@@ -234,9 +234,9 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 	}
 
 	ann, err := allAnnotators.GetAnnotator(filename)
-	if time.Since(lastLog) > 10*time.Second {
+	if time.Since(lastLog) > 10*time.Second && ann != nil {
 		lastLog = time.Now()
-		log.Println("Using", ann, err, "for", date)
+		log.Println("Using", ann.AnnotatorDate(), err, "for", date)
 	}
 	return ann, err
 }

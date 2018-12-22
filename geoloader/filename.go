@@ -83,6 +83,7 @@ func (dir *directory) Insert(date time.Time, fn string) {
 		dir.entries[dateString] = entry
 	}
 
+	log.Println("Adding", dateString, fn)
 	entry.filenames = append(entry.filenames, fn)
 }
 
