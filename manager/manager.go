@@ -234,14 +234,14 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 	}
 
 	ann, err := allAnnotators.GetAnnotator(filename)
-	if time.Since(lastLog) > 10*time.Second && ann != nil {
+	if time.Since(lastLog) > 5*time.Minute && ann != nil {
 		lastLog = time.Now()
-		log.Println("Using", ann.AnnotatorDate(), err, "for", date)
+		log.Println("Using", ann.AnnotatorDate().Format("20060101"), err, "for", date.Format("20060102"))
 	}
 	return ann, err
 }
 
-// LoadDatasetDirectory will update the filename list of archived dataset in memory
+// InitAnnotatorCache will update the filename list of archived dataset in memory
 // and load the latest Geolite2 dataset in memory.
 // Initialized allAnnotators if not already initialized.
 func InitAnnotatorCache() {
