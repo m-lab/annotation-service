@@ -312,7 +312,11 @@ func TestE2ELoadMultipleDataset(t *testing.T) {
 	defer restore()
 
 	manager.SetAnnotatorCacheForTest(nil)
-	manager.InitDataset()
+	// Use a standard annotator cache
+	manager.InitAnnotatorCache()
+	// Init directory from GCS.
+	geoloader.UpdateArchivedFilenames()
+
 	tests := []struct {
 		ip   string
 		time string

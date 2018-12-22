@@ -241,10 +241,10 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 	return ann, err
 }
 
-// InitDataset will update the filename list of archived dataset in memory
+// LoadDatasetDirectory will update the filename list of archived dataset in memory
 // and load the latest Geolite2 dataset in memory.
 // Initialized allAnnotators if not already initialized.
-func InitDataset() {
+func InitAnnotatorCache() {
 	if allAnnotators == nil {
 		allAnnotators = NewAnnotatorCache(12, 1, 5*time.Minute, geoloader.ArchivedLoader)
 	}

@@ -7,8 +7,9 @@ import (
 	_ "net/http/pprof"
 	"os"
 
+	"github.com/m-lab/annotation-service/geoloader"
+
 	"github.com/m-lab/annotation-service/handler"
-	"github.com/m-lab/annotation-service/manager"
 	"github.com/m-lab/annotation-service/metrics"
 )
 
@@ -36,9 +37,7 @@ func Status(w http.ResponseWriter, r *http.Request) {
 
 // Update the list of maxmind datasets daily
 func updateMaxmindDatasets(w http.ResponseWriter, r *http.Request) {
-	manager.InitDataset()
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+	geoloader.UpdateArchivedFilenames()
 }
 
 func init() {
