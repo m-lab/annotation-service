@@ -17,6 +17,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/geolite2"
+	"github.com/m-lab/annotation-service/geoloader"
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/manager"
 )
@@ -36,33 +37,46 @@ func TestAnnotate(t *testing.T) {
 		{"This will be an error.", "1000", "Invalid request"},
 	}
 	// TODO - make and use an annotator generator
-	manager.CurrentAnnotator = &geolite2.GeoDataset{
-		IP4Nodes: []geolite2.IPNode{
-			{
-				IPAddressLow:  net.IPv4(0, 0, 0, 0),
-				IPAddressHigh: net.IPv4(255, 255, 255, 255),
-				LocationIndex: 0,
-				PostalCode:    "10583",
-				Latitude:      42.1,
-				Longitude:     -73.1,
+	// This sets up a cache that uses a fake loader to load ANY annotator.
+	// For testing, the directory is initialized by the filename.go init() function
+	loader := func(string) (api.Annotator, error) {
+		return &geolite2.GeoDataset{
+			IP4Nodes: []geolite2.IPNode{
+				{
+					IPAddressLow:  net.IPv4(0, 0, 0, 0),
+					IPAddressHigh: net.IPv4(255, 255, 255, 255),
+					LocationIndex: 0,
+					PostalCode:    "10583",
+					Latitude:      42.1,
+					Longitude:     -73.1,
+				},
 			},
-		},
-		IP6Nodes: []geolite2.IPNode{
-			{
-				IPAddressLow:  net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-				IPAddressHigh: net.IP{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
-				LocationIndex: 0,
-				PostalCode:    "10583",
-				Latitude:      42.1,
-				Longitude:     -73.1,
+			IP6Nodes: []geolite2.IPNode{
+				{
+					IPAddressLow:  net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					IPAddressHigh: net.IP{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+					LocationIndex: 0,
+					PostalCode:    "10583",
+					Latitude:      42.1,
+					Longitude:     -73.1,
+				},
 			},
-		},
-		LocationNodes: []geolite2.LocationNode{
-			{
-				CityName: "Not A Real City", RegionCode: "ME",
+			LocationNodes: []geolite2.LocationNode{
+				{
+					CityName: "Not A Real City", RegionCode: "ME",
+				},
 			},
-		},
+		}, nil
 	}
+	cache := manager.NewAnnotatorCache(1, 3, time.Minute, loader)
+	fn := geoloader.BestAnnotatorName(time.Now())
+	_, err := cache.GetAnnotator(fn)
+	for err != nil {
+		_, err = cache.GetAnnotator(fn)
+		time.Sleep(100 * time.Millisecond)
+	}
+	manager.SetAnnotatorCache(cache)
+
 	for _, test := range tests {
 		w := httptest.NewRecorder()
 		r := &http.Request{}
@@ -207,7 +221,7 @@ func TestBatchAnnotate(t *testing.T) {
 		},
 	}
 	// TODO - make a test utility in geolite2 package.
-	manager.CurrentAnnotator = &geolite2.GeoDataset{
+	/*ds := &geolite2.GeoDataset{
 		IP4Nodes: []geolite2.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),
@@ -229,7 +243,7 @@ func TestBatchAnnotate(t *testing.T) {
 				CityName: "Not A Real City", RegionCode: "ME",
 			},
 		},
-	}
+	}*/
 	for _, test := range tests {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("POST", "/batch_annotate", strings.NewReader(test.body))
@@ -255,7 +269,7 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 				ASN: &api.IPASNData{}},
 		},
 	}
-	manager.CurrentAnnotator = &geolite2.GeoDataset{
+	/*ds := &geolite2.GeoDataset{
 		IP4Nodes: []geolite2.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),
@@ -277,7 +291,7 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 				CityName: "Not A Real City",
 			},
 		},
-	}
+	} */
 	for _, test := range tests {
 		res, _ := handler.GetMetadataForSingleIP(test.req)
 		if diff := deep.Equal(res, test.res); diff != nil {
