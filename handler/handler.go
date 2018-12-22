@@ -16,7 +16,6 @@ import (
 
 	"github.com/m-lab/annotation-service/api"
 	v2 "github.com/m-lab/annotation-service/api/v2"
-	"github.com/m-lab/annotation-service/geoloader"
 	"github.com/m-lab/annotation-service/manager"
 	"github.com/m-lab/annotation-service/metrics"
 )
@@ -28,10 +27,6 @@ const (
 )
 
 func InitHandler() {
-	manager.InitAnnotatorCache()
-	// Init directory from GCS.
-	geoloader.UpdateArchivedFilenames()
-
 	// sets up any handlers that are needed, including url
 	// handlers and pubsub handlers
 	http.HandleFunc("/annotate", Annotate)

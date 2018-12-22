@@ -121,7 +121,7 @@ var GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-G
 var GeoLegacyRegex = regexp.MustCompile(`.*-GeoLiteCity.dat.*`)
 var GeoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
 
-// UpdateArchivedFilenames extracts the dataset filenames from downloader bucket
+// UpdateArchivedFilenames updates the list of dataset filenames from GCS.
 // This job is run at the beginning of deployment and daily cron job.
 func UpdateArchivedFilenames() error {
 	old := getDirectory()
