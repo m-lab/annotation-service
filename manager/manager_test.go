@@ -27,7 +27,7 @@ func fakeLoader(date string) (api.Annotator, error) {
 }
 
 func TestAnnotatorCache(t *testing.T) {
-	am := manager.NewAnnotatorMap(3, 2, 0, fakeLoader)
+	am := manager.NewAnnotatorCache(3, 2, 0, fakeLoader)
 	names := []string{"Maxmind/2018/01/01/20180101T054119Z-GeoLite2-City-CSV.zip",
 		"Maxmind/2018/01/02/20180201T054119Z-GeoLite2-City-CSV.zip",
 		"Maxmind/2018/01/03/20180301T054119Z-GeoLite2-City-CSV.zip",

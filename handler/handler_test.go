@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/m-lab/go/osx"
+
 	"github.com/go-test/deep"
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/geolite2"
@@ -40,7 +42,7 @@ func setupCacheForTest(ann api.Annotator) {
 		_, err = cache.GetAnnotator(fn)
 		time.Sleep(100 * time.Millisecond)
 	}
-	manager.SetAnnotatorCache(cache)
+	manager.SetAnnotatorCacheForTest(cache)
 }
 func TestAnnotate(t *testing.T) {
 	tests := []struct {
@@ -304,6 +306,10 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 }
 
 func TestE2ELoadMultipleDataset(t *testing.T) {
+	restore := osx.MustSetenv("GCLOUD_PROJECT", "mlab-testing")
+	defer restore()
+
+	manager.SetAnnotatorCacheForTest(nil)
 	manager.InitDataset()
 	tests := []struct {
 		ip   string

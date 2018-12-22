@@ -50,7 +50,7 @@ var (
 )
 
 // NOT THREADSAFE.  Should be called once at initialization time.
-func SetAnnotatorCache(ac *AnnotatorCache) {
+func SetAnnotatorCacheForTest(ac *AnnotatorCache) {
 	allAnnotators = ac
 }
 
@@ -236,6 +236,7 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 
 // InitDataset will update the filename list of archived dataset in memory
 // and load the latest Geolite2 dataset in memory.
+// Initialized allAnnotators if not already initialized.
 func InitDataset() {
 	if allAnnotators == nil {
 		allAnnotators = NewAnnotatorCache(12, 1, 5*time.Minute, geoloader.ArchivedLoader)
