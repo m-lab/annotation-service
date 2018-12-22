@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/m-lab/annotation-service/geoloader"
+
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/handler"
@@ -138,17 +140,19 @@ func TestE2ELoadMultipleDataset(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping test that uses GCS")
 	}
-	manager.InitDataset()
-	manager.MaxDatasetInMemory = 2
+	manager.InitAnnotatorCache()
+	geoloader.UpdateArchivedFilenames()
+
 	tests := []struct {
 		ip   string
 		time string
 		res  string
 	}{
 		// This request needs a legacy binary dataset
-		//		{"1.4.128.0", "1199145600", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"ASN":null}`},
-		// This request needs another legacy binary dataset
-		//		{"1.4.128.0", "1399145600", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"ASN":null}`},
+		// TODO uncomment when legacy is working again.
+		// {"1.4.128.0", "1199145600", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"ASN":null}`},
+		// If more recent dataset is used, we get:
+		// {"Geo":{"continent_code":"AS","country_code":"TH","country_name":"Thailand","region":"45","city":"Roi Et","postal_code":"45000","latitude":16.0533,"longitude":103.6539},"ASN":null}'},
 		// This request needs a geolite2 dataset
 		{"1.9.128.0", "1512086400", `{"Geo":{"continent_code":"AS","country_code":"MY","country_name":"Malaysia","region":"14","city":"Kuala Lumpur","postal_code":"50400","latitude":3.149,"longitude":101.697},"ASN":null}`},
 		// This request needs the latest dataset in the memory.

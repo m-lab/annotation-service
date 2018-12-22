@@ -27,8 +27,6 @@ const (
 )
 
 func InitHandler() {
-	manager.InitDataset()
-
 	// sets up any handlers that are needed, including url
 	// handlers and pubsub handlers
 	http.HandleFunc("/annotate", Annotate)

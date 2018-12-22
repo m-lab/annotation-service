@@ -12,7 +12,9 @@ package manager
 
 import (
 	"errors"
+	"fmt"
 	"log"
+	"runtime"
 	"sync"
 	"time"
 
@@ -50,6 +52,14 @@ var (
 
 	allAnnotators *AnnotatorCache
 )
+
+func errorMetricWithLabel(err error) {
+	if err != nil {
+		_, _, line, _ := runtime.Caller(1)
+		label := fmt.Sprintf("%3d %s", line+2, err)
+		metrics.ErrorTotal.WithLabelValues(label).Inc()
+	}
+}
 
 // NOT THREADSAFE.  Should be called once at initialization time.
 func SetAnnotatorCacheForTest(ac *AnnotatorCache) {
@@ -115,6 +125,7 @@ func (am *AnnotatorCache) validateAndSetAnnotator(dateString string, ann api.Ann
 	entry.lastUsed = time.Now()
 
 	metrics.LoadCount.Inc()
+	log.Println("total", len(am.annotators))
 	metrics.PendingLoads.Dec()
 	metrics.DatasetCount.Inc()
 	am.numPending--
@@ -127,14 +138,10 @@ func (am *AnnotatorCache) validateAndSetAnnotator(dateString string, ann api.Ann
 // It should only be called asynchronously from GetAnnotator.
 func (am *AnnotatorCache) loadAnnotator(dateString string) {
 	ann, err := am.loader(dateString)
-	if err != nil {
-		metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
-	}
+	errorMetricWithLabel(err)
 	// Set the new annotator value.  Entry should be nil.
 	err = am.validateAndSetAnnotator(dateString, ann, err)
-	if err != nil {
-		metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
-	}
+	errorMetricWithLabel(err)
 }
 
 // Client must hold write lock.
@@ -157,14 +164,13 @@ func (am *AnnotatorCache) updateOldest() {
 // If not already loaded, this will trigger loading, and return ErrPendingAnnotatorLoad.
 // However, if eviction is required, this will synchronously attempt eviction, and return
 // ErrPendingAnnotatorLoad if successful, or ErrAnnotatorLoadFailed if eviction was unsuccessful.
-func (am *AnnotatorCache) GetAnnotator(dateString string) (api.Annotator, error) {
+func (am *AnnotatorCache) GetAnnotator(filename string) (api.Annotator, error) {
 	am.lock.Lock()
 	defer am.lock.Unlock()
-	entry, ok := am.annotators[dateString]
+	entry, ok := am.annotators[filename]
 	if !ok {
 		metrics.RejectionCount.WithLabelValues("New Dataset").Inc()
 		if am.numPending >= am.maxPending {
-			log.Println("Too many loading")
 			return nil, ErrPendingAnnotatorLoad
 		}
 		if len(am.annotators) >= am.maxEntries {
@@ -175,10 +181,10 @@ func (am *AnnotatorCache) GetAnnotator(dateString string) (api.Annotator, error)
 		}
 		// There is no entry yet for this date, so we take ownership by
 		// creating an entry.
-		am.annotators[dateString] = &cacheEntry{}
+		am.annotators[filename] = &cacheEntry{}
 		metrics.PendingLoads.Inc()
 		am.numPending++
-		go am.loadAnnotator(dateString)
+		go am.loadAnnotator(filename)
 		return nil, ErrPendingAnnotatorLoad
 	}
 
@@ -194,7 +200,7 @@ func (am *AnnotatorCache) GetAnnotator(dateString string) (api.Annotator, error)
 
 	// Update the LRU time.
 	entry.lastUsed = time.Now()
-	if am.oldestIndex == dateString || am.oldestIndex == "" {
+	if am.oldestIndex == filename || am.oldestIndex == "" {
 		am.updateOldest()
 	}
 
@@ -222,26 +228,30 @@ func (am *AnnotatorCache) tryEvictOldest() bool {
 	return true
 }
 
+var lastLog = time.Time{}
+
 // GetAnnotator gets the current annotator.
 func GetAnnotator(date time.Time) (api.Annotator, error) {
 	filename := geoloader.BestAnnotatorName(date)
-
 	if filename == "" {
-		metrics.ErrorTotal.WithLabelValues("No Appropriate Dataset").Inc()
-		return nil, errors.New("No Appropriate Dataset")
+		err := errors.New("No Appropriate Dataset")
+		errorMetricWithLabel(err)
+		return nil, err
 	}
 
-	return allAnnotators.GetAnnotator(filename)
+	ann, err := allAnnotators.GetAnnotator(filename)
+	errorMetricWithLabel(err)
+	if time.Since(lastLog) > 5*time.Minute && ann != nil {
+		lastLog = time.Now()
+		log.Println("Using", ann.AnnotatorDate().Format("20060102"), err, "for", date.Format("20060102"))
+	}
+	return ann, err
 }
 
-// InitDataset will update the filename list of archived dataset in memory
-// and load the latest Geolite2 dataset in memory.
+// InitAnnotatorCache initializes the allAnnotators cache (if not already initialized)
 // Initialized allAnnotators if not already initialized.
-func InitDataset() {
+func InitAnnotatorCache() {
 	if allAnnotators == nil {
-		allAnnotators = NewAnnotatorCache(12, 1, 5*time.Minute, geoloader.ArchivedLoader)
+		allAnnotators = NewAnnotatorCache(6, 2, 5*time.Minute, geoloader.ArchivedLoader)
 	}
-	geoloader.UpdateArchivedFilenames()
-
-	// TODO - preload the most recent?
 }
