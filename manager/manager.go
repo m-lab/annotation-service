@@ -115,6 +115,7 @@ func (am *AnnotatorCache) validateAndSetAnnotator(dateString string, ann api.Ann
 	entry.lastUsed = time.Now()
 
 	metrics.LoadCount.Inc()
+	log.Println("total", len(am.annotators))
 	metrics.PendingLoads.Dec()
 	metrics.DatasetCount.Inc()
 	am.numPending--
@@ -157,10 +158,10 @@ func (am *AnnotatorCache) updateOldest() {
 // If not already loaded, this will trigger loading, and return ErrPendingAnnotatorLoad.
 // However, if eviction is required, this will synchronously attempt eviction, and return
 // ErrPendingAnnotatorLoad if successful, or ErrAnnotatorLoadFailed if eviction was unsuccessful.
-func (am *AnnotatorCache) GetAnnotator(dateString string) (api.Annotator, error) {
+func (am *AnnotatorCache) GetAnnotator(filename string) (api.Annotator, error) {
 	am.lock.Lock()
 	defer am.lock.Unlock()
-	entry, ok := am.annotators[dateString]
+	entry, ok := am.annotators[filename]
 	if !ok {
 		metrics.RejectionCount.WithLabelValues("New Dataset").Inc()
 		if am.numPending >= am.maxPending {
@@ -175,10 +176,10 @@ func (am *AnnotatorCache) GetAnnotator(dateString string) (api.Annotator, error)
 		}
 		// There is no entry yet for this date, so we take ownership by
 		// creating an entry.
-		am.annotators[dateString] = &cacheEntry{}
+		am.annotators[filename] = &cacheEntry{}
 		metrics.PendingLoads.Inc()
 		am.numPending++
-		go am.loadAnnotator(dateString)
+		go am.loadAnnotator(filename)
 		return nil, ErrPendingAnnotatorLoad
 	}
 
@@ -194,7 +195,7 @@ func (am *AnnotatorCache) GetAnnotator(dateString string) (api.Annotator, error)
 
 	// Update the LRU time.
 	entry.lastUsed = time.Now()
-	if am.oldestIndex == dateString || am.oldestIndex == "" {
+	if am.oldestIndex == filename || am.oldestIndex == "" {
 		am.updateOldest()
 	}
 
@@ -222,16 +223,22 @@ func (am *AnnotatorCache) tryEvictOldest() bool {
 	return true
 }
 
+var lastLog = time.Time{}
+
 // GetAnnotator gets the current annotator.
 func GetAnnotator(date time.Time) (api.Annotator, error) {
 	filename := geoloader.BestAnnotatorName(date)
-
 	if filename == "" {
 		metrics.ErrorTotal.WithLabelValues("No Appropriate Dataset").Inc()
 		return nil, errors.New("No Appropriate Dataset")
 	}
 
-	return allAnnotators.GetAnnotator(filename)
+	ann, err := allAnnotators.GetAnnotator(filename)
+	if time.Since(lastLog) > 10*time.Second {
+		lastLog = time.Now()
+		log.Println("Using", ann, err, "for", date)
+	}
+	return ann, err
 }
 
 // InitDataset will update the filename list of archived dataset in memory

@@ -342,7 +342,6 @@ func BatchValidateAndParse(jsonBuffer []byte) ([]api.RequestData, error) {
 // pointer, even if it cannot find the appropriate metadata.
 func GetMetadataForSingleIP(request *api.RequestData) (api.GeoData, error) {
 	metrics.TotalLookups.Inc()
-	// TODO replace with generic GetAnnotator, that respects time.
 	ann, err := manager.GetAnnotator(request.Timestamp)
 	if err != nil {
 		return api.GeoData{}, err
