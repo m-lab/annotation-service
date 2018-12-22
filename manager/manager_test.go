@@ -101,6 +101,7 @@ func TestAnnotatorCache(t *testing.T) {
 		}
 	}(names[2])
 
+	log.Println("loading 4th should cause eviction")
 	// And now load the fourth.  This should cause synchronous eviction, and NOT cause loading.
 	_, err = am.GetAnnotator(names[3])
 	if err != manager.ErrPendingAnnotatorLoad {

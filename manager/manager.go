@@ -1,5 +1,13 @@
 package manager
 
+// The AnnotatorCache is an LRU cache that handles loading and eviction of annotators in
+// response to requests for specific dates.
+// Configuration parameters are:
+//   minEvictionAge - the minimum period that an annotator should be idle before eviction.
+//   maxPendingLoads - the maximum number of concurrent loads allowed.
+//   maxEntries - the maximum number of entries allowed, to avoid OOM problems.
+//   loader - the function that handles loading of a new annotator.
+
 import (
 	"errors"
 	"log"
@@ -28,7 +36,7 @@ var (
 	ErrPendingAnnotatorLoad = newCacheError("annotator is loading")
 
 	// ErrAnnotatorLoadFailed is returned when a requested annotator has failed to load.
-	ErrAnnotatorLoadFailed = newCacheError("unable to load annoator")
+	ErrAnnotatorLoadFailed = newCacheError("unable to load annotator")
 
 	// These are UNEXPECTED errors!!
 	// ErrGoroutineNotOwner is returned when goroutine attempts to set annotator entry, but is not the owner.
@@ -38,8 +46,13 @@ var (
 	// ErrNilEntry is returned when map has a nil entry, which should never happen.
 	ErrNilEntry = newCacheError("Map entry is nil")
 
-	allAnnotators AnnotatorCache
+	allAnnotators *AnnotatorCache
 )
+
+// NOT THREADSAFE.  Should be called once at initialization time.
+func SetAnnotatorCache(ac *AnnotatorCache) {
+	allAnnotators = ac
+}
 
 type cacheEntry struct {
 	ann      api.Annotator
@@ -72,13 +85,13 @@ type AnnotatorCache struct {
 	minEvictionAge time.Duration // Minimum unused period before eviction
 }
 
-// NewAnnotatorMap creates a new map that will use the provided loader for loading new Annotators.
-func NewAnnotatorMap(maxEntries int, maxPending int, minAge time.Duration, loader func(string) (api.Annotator, error)) *AnnotatorCache {
+// NewAnnotatorCache creates a new map that will use the provided loader for loading new Annotators.
+func NewAnnotatorCache(maxEntries int, maxPending int, minAge time.Duration, loader func(string) (api.Annotator, error)) *AnnotatorCache {
 	return &AnnotatorCache{annotators: make(map[string]*cacheEntry, 20), loader: loader,
 		maxEntries: maxEntries, maxPending: maxPending, minEvictionAge: minAge}
 }
 
-// NOTE: Should only be called by checkAndLoadAnnotator.
+// NOTE: Should only be called by loadAnnotator.
 // The calling goroutine should "own" the responsibility for
 // setting the annotator.
 // TODO Add unit tests for load error cases.
@@ -89,12 +102,10 @@ func (am *AnnotatorCache) validateAndSetAnnotator(dateString string, ann api.Ann
 	entry, ok := am.annotators[dateString]
 	if !ok || entry == nil {
 		log.Println("This should never happen", ErrGoroutineNotOwner)
-		metrics.ErrorTotal.WithLabelValues("WrongOwner").Inc()
 		return ErrGoroutineNotOwner
 	}
 	if entry.ann != nil {
 		log.Println("This should never happen", ErrMapEntryAlreadySet)
-		metrics.ErrorTotal.WithLabelValues("MapEntryAlreadySet").Inc()
 		return ErrMapEntryAlreadySet
 	}
 	entry.ann = ann
@@ -115,14 +126,12 @@ func (am *AnnotatorCache) validateAndSetAnnotator(dateString string, ann api.Ann
 func (am *AnnotatorCache) loadAnnotator(dateString string) {
 	ann, err := am.loader(dateString)
 	if err != nil {
-		// TODO add a metric
-		log.Println(err)
+		metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
 	}
 	// Set the new annotator value.  Entry should be nil.
 	err = am.validateAndSetAnnotator(dateString, ann, err)
 	if err != nil {
-		// TODO add a metric
-		log.Println(err)
+		metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
 	}
 }
 
@@ -143,23 +152,32 @@ func (am *AnnotatorCache) updateOldest() {
 }
 
 // GetAnnotator gets the named annotator, if already in the map.
-// If not already loaded, this will trigger loading, and return ErrPendingAnnotatorLoad
+// If not already loaded, this will trigger loading, and return ErrPendingAnnotatorLoad.
+// However, if eviction is required, this will synchronously attempt eviction, and return
+// ErrPendingAnnotatorLoad if successful, or ErrAnnotatorLoadFailed if eviction was unsuccessful.
 func (am *AnnotatorCache) GetAnnotator(dateString string) (api.Annotator, error) {
+	log.Println("Requested", dateString)
 	am.lock.Lock()
 	defer am.lock.Unlock()
-	if am.numPending >= am.maxPending {
-		log.Println("Too many loading")
-		return nil, ErrPendingAnnotatorLoad
-	}
 	entry, ok := am.annotators[dateString]
 	if !ok {
+		metrics.RejectionCount.WithLabelValues("New Dataset").Inc()
+		if am.numPending >= am.maxPending {
+			log.Println("Too many loading")
+			return nil, ErrPendingAnnotatorLoad
+		}
+		if len(am.annotators) >= am.maxEntries {
+			if !am.tryEvictOldest() {
+				return nil, ErrAnnotatorLoadFailed
+			}
+			return nil, ErrPendingAnnotatorLoad
+		}
 		// There is no entry yet for this date, so we take ownership by
 		// creating an entry.
 		am.annotators[dateString] = &cacheEntry{}
 		metrics.PendingLoads.Inc()
 		am.numPending++
 		go am.loadAnnotator(dateString)
-		metrics.RejectionCount.WithLabelValues("New Dataset").Inc()
 		return nil, ErrPendingAnnotatorLoad
 	}
 
@@ -175,7 +193,7 @@ func (am *AnnotatorCache) GetAnnotator(dateString string) (api.Annotator, error)
 
 	// Update the LRU time.
 	entry.lastUsed = time.Now()
-	if am.oldestIndex == dateString {
+	if am.oldestIndex == dateString || am.oldestIndex == "" {
 		am.updateOldest()
 	}
 
@@ -183,10 +201,8 @@ func (am *AnnotatorCache) GetAnnotator(dateString string) (api.Annotator, error)
 }
 
 // tryEvictOldest evicts the oldest entry, IFF it has not been referenced in minEvictionAge
+// Caller must hold the lock.
 func (am *AnnotatorCache) tryEvictOldest() bool {
-	am.lock.Lock()
-	defer am.lock.Unlock()
-
 	if am.oldestIndex == "" {
 		return false
 	}
@@ -196,7 +212,9 @@ func (am *AnnotatorCache) tryEvictOldest() bool {
 		// TODO add metric for failed eviction requests.
 		return false
 	}
+	log.Println("evicting", am.oldestIndex)
 	delete(am.annotators, am.oldestIndex)
+	log.Println("total", len(am.annotators))
 	am.updateOldest()
 	metrics.EvictionCount.Inc()
 	metrics.DatasetCount.Dec()
@@ -206,8 +224,14 @@ func (am *AnnotatorCache) tryEvictOldest() bool {
 
 // GetAnnotator gets the current annotator.
 func GetAnnotator(date time.Time) (api.Annotator, error) {
-	dateString := date.Format("20060102")
-	return allAnnotators.GetAnnotator(dateString)
+	filename := geoloader.BestAnnotatorName(date)
+
+	if filename == "" {
+		metrics.ErrorTotal.WithLabelValues("No Appropriate Dataset").Inc()
+		return nil, errors.New("No Appropriate Dataset")
+	}
+
+	return allAnnotators.GetAnnotator(filename)
 }
 
 // InitDataset will update the filename list of archived dataset in memory
