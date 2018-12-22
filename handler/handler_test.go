@@ -303,7 +303,7 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 	}
 }
 
-func xTestE2ELoadMultipleDataset(t *testing.T) {
+func TestE2ELoadMultipleDataset(t *testing.T) {
 	manager.InitDataset()
 	tests := []struct {
 		ip   string
