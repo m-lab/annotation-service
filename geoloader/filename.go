@@ -2,6 +2,7 @@ package geoloader
 
 import (
 	"context"
+	"flag"
 	"log"
 	"regexp"
 	"sort"
@@ -42,11 +43,13 @@ func setDirectory(dir *directory) {
 	datasetDir = dir
 }
 
-// This sets up a default directory for testing purposes.
 func init() {
 	dir := newDirectory(10)
-	date, _ := time.Parse("20060102", "20130828")
-	dir.Insert(date, "Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz")
+	// Hack
+	if flag.Lookup("test.v") != nil {
+		date, _ := time.Parse("20060102", "20130828")
+		dir.Insert(date, "Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz")
+	}
 	setDirectory(&dir)
 }
 
@@ -83,6 +86,7 @@ func (dir *directory) Insert(date time.Time, fn string) {
 		dir.entries[dateString] = entry
 	}
 
+	log.Println("Adding", dateString, fn)
 	entry.filenames = append(entry.filenames, fn)
 }
 
@@ -120,7 +124,7 @@ var GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-G
 var GeoLegacyRegex = regexp.MustCompile(`.*-GeoLiteCity.dat.*`)
 var GeoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
 
-// UpdateArchivedFilenames extracts the dataset filenames from downloader bucket
+// UpdateArchivedFilenames updates the list of dataset filenames from GCS.
 // This job is run at the beginning of deployment and daily cron job.
 func UpdateArchivedFilenames() error {
 	old := getDirectory()

@@ -2,6 +2,7 @@ package handler_test
 
 // TODO 201901 - TestStatusServiceUnavailable()
 // TODO 201901 - TestStatusInternalError()
+// TODO Should do a v2 api test with different dataset dates.
 
 import (
 	"bytes"
@@ -313,7 +314,11 @@ func TestE2ELoadMultipleDataset(t *testing.T) {
 	defer restore()
 
 	manager.SetAnnotatorCacheForTest(nil)
-	manager.InitDataset()
+	// Use a standard annotator cache
+	manager.InitAnnotatorCache()
+	// Init directory from GCS.
+	geoloader.UpdateArchivedFilenames()
+
 	tests := []struct {
 		ip   string
 		time string

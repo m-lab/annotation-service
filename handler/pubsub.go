@@ -6,7 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/m-lab/annotation-service/manager"
+	"github.com/m-lab/annotation-service/geoloader"
+
 	"golang.org/x/net/context"
 
 	"cloud.google.com/go/pubsub"
@@ -36,7 +37,7 @@ func waitForDownloaderMessages() {
 	}
 	// Block forever to listen for new messages and run the refresh dataset callbacks when a new message arrives
 	log.Fatal(sub.Receive(context.Background(), func(ctx context.Context, m *pubsub.Message) {
-		manager.InitDataset()
+		geoloader.UpdateArchivedFilenames()
 		m.Ack()
 	}))
 }

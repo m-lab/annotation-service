@@ -27,8 +27,6 @@ const (
 )
 
 func InitHandler() {
-	manager.InitDataset()
-
 	// sets up any handlers that are needed, including url
 	// handlers and pubsub handlers
 	http.HandleFunc("/annotate", Annotate)
@@ -191,7 +189,7 @@ func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 
 		annotation, err := ann.GetAnnotation(&request)
 		if err != nil {
-			metrics.ErrorTotal.WithLabelValues("GetAnnotation Error").Inc()
+			metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
 			continue
 		}
 		responseMap[request.IP] = &annotation
@@ -347,7 +345,6 @@ func BatchValidateAndParse(jsonBuffer []byte) ([]api.RequestData, error) {
 // pointer, even if it cannot find the appropriate metadata.
 func GetMetadataForSingleIP(request *api.RequestData) (api.GeoData, error) {
 	metrics.TotalLookups.Inc()
-	// TODO replace with generic GetAnnotator, that respects time.
 	ann, err := manager.GetAnnotator(request.Timestamp)
 	if err != nil {
 		return api.GeoData{}, err
