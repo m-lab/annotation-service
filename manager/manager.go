@@ -8,6 +8,8 @@ package manager
 //   maxEntries - the maximum number of entries allowed, to avoid OOM problems.
 //   loader - the function that handles loading of a new annotator.
 
+// TODO - consider preloading the NEXT annotator whenever there is room available.
+
 import (
 	"errors"
 	"log"
@@ -156,7 +158,6 @@ func (am *AnnotatorCache) updateOldest() {
 // However, if eviction is required, this will synchronously attempt eviction, and return
 // ErrPendingAnnotatorLoad if successful, or ErrAnnotatorLoadFailed if eviction was unsuccessful.
 func (am *AnnotatorCache) GetAnnotator(dateString string) (api.Annotator, error) {
-	log.Println("Requested", dateString)
 	am.lock.Lock()
 	defer am.lock.Unlock()
 	entry, ok := am.annotators[dateString]
@@ -214,7 +215,6 @@ func (am *AnnotatorCache) tryEvictOldest() bool {
 	}
 	log.Println("evicting", am.oldestIndex)
 	delete(am.annotators, am.oldestIndex)
-	log.Println("total", len(am.annotators))
 	am.updateOldest()
 	metrics.EvictionCount.Inc()
 	metrics.DatasetCount.Dec()
