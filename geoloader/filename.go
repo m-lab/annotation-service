@@ -2,6 +2,7 @@ package geoloader
 
 import (
 	"context"
+	"flag"
 	"log"
 	"regexp"
 	"sort"
@@ -42,12 +43,14 @@ func setDirectory(dir *directory) {
 	datasetDir = dir
 }
 
-// This sets up a default directory for testing purposes.
 func init() {
 	dir := newDirectory(10)
-	date, _ := time.Parse("20060102", "20130828")
-	dir.Insert(date, "Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz")
-	setDirectory(&dir)
+	// Hack
+	if flag.Lookup("test.v") != nil {
+		date, _ := time.Parse("20060102", "20130828")
+		dir.Insert(date, "Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz")
+		setDirectory(&dir)
+	}
 }
 
 type dateEntry struct {
