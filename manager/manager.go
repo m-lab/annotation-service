@@ -12,7 +12,9 @@ package manager
 
 import (
 	"errors"
+	"fmt"
 	"log"
+	"runtime"
 	"sync"
 	"time"
 
@@ -50,6 +52,14 @@ var (
 
 	allAnnotators *AnnotatorCache
 )
+
+func errorMetricWithLabel(err error) {
+	if err != nil {
+		_, _, line, _ := runtime.Caller(1)
+		label := fmt.Sprintf("%3d %s", line+2, err)
+		metrics.ErrorTotal.WithLabelValues(label).Inc()
+	}
+}
 
 // NOT THREADSAFE.  Should be called once at initialization time.
 func SetAnnotatorCacheForTest(ac *AnnotatorCache) {
@@ -128,14 +138,10 @@ func (am *AnnotatorCache) validateAndSetAnnotator(dateString string, ann api.Ann
 // It should only be called asynchronously from GetAnnotator.
 func (am *AnnotatorCache) loadAnnotator(dateString string) {
 	ann, err := am.loader(dateString)
-	if err != nil {
-		metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
-	}
+	errorMetricWithLabel(err)
 	// Set the new annotator value.  Entry should be nil.
 	err = am.validateAndSetAnnotator(dateString, ann, err)
-	if err != nil {
-		metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
-	}
+	errorMetricWithLabel(err)
 }
 
 // Client must hold write lock.
@@ -229,11 +235,13 @@ var lastLog = time.Time{}
 func GetAnnotator(date time.Time) (api.Annotator, error) {
 	filename := geoloader.BestAnnotatorName(date)
 	if filename == "" {
-		metrics.ErrorTotal.WithLabelValues("No Appropriate Dataset").Inc()
-		return nil, errors.New("No Appropriate Dataset")
+		err := errors.New("No Appropriate Dataset")
+		errorMetricWithLabel(err)
+		return nil, err
 	}
 
 	ann, err := allAnnotators.GetAnnotator(filename)
+	errorMetricWithLabel(err)
 	if time.Since(lastLog) > 5*time.Minute && ann != nil {
 		lastLog = time.Now()
 		log.Println("Using", ann.AnnotatorDate().Format("20060101"), err, "for", date.Format("20060102"))
