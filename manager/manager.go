@@ -16,7 +16,9 @@ import (
 	"log"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/geoloader"
@@ -67,10 +69,20 @@ func SetAnnotatorCacheForTest(ac *AnnotatorCache) {
 }
 
 type cacheEntry struct {
-	ann      api.Annotator
-	lastUsed time.Time
-	//
-	err CacheError
+	ann api.Annotator
+	// UPDATED ATOMICALLY, or read while holding exclusive AnnotatorCache lock.
+	lastUsed unsafe.Pointer
+	err      CacheError
+}
+
+func (ce *cacheEntry) updateLastUsed() {
+	newTime := time.Now()
+	atomic.StorePointer(&ce.lastUsed, unsafe.Pointer(&newTime))
+}
+
+func (ce *cacheEntry) getLastUsed() time.Time {
+	ptr := atomic.LoadPointer(&ce.lastUsed)
+	return *(*time.Time)(ptr)
 }
 
 // AnnotatorCache manages all loading and fetching of Annotators.
@@ -83,12 +95,14 @@ type cacheEntry struct {
 //  the entry.
 // TODO - still need a strategy for dealing with persistent errors.
 type AnnotatorCache struct {
-	// Lock to be held when reading or writing the map or oldestIndex.
-	lock sync.Mutex
+	// Lock - any thread reading `annotators` should RLock()
+	// Any thread writing `annotators` should Lock()
+	lock sync.RWMutex
+
 	// Keys are date strings in YYYYMMDD format.
-	annotators  map[string]*cacheEntry
-	numPending  int    // Number of pending loads.
-	oldestIndex string // The index of the oldest entry.
+	annotators map[string]*cacheEntry
+
+	numPending int // Number of pending loads.
 
 	// These are static and can be accessed without holding the lock
 	loader         func(string) (api.Annotator, error)
@@ -108,21 +122,25 @@ func NewAnnotatorCache(maxEntries int, maxPending int, minAge time.Duration, loa
 // setting the annotator.
 // TODO Add unit tests for load error cases.
 func (am *AnnotatorCache) validateAndSetAnnotator(dateString string, ann api.Annotator, err error) error {
+	// This prevents readers from trying to read structures while they
+	// are being updated.
 	am.lock.Lock()
-	defer am.lock.Unlock()
 
 	entry, ok := am.annotators[dateString]
 	if !ok || entry == nil {
+		am.lock.Unlock()
 		log.Println("This should never happen", ErrGoroutineNotOwner)
 		return ErrGoroutineNotOwner
 	}
 	if entry.ann != nil {
+		am.lock.Unlock()
 		log.Println("This should never happen", ErrMapEntryAlreadySet)
 		return ErrMapEntryAlreadySet
 	}
 	entry.ann = ann
 	entry.err = err
-	entry.lastUsed = time.Now()
+	entry.updateLastUsed()
+	am.lock.Unlock()
 
 	metrics.LoadCount.Inc()
 	log.Println("total", len(am.annotators))
@@ -144,20 +162,27 @@ func (am *AnnotatorCache) loadAnnotator(dateString string) {
 	errorMetricWithLabel(err)
 }
 
-// Client must hold write lock.
-func (am *AnnotatorCache) updateOldest() {
-	am.oldestIndex = ""
-	if len(am.annotators) == 0 {
+// Try loading with EITHER try to evict, OR try to load, OR yield to another thread already loading.
+func (am *AnnotatorCache) tryLoading(fn string) {
+	am.lock.Lock()
+	defer am.lock.Unlock()
+	_, ok := am.annotators[fn]
+	if ok {
 		return
 	}
-	oldest := time.Now()
-	// Scan through the map keys to find the oldest key.
-	for k, e := range am.annotators {
-		if e.lastUsed.Before(oldest) {
-			oldest = e.lastUsed
-			am.oldestIndex = k
-		}
+	if am.numPending >= am.maxPending {
+		return
 	}
+	if len(am.annotators) >= am.maxEntries {
+		go am.tryEvictOldest()
+		return
+	}
+	// There is no entry yet for this date, so we take ownership by
+	// creating an entry.
+	am.annotators[fn] = &cacheEntry{}
+	metrics.PendingLoads.Inc()
+	am.numPending++
+	go am.loadAnnotator(fn)
 }
 
 // GetAnnotator gets the named annotator, if already in the map.
@@ -165,66 +190,79 @@ func (am *AnnotatorCache) updateOldest() {
 // However, if eviction is required, this will synchronously attempt eviction, and return
 // ErrPendingAnnotatorLoad if successful, or ErrAnnotatorLoadFailed if eviction was unsuccessful.
 func (am *AnnotatorCache) GetAnnotator(filename string) (api.Annotator, error) {
-	am.lock.Lock()
-	defer am.lock.Unlock()
+	am.lock.RLock()
+	defer am.lock.RUnlock()
 	entry, ok := am.annotators[filename]
 	if !ok {
+		go am.tryLoading(filename)
 		metrics.RejectionCount.WithLabelValues("New Dataset").Inc()
-		if am.numPending >= am.maxPending {
-			return nil, ErrPendingAnnotatorLoad
-		}
-		if len(am.annotators) >= am.maxEntries {
-			if !am.tryEvictOldest() {
-				return nil, ErrAnnotatorLoadFailed
-			}
-			return nil, ErrPendingAnnotatorLoad
-		}
-		// There is no entry yet for this date, so we take ownership by
-		// creating an entry.
-		am.annotators[filename] = &cacheEntry{}
-		metrics.PendingLoads.Inc()
-		am.numPending++
-		go am.loadAnnotator(filename)
 		return nil, ErrPendingAnnotatorLoad
 	}
 
 	if entry == nil {
 		return nil, ErrNilEntry
-	} else if entry.err != nil {
+	}
+	// Update the LRU time.
+	entry.updateLastUsed()
+
+	if entry.err != nil {
 		return nil, entry.err
-	} else if entry.ann == nil {
+	}
+	if entry.ann == nil {
 		// Another goroutine is already loading this entry.  Return error.
 		metrics.RejectionCount.WithLabelValues("New Dataset").Inc()
 		return nil, ErrPendingAnnotatorLoad
 	}
 
-	// Update the LRU time.
-	entry.lastUsed = time.Now()
-	if am.oldestIndex == filename || am.oldestIndex == "" {
-		am.updateOldest()
-	}
-
 	return entry.ann, nil
+}
+
+func (am *AnnotatorCache) findOldestEntryKey() string {
+	am.lock.RLock()
+	defer am.lock.RUnlock()
+	oldestUsed := time.Now()
+	oldestKey := ""
+	for k, v := range am.annotators {
+		lastUsed := v.getLastUsed()
+		if lastUsed.Before(oldestUsed) {
+			oldestUsed = lastUsed
+			oldestKey = k
+		}
+	}
+	return oldestKey
 }
 
 // tryEvictOldest evicts the oldest entry, IFF it has not been referenced in minEvictionAge
 // Caller must hold the lock.
 func (am *AnnotatorCache) tryEvictOldest() bool {
-	if am.oldestIndex == "" {
+	oldest := am.findOldestEntryKey()
+	am.lock.Lock() // Prevent others from reading.
+	defer am.lock.Unlock()
+
+	e, ok := am.annotators[oldest]
+	if !ok {
+		return false
+	}
+	if e == nil {
+		return false
+	}
+	if e.err != nil {
+		// TODO handle this case better.
+		return false
+	}
+	if e.ann == nil {
 		return false
 	}
 
-	e := am.annotators[am.oldestIndex]
-	if time.Since(e.lastUsed) < am.minEvictionAge {
+	age := time.Since(e.getLastUsed())
+	if age < am.minEvictionAge {
 		// TODO add metric for failed eviction requests.
 		return false
 	}
-	log.Println("evicting", am.oldestIndex)
-	delete(am.annotators, am.oldestIndex)
-	am.updateOldest()
+	log.Println("evicting", age, oldest)
+	delete(am.annotators, oldest)
 	metrics.EvictionCount.Inc()
 	metrics.DatasetCount.Dec()
-
 	return true
 }
 

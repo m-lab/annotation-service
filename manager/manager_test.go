@@ -113,9 +113,21 @@ func TestAnnotatorCache(t *testing.T) {
 	// Last load attempt should have caused one to be evicted, so exactly one of these
 	// should no longer be loaded, and return an ErrPendingAnnotatorLoad.
 	// One of these checks will also trigger another load, but that is OK.
-	_, err0 := am.GetAnnotator(names[0])
-	_, err1 := am.GetAnnotator(names[1])
-	_, err2 := am.GetAnnotator(names[2])
+	// Argh - eviction is now asynchronous, so we have to sleep briefly.
+	var err0, err1, err2 error
+	start := time.Now()
+	for {
+		_, err0 = am.GetAnnotator(names[0])
+		_, err1 = am.GetAnnotator(names[1])
+		_, err2 = am.GetAnnotator(names[2])
+		if err0 != nil || err1 != nil || err2 != nil {
+			break
+		}
+		if time.Since(start) > 5*time.Second {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 	switch {
 	case err0 == nil && err1 == nil && err2 == nil:
 		t.Error("One of the items should have been evicted", err0, err1, err2)
@@ -137,6 +149,9 @@ func TestAnnotatorCache(t *testing.T) {
 }
 
 func TestE2ELoadMultipleDataset(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
 	manager.InitAnnotatorCache()
 	geoloader.UpdateArchivedFilenames()
 
