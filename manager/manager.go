@@ -171,7 +171,6 @@ func (am *AnnotatorCache) GetAnnotator(filename string) (api.Annotator, error) {
 	if !ok {
 		metrics.RejectionCount.WithLabelValues("New Dataset").Inc()
 		if am.numPending >= am.maxPending {
-			log.Println("Too many loading")
 			return nil, ErrPendingAnnotatorLoad
 		}
 		if len(am.annotators) >= am.maxEntries {
@@ -244,7 +243,7 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 	errorMetricWithLabel(err)
 	if time.Since(lastLog) > 5*time.Minute && ann != nil {
 		lastLog = time.Now()
-		log.Println("Using", ann.AnnotatorDate().Format("20060101"), err, "for", date.Format("20060102"))
+		log.Println("Using", ann.AnnotatorDate().Format("20060102"), err, "for", date.Format("20060102"))
 	}
 	return ann, err
 }
