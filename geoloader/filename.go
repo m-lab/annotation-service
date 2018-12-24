@@ -49,8 +49,8 @@ func init() {
 	if flag.Lookup("test.v") != nil {
 		date, _ := time.Parse("20060102", "20130828")
 		dir.Insert(date, "Maxmind/2013/08/28/20130828T184800Z-GeoLiteCity.dat.gz")
-		setDirectory(&dir)
 	}
+	setDirectory(&dir)
 }
 
 type dateEntry struct {
