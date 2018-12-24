@@ -90,6 +90,7 @@ func TestAnnotatorCache(t *testing.T) {
 	}
 
 	// Verify that third is NOT available.  This kicks off loading.
+	// TODO - this is flaky
 	_, err = am.GetAnnotator(names[2])
 	if err != manager.ErrPendingAnnotatorLoad {
 		t.Fatal("Got", err)

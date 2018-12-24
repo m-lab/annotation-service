@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
@@ -142,19 +143,26 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 		return nil, time.Time{}, errNoAnnotator
 	}
 
+	wg := &sync.WaitGroup{}
+	wg.Add(len(ips))
+	respLock := sync.Mutex{}
 	for i := range ips {
 		request := ips[i]
 		metrics.TotalLookups.Inc()
-		annotation, err := ann.GetAnnotation(&request)
-		if err != nil {
-			// TODO need better error handling.
-			continue
-		}
-		// This requires that the caller should ignore the dateString.
-		// TODO - the unit tests do not catch this problem, so maybe it isn't a problem.
-		dateString := strconv.FormatInt(request.Timestamp.Unix(), encodingBase)
-		responseMap[request.IP+dateString] = &annotation
+		go func(req *api.RequestData) {
+			annotation, err := ann.GetAnnotation(req)
+			if err == nil {
+				respLock.Lock()
+				defer respLock.Unlock()
+				dateString := strconv.FormatInt(request.Timestamp.Unix(), encodingBase)
+				responseMap[request.IP+dateString] = &annotation
+			} else {
+				metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
+			}
+			wg.Done()
+		}(&request)
 	}
+	wg.Wait()
 	// TODO use annotator's actual start date.
 	return responseMap, time.Time{}, nil
 }
@@ -173,9 +181,13 @@ func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 		return v2.Response{}, errNoAnnotator
 	}
 
+	wg := &sync.WaitGroup{}
+	wg.Add(len(ips))
+	respLock := sync.Mutex{}
 	for i := range ips {
 		ip := net.ParseIP(ips[i])
 		if ip == nil {
+			wg.Done()
 			metrics.BadIPTotal.Inc()
 			continue
 		}
@@ -187,13 +199,19 @@ func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 		request := api.RequestData{IP: ip.String(), IPFormat: format, Timestamp: date}
 		metrics.TotalLookups.Inc()
 
-		annotation, err := ann.GetAnnotation(&request)
-		if err != nil {
-			metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
-			continue
-		}
-		responseMap[request.IP] = &annotation
+		go func(req *api.RequestData) {
+			annotation, err := ann.GetAnnotation(req)
+			if err == nil {
+				respLock.Lock()
+				defer respLock.Unlock()
+				responseMap[req.IP] = &annotation
+			} else {
+				metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
+			}
+			wg.Done()
+		}(&request)
 	}
+	wg.Wait()
 	return v2.Response{AnnotatorDate: ann.AnnotatorDate(), Annotations: responseMap}, nil
 }
 
