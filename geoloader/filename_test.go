@@ -52,7 +52,7 @@ func TestBestAnnotatorName(t *testing.T) {
 		{"20180809", "Maxmind/2018/08/08/20180808T050355Z-GeoLite2-City-CSV.zip"},
 		{"20170814", "Maxmind/2017/08/15/20170815T200728Z-GeoLite2-City-CSV.zip"},
 		{"20170902", "Maxmind/2017/09/01/20170901T004438Z-GeoLite2-City-CSV.zip"},
-		{"20170906", ""},
+		{"20170906", "Maxmind/2017/09/01/20170901T004438Z-GeoLite2-City-CSV.zip"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.date, func(t *testing.T) {
