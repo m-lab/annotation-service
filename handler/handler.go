@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
@@ -138,20 +139,27 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 		return nil, time.Time{}, errNoAnnotator
 	}
 
+	wg := &sync.WaitGroup{}
+	wg.Add(len(ips))
+	respLock := sync.Mutex{}
 	for i := range ips {
 		request := ips[i]
 		metrics.TotalLookups.Inc()
-		data := api.GeoData{}
-		err := ann.Annotate(request.IP, &data)
-		if err != nil {
-			// TODO need better error handling.
-			continue
-		}
-		// This requires that the caller should ignore the dateString.
-		// TODO - the unit tests do not catch this problem, so maybe it isn't a problem.
-		dateString := strconv.FormatInt(request.Timestamp.Unix(), encodingBase)
-		responseMap[request.IP+dateString] = &data
+		go func(req *api.RequestData) {
+			data := api.GeoData{}
+			err := ann.Annotate(req.IP, &data)
+			if err == nil {
+				respLock.Lock()
+				defer respLock.Unlock()
+				dateString := strconv.FormatInt(req.Timestamp.Unix(), encodingBase)
+				responseMap[req.IP+dateString] = &data
+			} else {
+				metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
+			}
+			wg.Done()
+		}(&request)
 	}
+	wg.Wait()
 	// TODO use annotator's actual start date.
 	return responseMap, time.Time{}, nil
 }
@@ -241,9 +249,9 @@ func checkError(err error, w http.ResponseWriter, ipCount int, label string, tSt
 		default:
 			// If it isn't loading, client should probably give up instead of retrying.
 			w.WriteHeader(http.StatusInternalServerError)
-			metrics.RequestTimeHistogramUsec.WithLabelValues(label, err.Error()).Observe(float64(time.Since(tStart).Nanoseconds()) / 1000)
+			metrics.RequestTimeHistogramUsec.WithLabelValues(label, "InternalServerError").Observe(float64(time.Since(tStart).Nanoseconds()) / 1000)
+			fmt.Fprintf(w, err.Error())
 		}
-		fmt.Fprintf(w, err.Error())
 		return true
 	}
 	return false

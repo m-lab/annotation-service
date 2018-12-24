@@ -90,6 +90,7 @@ func TestAnnotatorCache(t *testing.T) {
 	}
 
 	// Verify that third is NOT available.  This kicks off loading.
+	// TODO - this is flaky
 	_, err = am.GetAnnotator(names[2])
 	if err != manager.ErrPendingAnnotatorLoad {
 		t.Fatal("Got", err)
@@ -113,9 +114,21 @@ func TestAnnotatorCache(t *testing.T) {
 	// Last load attempt should have caused one to be evicted, so exactly one of these
 	// should no longer be loaded, and return an ErrPendingAnnotatorLoad.
 	// One of these checks will also trigger another load, but that is OK.
-	_, err0 := am.GetAnnotator(names[0])
-	_, err1 := am.GetAnnotator(names[1])
-	_, err2 := am.GetAnnotator(names[2])
+	// Argh - eviction is now asynchronous, so we have to sleep briefly.
+	var err0, err1, err2 error
+	start := time.Now()
+	for {
+		_, err0 = am.GetAnnotator(names[0])
+		_, err1 = am.GetAnnotator(names[1])
+		_, err2 = am.GetAnnotator(names[2])
+		if err0 != nil || err1 != nil || err2 != nil {
+			break
+		}
+		if time.Since(start) > 5*time.Second {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 	switch {
 	case err0 == nil && err1 == nil && err2 == nil:
 		t.Error("One of the items should have been evicted", err0, err1, err2)
@@ -179,7 +192,6 @@ func TestE2ELoadMultipleDataset(t *testing.T) {
 		}
 
 		body := w.Body.String()
-		log.Println(body)
 
 		if string(body) != test.res {
 			t.Errorf("\nGot\n__%s__\nexpected\n__%s__\n", body, test.res)

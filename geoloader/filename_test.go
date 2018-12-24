@@ -38,6 +38,7 @@ func TestDir(t *testing.T) {
 		t.Error("wrong date", dir.LastFilenameEarlierThan(date("20100101", t)))
 	}
 }
+
 func TestBestAnnotatorName(t *testing.T) {
 	err := geoloader.UpdateArchivedFilenames()
 	if err != nil {
@@ -48,9 +49,9 @@ func TestBestAnnotatorName(t *testing.T) {
 		date string
 		want string
 	}{
-		{"20170102", "Maxmind/2017/08/15/20170815T200728Z-GeoLite2-City-CSV.zip"},
+		{"20170102", "Maxmind/2016/12/08/20161208T080000Z-GeoLiteCity.dat.gz"},
 		{"20180809", "Maxmind/2018/08/08/20180808T050355Z-GeoLite2-City-CSV.zip"},
-		{"20170814", "Maxmind/2017/08/15/20170815T200728Z-GeoLite2-City-CSV.zip"},
+		{"20170814", "Maxmind/2017/08/08/20170808T080000Z-GeoLiteCity.dat.gz"},
 		{"20170902", "Maxmind/2017/09/01/20170901T004438Z-GeoLite2-City-CSV.zip"},
 		{"20170906", "Maxmind/2017/09/01/20170901T004438Z-GeoLite2-City-CSV.zip"},
 	}
