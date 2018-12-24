@@ -17,10 +17,24 @@ var (
 		Name: "annotator_Running_Annotation_Requests_Count",
 		Help: "The current number of unfulfilled annotation service requests.",
 	})
-	RequestTimes = prometheus.NewSummaryVec(prometheus.SummaryOpts{
+	RequestTimes = prometheus.NewSummary(prometheus.SummaryOpts{
 		Name: "annotator_Request_Response_Time_Summary",
 		Help: "The response time of each request, in nanoseconds.",
-	}, []string{"type", "size"})
+	})
+	RequestTimeHistogram = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name: "annotator_latency_hist_usec",
+			Help: "annotator latency distributions.",
+			Buckets: []float64{
+				10, 12, 15, 20, 24, 30, 40, 48, 60, 80,
+				100, 120, 150, 200, 240, 300, 400, 480, 600, 800,
+				1000, 1200, 1500, 2000, 2400, 3000, 4000, 4800, 6000, 8000,
+				10000, 12000, 15000, 20000, 24000, 30000, 40000, 48000, 60000, 80000,
+				100000, 120000, 150000, 200000, 240000, 300000, 400000, 480000, 600000, 800000,
+				1000000, 1200000, 1500000, 2000000, 2400000, 3000000, 4000000, 4800000, 6000000, 8000000,
+			},
+		},
+		[]string{"type", "detail"})
 	TotalRequests = prometheus.NewCounter(prometheus.CounterOpts{
 		Name: "annotator_Annotation_Requests_total",
 		Help: "The total number of annotation service requests.",
@@ -70,6 +84,7 @@ func init() {
 	prometheus.MustRegister(TotalRequests)
 	prometheus.MustRegister(TotalLookups)
 	prometheus.MustRegister(RequestTimes)
+	prometheus.MustRegister(RequestTimeHistogram)
 	prometheus.MustRegister(BadIPTotal)
 	prometheus.MustRegister(ErrorTotal)
 
