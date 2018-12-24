@@ -45,10 +45,7 @@ func InitHandler() {
 // metadata out to the response encoded in json format.
 func Annotate(w http.ResponseWriter, r *http.Request) {
 	// Setup timers and counters for prometheus metrics.
-	timerStart := time.Now()
-	defer func(tStart time.Time) {
-		metrics.RequestTimes.Observe(float64(time.Since(tStart).Nanoseconds()))
-	}(timerStart)
+	tStart := time.Now()
 	metrics.ActiveRequests.Inc()
 	metrics.TotalRequests.Inc()
 	defer metrics.ActiveRequests.Dec()
@@ -57,6 +54,7 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusNotAcceptable)
 		fmt.Fprintf(w, "Invalid request")
+		metrics.RequestTimes.WithLabelValues("single", "error1").Observe(float64(time.Since(tStart).Nanoseconds()))
 		return
 	}
 
@@ -64,6 +62,7 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusRequestTimeout)
 		fmt.Fprintf(w, err.Error())
+		metrics.RequestTimes.WithLabelValues("single", "error2").Observe(float64(time.Since(tStart).Nanoseconds()))
 		return
 	}
 
@@ -71,9 +70,11 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "Unknown JSON Encoding Error")
+		metrics.RequestTimes.WithLabelValues("single", "error3").Observe(float64(time.Since(tStart).Nanoseconds()))
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
+	metrics.RequestTimes.WithLabelValues("single", "success").Observe(float64(time.Since(tStart).Nanoseconds()))
 }
 
 // ValidateAndParse takes a request and validates the URL parameters,
@@ -225,7 +226,7 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	// Setup timers and counters for prometheus metrics.
 	timerStart := time.Now()
 	defer func(tStart time.Time) {
-		metrics.RequestTimes.Observe(float64(time.Since(tStart).Nanoseconds()))
+		metrics.RequestTimes.WithLabelValues("raw", "").Observe(float64(time.Since(tStart).Nanoseconds()))
 	}(timerStart)
 	metrics.ActiveRequests.Inc()
 	metrics.TotalRequests.Inc()
@@ -244,10 +245,12 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 
 // TODO Leave this here for now to make review easier, rearrange later.
 func handleOld(w http.ResponseWriter, jsonBuffer []byte) {
+	tStart := time.Now()
 	dataSlice, err := BatchValidateAndParse(jsonBuffer)
 	if err != nil {
 		// TODO Add metric
 		fmt.Fprintf(w, "Invalid Request!")
+		metrics.RequestTimes.WithLabelValues("old", "invalid").Observe(float64(time.Since(tStart).Nanoseconds()))
 		return
 	}
 
@@ -260,6 +263,7 @@ func handleOld(w http.ResponseWriter, jsonBuffer []byte) {
 		responseMap, _, err = AnnotateLegacy(date, dataSlice)
 		if err != nil {
 			fmt.Fprintf(w, err.Error())
+			metrics.RequestTimes.WithLabelValues("old", "ann error").Observe(float64(time.Since(tStart).Nanoseconds()))
 			return
 		}
 	} else {
@@ -270,17 +274,25 @@ func handleOld(w http.ResponseWriter, jsonBuffer []byte) {
 	if err != nil {
 		// TODO Add metric
 		fmt.Fprintf(w, "Unknown JSON Encoding Error")
+		metrics.RequestTimes.WithLabelValues("old", "json error").Observe(float64(time.Since(tStart).Nanoseconds()))
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
+	if len(dataSlice) < 10 {
+		metrics.RequestTimes.WithLabelValues("old", "small").Observe(float64(time.Since(tStart).Nanoseconds()))
+	} else {
+		metrics.RequestTimes.WithLabelValues("old", "large").Observe(float64(time.Since(tStart).Nanoseconds()))
+	}
 }
 
 func handleV2(w http.ResponseWriter, jsonBuffer []byte) {
+	tStart := time.Now()
 	request := v2.Request{}
 
 	err := json.Unmarshal(jsonBuffer, &request)
 	if err != nil {
 		// TODO Add metric
+		metrics.RequestTimes.WithLabelValues("v2", "json err").Observe(float64(time.Since(tStart).Nanoseconds()))
 		fmt.Fprintf(w, "Unable to parse V2.0 request %s", string(jsonBuffer))
 		return
 	}
@@ -293,6 +305,7 @@ func handleV2(w http.ResponseWriter, jsonBuffer []byte) {
 		// For old request format, we use the date of the first RequestData
 		response, err = AnnotateV2(request.Date, request.IPs)
 		if err != nil {
+			metrics.RequestTimes.WithLabelValues("v2", "ann err").Observe(float64(time.Since(tStart).Nanoseconds()))
 			fmt.Fprintf(w, err.Error())
 			return
 		}
@@ -301,10 +314,16 @@ func handleV2(w http.ResponseWriter, jsonBuffer []byte) {
 	encodedResult, err := json.Marshal(response)
 	if err != nil {
 		// TODO Add metric
+		metrics.RequestTimes.WithLabelValues("v2", "encode err").Observe(float64(time.Since(tStart).Nanoseconds()))
 		fmt.Fprintf(w, "Unknown JSON Encoding Error")
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
+	if len(request.IPs) < 10 {
+		metrics.RequestTimes.WithLabelValues("v2", "small").Observe(float64(time.Since(tStart).Nanoseconds()))
+	} else {
+		metrics.RequestTimes.WithLabelValues("v2", "large").Observe(float64(time.Since(tStart).Nanoseconds()))
+	}
 }
 
 func handleNewOrOld(w http.ResponseWriter, jsonBuffer []byte) {

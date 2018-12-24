@@ -17,10 +17,10 @@ var (
 		Name: "annotator_Running_Annotation_Requests_Count",
 		Help: "The current number of unfulfilled annotation service requests.",
 	})
-	RequestTimes = prometheus.NewSummary(prometheus.SummaryOpts{
+	RequestTimes = prometheus.NewSummaryVec(prometheus.SummaryOpts{
 		Name: "annotator_Request_Response_Time_Summary",
 		Help: "The response time of each request, in nanoseconds.",
-	})
+	}, []string{"type", "size"})
 	TotalRequests = prometheus.NewCounter(prometheus.CounterOpts{
 		Name: "annotator_Annotation_Requests_total",
 		Help: "The total number of annotation service requests.",
