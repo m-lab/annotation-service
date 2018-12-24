@@ -261,7 +261,7 @@ func handleOld(w http.ResponseWriter, jsonBuffer []byte) {
 		responseMap, _, err = AnnotateLegacy(date, dataSlice)
 		if err != nil {
 			fmt.Fprintf(w, err.Error())
-			metrics.RequestTimeHistogram.WithLabelValues("old", "ann error").Observe(float64(time.Since(tStart).Nanoseconds()))
+			metrics.RequestTimeHistogram.WithLabelValues("old", err.Error()).Observe(float64(time.Since(tStart).Nanoseconds()))
 			return
 		}
 	} else {
@@ -272,14 +272,16 @@ func handleOld(w http.ResponseWriter, jsonBuffer []byte) {
 	if err != nil {
 		// TODO Add metric
 		fmt.Fprintf(w, "Unknown JSON Encoding Error")
-		metrics.RequestTimeHistogram.WithLabelValues("old", "json error").Observe(float64(time.Since(tStart).Nanoseconds()))
+		metrics.RequestTimeHistogram.WithLabelValues("old", err.Error()).Observe(float64(time.Since(tStart).Nanoseconds()))
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
-	if len(dataSlice) < 10 {
-		metrics.RequestTimeHistogram.WithLabelValues("old", "small").Observe(float64(time.Since(tStart).Nanoseconds()))
-	} else {
+	if len(dataSlice) > 50 {
+		metrics.RequestTimeHistogram.WithLabelValues("old", "huge").Observe(float64(time.Since(tStart).Nanoseconds()))
+	} else if len(dataSlice) > 10 {
 		metrics.RequestTimeHistogram.WithLabelValues("old", "large").Observe(float64(time.Since(tStart).Nanoseconds()))
+	} else {
+		metrics.RequestTimeHistogram.WithLabelValues("old", "small").Observe(float64(time.Since(tStart).Nanoseconds()))
 	}
 }
 
@@ -290,7 +292,7 @@ func handleV2(w http.ResponseWriter, jsonBuffer []byte) {
 	err := json.Unmarshal(jsonBuffer, &request)
 	if err != nil {
 		// TODO Add metric
-		metrics.RequestTimeHistogram.WithLabelValues("v2", "json err").Observe(float64(time.Since(tStart).Nanoseconds()))
+		metrics.RequestTimeHistogram.WithLabelValues("v2", err.Error()).Observe(float64(time.Since(tStart).Nanoseconds()))
 		fmt.Fprintf(w, "Unable to parse V2.0 request %s", string(jsonBuffer))
 		return
 	}
@@ -303,7 +305,7 @@ func handleV2(w http.ResponseWriter, jsonBuffer []byte) {
 		// For old request format, we use the date of the first RequestData
 		response, err = AnnotateV2(request.Date, request.IPs)
 		if err != nil {
-			metrics.RequestTimeHistogram.WithLabelValues("v2", "ann err").Observe(float64(time.Since(tStart).Nanoseconds()))
+			metrics.RequestTimeHistogram.WithLabelValues("v2", err.Error()).Observe(float64(time.Since(tStart).Nanoseconds()))
 			fmt.Fprintf(w, err.Error())
 			return
 		}
@@ -312,15 +314,17 @@ func handleV2(w http.ResponseWriter, jsonBuffer []byte) {
 	encodedResult, err := json.Marshal(response)
 	if err != nil {
 		// TODO Add metric
-		metrics.RequestTimeHistogram.WithLabelValues("v2", "encode err").Observe(float64(time.Since(tStart).Nanoseconds()))
+		metrics.RequestTimeHistogram.WithLabelValues("v2", err.Error()).Observe(float64(time.Since(tStart).Nanoseconds()))
 		fmt.Fprintf(w, "Unknown JSON Encoding Error")
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
-	if len(request.IPs) < 10 {
-		metrics.RequestTimeHistogram.WithLabelValues("v2", "small").Observe(float64(time.Since(tStart).Nanoseconds()))
-	} else {
+	if len(request.IPs) > 50 {
+		metrics.RequestTimeHistogram.WithLabelValues("v2", "huge").Observe(float64(time.Since(tStart).Nanoseconds()))
+	} else if len(request.IPs) > 10 {
 		metrics.RequestTimeHistogram.WithLabelValues("v2", "large").Observe(float64(time.Since(tStart).Nanoseconds()))
+	} else {
+		metrics.RequestTimeHistogram.WithLabelValues("v2", "small").Observe(float64(time.Since(tStart).Nanoseconds()))
 	}
 }
 
