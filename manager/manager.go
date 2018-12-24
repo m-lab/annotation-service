@@ -252,6 +252,6 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 // Initialized allAnnotators if not already initialized.
 func InitAnnotatorCache() {
 	if allAnnotators == nil {
-		allAnnotators = NewAnnotatorCache(12, 1, 5*time.Minute, geoloader.ArchivedLoader)
+		allAnnotators = NewAnnotatorCache(6, 2, 5*time.Minute, geoloader.ArchivedLoader)
 	}
 }
