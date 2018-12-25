@@ -235,11 +235,12 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 				index = backupIndex
 			} else {
 				// TODO There are an enormous number of these in the log.  Why?  What does it mean?
-				log.Println("Couldn't get a valid Geoname id!", record)
+				log.Println("Couldn't get a valid Geoname id!", len(record), record)
 				//TODO: Add a prometheus metric here
 			}
 
 		}
+		// TODO - if error above, this might default to zero!!
 		newNode.LocationIndex = index
 		newNode.PostalCode = record[6]
 		newNode.Latitude, err = stringToFloat(record[7], "Latitude")
