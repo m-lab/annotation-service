@@ -151,6 +151,7 @@ func checkNumColumns(record []string, size int) error {
 func lookupGeoID(gnid string, idMap map[int]int) (int, error) {
 	geonameID, err := strconv.Atoi(gnid)
 	if err != nil {
+		log.Println("geonameID should be a number", gnid)
 		return 0, errors.New("Corrupted Data: geonameID should be a number")
 	}
 	loadIndex, ok := idMap[geonameID]
