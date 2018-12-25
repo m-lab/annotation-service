@@ -54,27 +54,20 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 	defer metrics.ActiveRequests.Dec()
 
 	data, err := ValidateAndParse(r)
-	if err != nil {
-		w.WriteHeader(http.StatusNotAcceptable)
-		fmt.Fprintf(w, "Invalid request")
+	if checkError(err, w, "single", tStart) {
 		return
 	}
 
 	result, err := GetMetadataForSingleIP(data)
-	if err != nil {
-		w.WriteHeader(http.StatusRequestTimeout)
-		fmt.Fprintf(w, err.Error())
-		metrics.RequestTimeHistogram.WithLabelValues("single", err.Error()).Observe(float64(time.Since(tStart).Nanoseconds()))
+	if checkError(err, w, "single", tStart) {
 		return
 	}
 
 	encodedResult, err := json.Marshal(result)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Unknown JSON Encoding Error")
-		metrics.RequestTimeHistogram.WithLabelValues("single", err.Error()).Observe(float64(time.Since(tStart).Nanoseconds()))
+	if checkError(err, w, "single", tStart) {
 		return
 	}
+
 	fmt.Fprint(w, string(encodedResult))
 	metrics.RequestTimeHistogram.WithLabelValues("single", "success").Observe(float64(time.Since(tStart).Nanoseconds()))
 }
@@ -226,18 +219,16 @@ func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 // TODO update this comment when we switch to new API.
 func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	// Setup timers and counters for prometheus metrics.
-	timerStart := time.Now()
+	tStart := time.Now()
 	defer func(t time.Time) {
 		metrics.RequestTimes.Observe(float64(time.Since(t).Nanoseconds()))
-	}(timerStart)
+	}(tStart)
 	metrics.ActiveRequests.Inc()
 	metrics.TotalRequests.Inc()
 	defer metrics.ActiveRequests.Dec()
 
 	jsonBuffer, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.Println(err)
-		fmt.Fprintf(w, "Invalid Request!")
+	if checkError(err, w, "batch", tStart) {
 		return
 	}
 	r.Body.Close()
@@ -260,14 +251,26 @@ func latencyStats(label string, count int, tStart time.Time) {
 	}
 }
 
+func checkError(err error, w http.ResponseWriter, label string, tStart time.Time) bool {
+	if err != nil {
+		switch {
+		case err == manager.ErrPendingAnnotatorLoad:
+			w.WriteHeader(http.StatusServiceUnavailable)
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		fmt.Fprintf(w, err.Error())
+		metrics.RequestTimeHistogram.WithLabelValues(label, err.Error()).Observe(float64(time.Since(tStart).Nanoseconds()))
+		return true
+	}
+	return false
+}
+
 // TODO Leave this here for now to make review easier, rearrange later.
 func handleOld(w http.ResponseWriter, jsonBuffer []byte) {
 	tStart := time.Now()
 	dataSlice, err := BatchValidateAndParse(jsonBuffer)
-	if err != nil {
-		// TODO Add metric
-		fmt.Fprintf(w, "Invalid Request!")
-		metrics.RequestTimeHistogram.WithLabelValues("old", "invalid").Observe(float64(time.Since(tStart).Nanoseconds()))
+	if checkError(err, w, "old", tStart) {
 		return
 	}
 
@@ -278,9 +281,7 @@ func handleOld(w http.ResponseWriter, jsonBuffer []byte) {
 		// For old request format, we use the date of the first RequestData
 		date := dataSlice[0].Timestamp
 		responseMap, _, err = AnnotateLegacy(date, dataSlice)
-		if err != nil {
-			fmt.Fprintf(w, err.Error())
-			metrics.RequestTimeHistogram.WithLabelValues("old", err.Error()).Observe(float64(time.Since(tStart).Nanoseconds()))
+		if checkError(err, w, "old", tStart) {
 			return
 		}
 	} else {
@@ -288,10 +289,7 @@ func handleOld(w http.ResponseWriter, jsonBuffer []byte) {
 	}
 
 	encodedResult, err := json.Marshal(responseMap)
-	if err != nil {
-		// TODO Add metric
-		fmt.Fprintf(w, "Unknown JSON Encoding Error")
-		metrics.RequestTimeHistogram.WithLabelValues("old", err.Error()).Observe(float64(time.Since(tStart).Nanoseconds()))
+	if checkError(err, w, "old", tStart) {
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
@@ -303,10 +301,7 @@ func handleV2(w http.ResponseWriter, jsonBuffer []byte) {
 	request := v2.Request{}
 
 	err := json.Unmarshal(jsonBuffer, &request)
-	if err != nil {
-		// TODO Add metric
-		metrics.RequestTimeHistogram.WithLabelValues("v2", err.Error()).Observe(float64(time.Since(tStart).Nanoseconds()))
-		fmt.Fprintf(w, "Unable to parse V2.0 request %s", string(jsonBuffer))
+	if checkError(err, w, "v2", tStart) {
 		return
 	}
 
@@ -317,18 +312,13 @@ func handleV2(w http.ResponseWriter, jsonBuffer []byte) {
 	if len(request.IPs) > 0 {
 		// For old request format, we use the date of the first RequestData
 		response, err = AnnotateV2(request.Date, request.IPs)
-		if err != nil {
-			metrics.RequestTimeHistogram.WithLabelValues("v2", err.Error()).Observe(float64(time.Since(tStart).Nanoseconds()))
-			fmt.Fprintf(w, err.Error())
+		if checkError(err, w, "v2", tStart) {
 			return
 		}
 	}
 
 	encodedResult, err := json.Marshal(response)
-	if err != nil {
-		// TODO Add metric
-		metrics.RequestTimeHistogram.WithLabelValues("v2", err.Error()).Observe(float64(time.Since(tStart).Nanoseconds()))
-		fmt.Fprintf(w, "Unknown JSON Encoding Error")
+	if checkError(err, w, "v2", tStart) {
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
@@ -336,6 +326,7 @@ func handleV2(w http.ResponseWriter, jsonBuffer []byte) {
 }
 
 func handleNewOrOld(w http.ResponseWriter, jsonBuffer []byte) {
+	tStart := time.Now()
 	// Check API version of the request
 	wrapper := api.RequestWrapper{}
 	err := json.Unmarshal(jsonBuffer, &wrapper)
@@ -346,8 +337,9 @@ func handleNewOrOld(w http.ResponseWriter, jsonBuffer []byte) {
 		case v2.RequestTag:
 			handleV2(w, jsonBuffer)
 		default:
-			// TODO Add metric
-			fmt.Fprintf(w, "Unknown API version %s", wrapper.RequestType)
+			if checkError(errors.New("Unknown Request Type"), w, "newOrOld", tStart) {
+				return
+			}
 		}
 	}
 }
