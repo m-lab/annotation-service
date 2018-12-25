@@ -46,7 +46,9 @@ func InitHandler() {
 func Annotate(w http.ResponseWriter, r *http.Request) {
 	// Setup timers and counters for prometheus metrics.
 	tStart := time.Now()
-	defer metrics.RequestTimes.Observe(float64(time.Since(tStart).Nanoseconds()))
+	defer func(t time.Time) {
+		metrics.RequestTimes.Observe(float64(time.Since(t).Nanoseconds()))
+	}(tStart)
 	metrics.ActiveRequests.Inc()
 	metrics.TotalRequests.Inc()
 	defer metrics.ActiveRequests.Dec()
@@ -225,7 +227,9 @@ func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	// Setup timers and counters for prometheus metrics.
 	timerStart := time.Now()
-	defer metrics.RequestTimes.Observe(float64(time.Since(timerStart).Nanoseconds()))
+	defer func(t time.Time) {
+		metrics.RequestTimes.Observe(float64(time.Since(t).Nanoseconds()))
+	}(timerStart)
 	metrics.ActiveRequests.Inc()
 	metrics.TotalRequests.Inc()
 	defer metrics.ActiveRequests.Dec()
@@ -243,6 +247,8 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 
 func latencyStats(label string, count int, tStart time.Time) {
 	switch {
+	case count >= 400:
+		metrics.RequestTimeHistogram.WithLabelValues(label, "400+").Observe(float64(time.Since(tStart).Nanoseconds()))
 	case count >= 100:
 		metrics.RequestTimeHistogram.WithLabelValues(label, "100+").Observe(float64(time.Since(tStart).Nanoseconds()))
 	case count >= 20:

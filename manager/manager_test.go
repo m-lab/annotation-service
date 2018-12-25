@@ -190,7 +190,6 @@ func TestE2ELoadMultipleDataset(t *testing.T) {
 		}
 
 		body := w.Body.String()
-		log.Println(body)
 
 		if string(body) != test.res {
 			t.Errorf("\nGot\n__%s__\nexpected\n__%s__\n", body, test.res)
