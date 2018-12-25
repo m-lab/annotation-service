@@ -62,7 +62,7 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusRequestTimeout)
 		fmt.Fprintf(w, err.Error())
-		metrics.RequestTimeHistogram.WithLabelValues("single", "error2").Observe(float64(time.Since(tStart).Nanoseconds()))
+		metrics.RequestTimeHistogram.WithLabelValues("single", err.Error()).Observe(float64(time.Since(tStart).Nanoseconds()))
 		return
 	}
 
@@ -70,7 +70,7 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "Unknown JSON Encoding Error")
-		metrics.RequestTimeHistogram.WithLabelValues("single", "error3").Observe(float64(time.Since(tStart).Nanoseconds()))
+		metrics.RequestTimeHistogram.WithLabelValues("single", err.Error()).Observe(float64(time.Since(tStart).Nanoseconds()))
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
@@ -241,6 +241,19 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	handleNewOrOld(w, jsonBuffer)
 }
 
+func latencyStats(label string, count int, tStart time.Time) {
+	switch {
+	case count >= 100:
+		metrics.RequestTimeHistogram.WithLabelValues(label, "100+").Observe(float64(time.Since(tStart).Nanoseconds()))
+	case count >= 20:
+		metrics.RequestTimeHistogram.WithLabelValues(label, "20+").Observe(float64(time.Since(tStart).Nanoseconds()))
+	case count >= 5:
+		metrics.RequestTimeHistogram.WithLabelValues(label, "5+").Observe(float64(time.Since(tStart).Nanoseconds()))
+	default:
+		metrics.RequestTimeHistogram.WithLabelValues(label, "<5").Observe(float64(time.Since(tStart).Nanoseconds()))
+	}
+}
+
 // TODO Leave this here for now to make review easier, rearrange later.
 func handleOld(w http.ResponseWriter, jsonBuffer []byte) {
 	tStart := time.Now()
@@ -276,13 +289,7 @@ func handleOld(w http.ResponseWriter, jsonBuffer []byte) {
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
-	if len(dataSlice) > 50 {
-		metrics.RequestTimeHistogram.WithLabelValues("old", "huge").Observe(float64(time.Since(tStart).Nanoseconds()))
-	} else if len(dataSlice) > 10 {
-		metrics.RequestTimeHistogram.WithLabelValues("old", "large").Observe(float64(time.Since(tStart).Nanoseconds()))
-	} else {
-		metrics.RequestTimeHistogram.WithLabelValues("old", "small").Observe(float64(time.Since(tStart).Nanoseconds()))
-	}
+	latencyStats("old", len(dataSlice), tStart)
 }
 
 func handleV2(w http.ResponseWriter, jsonBuffer []byte) {
@@ -319,13 +326,7 @@ func handleV2(w http.ResponseWriter, jsonBuffer []byte) {
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
-	if len(request.IPs) > 50 {
-		metrics.RequestTimeHistogram.WithLabelValues("v2", "huge").Observe(float64(time.Since(tStart).Nanoseconds()))
-	} else if len(request.IPs) > 10 {
-		metrics.RequestTimeHistogram.WithLabelValues("v2", "large").Observe(float64(time.Since(tStart).Nanoseconds()))
-	} else {
-		metrics.RequestTimeHistogram.WithLabelValues("v2", "small").Observe(float64(time.Since(tStart).Nanoseconds()))
-	}
+	latencyStats("v2", len(request.IPs), tStart)
 }
 
 func handleNewOrOld(w http.ResponseWriter, jsonBuffer []byte) {
