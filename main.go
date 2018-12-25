@@ -6,6 +6,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"runtime"
 
 	"github.com/m-lab/annotation-service/geoloader"
 	"github.com/m-lab/annotation-service/manager"
@@ -47,6 +48,9 @@ func init() {
 }
 
 func main() {
+	runtime.SetMutexProfileFraction(100) // 1 in 100 events?
+	runtime.SetBlockProfileRate(1000000) // 1 event per msec?
+
 	log.Print("Beginning Setup\n")
 	manager.InitAnnotatorCache()
 	// Init annotator directory from GCS.
