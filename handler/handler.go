@@ -233,7 +233,7 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	}
 	r.Body.Close()
 
-	handleNewOrOld(w, jsonBuffer)
+	handleNewOrOld(w, tStart, jsonBuffer)
 }
 
 func latencyStats(label string, count int, tStart time.Time) {
@@ -267,8 +267,7 @@ func checkError(err error, w http.ResponseWriter, label string, tStart time.Time
 }
 
 // TODO Leave this here for now to make review easier, rearrange later.
-func handleOld(w http.ResponseWriter, jsonBuffer []byte) {
-	tStart := time.Now()
+func handleOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 	dataSlice, err := BatchValidateAndParse(jsonBuffer)
 	if checkError(err, w, "old", tStart) {
 		return
@@ -296,8 +295,7 @@ func handleOld(w http.ResponseWriter, jsonBuffer []byte) {
 	latencyStats("old", len(dataSlice), tStart)
 }
 
-func handleV2(w http.ResponseWriter, jsonBuffer []byte) {
-	tStart := time.Now()
+func handleV2(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 	request := v2.Request{}
 
 	err := json.Unmarshal(jsonBuffer, &request)
@@ -325,17 +323,16 @@ func handleV2(w http.ResponseWriter, jsonBuffer []byte) {
 	latencyStats("v2", len(request.IPs), tStart)
 }
 
-func handleNewOrOld(w http.ResponseWriter, jsonBuffer []byte) {
-	tStart := time.Now()
+func handleNewOrOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 	// Check API version of the request
 	wrapper := api.RequestWrapper{}
 	err := json.Unmarshal(jsonBuffer, &wrapper)
 	if err != nil {
-		handleOld(w, jsonBuffer)
+		handleOld(w, tStart, jsonBuffer)
 	} else {
 		switch wrapper.RequestType {
 		case v2.RequestTag:
-			handleV2(w, jsonBuffer)
+			handleV2(w, tStart, jsonBuffer)
 		default:
 			if checkError(errors.New("Unknown Request Type"), w, "newOrOld", tStart) {
 				return
