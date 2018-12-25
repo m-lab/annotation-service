@@ -166,8 +166,6 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 // AnnotateV2 finds an appropriate Annotator based on the requested Date, and creates a
 // response with annotations for all parseable IPs.
 func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
-	responseMap := make(map[string]*api.GeoData, len(ips))
-
 	ann, err := manager.GetAnnotator(date)
 	if err != nil {
 		return v2.Response{}, err
@@ -177,6 +175,7 @@ func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 		return v2.Response{}, errNoAnnotator
 	}
 
+	responseMap := make(map[string]*api.GeoData, len(ips))
 	wg := &sync.WaitGroup{}
 	wg.Add(len(ips))
 	respLock := sync.Mutex{}
@@ -236,12 +235,14 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	handleNewOrOld(w, tStart, jsonBuffer)
 }
 
-func latencyStats(label string, count int, tStart time.Time) {
+func latencyStats(label string, count int, tStart time.Time, annLatency time.Duration) {
 	switch {
 	case count >= 400:
 		metrics.RequestTimeHistogram.WithLabelValues(label, "400+").Observe(float64(time.Since(tStart).Nanoseconds()))
+		metrics.RequestTimeHistogram.WithLabelValues(label, "400+ ann").Observe(float64(annLatency.Nanoseconds()))
 	case count >= 100:
 		metrics.RequestTimeHistogram.WithLabelValues(label, "100+").Observe(float64(time.Since(tStart).Nanoseconds()))
+		metrics.RequestTimeHistogram.WithLabelValues(label, "100+ ann").Observe(float64(annLatency.Nanoseconds()))
 	case count >= 20:
 		metrics.RequestTimeHistogram.WithLabelValues(label, "20+").Observe(float64(time.Since(tStart).Nanoseconds()))
 	case count >= 5:
@@ -276,6 +277,7 @@ func handleOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 	var responseMap map[string]*api.GeoData
 
 	// For now, use the date of the first item.  In future the items will not have individual timestamps.
+	annStart := time.Now()
 	if len(dataSlice) > 0 {
 		// For old request format, we use the date of the first RequestData
 		date := dataSlice[0].Timestamp
@@ -286,13 +288,14 @@ func handleOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 	} else {
 		responseMap = make(map[string]*api.GeoData)
 	}
+	annLatency := time.Since(annStart)
 
 	encodedResult, err := json.Marshal(responseMap)
 	if checkError(err, w, "old", tStart) {
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
-	latencyStats("old", len(dataSlice), tStart)
+	latencyStats("old", len(dataSlice), tStart, annLatency)
 }
 
 func handleV2(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
@@ -306,6 +309,7 @@ func handleV2(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 	// No need to validate IP addresses, as they are net.IP
 	response := v2.Response{}
 
+	annStart := time.Now()
 	// For now, use the date of the first item.  In future the items will not have individual timestamps.
 	if len(request.IPs) > 0 {
 		// For old request format, we use the date of the first RequestData
@@ -313,14 +317,16 @@ func handleV2(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 		if checkError(err, w, "v2", tStart) {
 			return
 		}
+
 	}
+	annLatency := time.Since(annStart)
 
 	encodedResult, err := json.Marshal(response)
 	if checkError(err, w, "v2", tStart) {
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
-	latencyStats("v2", len(request.IPs), tStart)
+	latencyStats("v2", len(request.IPs), tStart, annLatency)
 }
 
 func handleNewOrOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
