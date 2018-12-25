@@ -122,13 +122,31 @@ func NewBatchResponse(size int) *BatchResponse {
 // TODO use error messages defined in the annotator-map PR.
 var errNoAnnotator = errors.New("no Annotator found")
 
+type responseMap struct {
+	lock    sync.Mutex
+	data    map[string]*api.GeoData
+	useLock bool
+}
+
+func (rm *responseMap) Set(key string, value *api.GeoData) {
+	if rm.useLock {
+		rm.lock.Unlock()
+		defer rm.lock.Lock()
+	}
+	rm.data[key] = value
+}
+
+func newResponseMap(size int, mt bool) *responseMap {
+	return &responseMap{data: make(map[string]*api.GeoData, size), useLock: mt}
+}
+
 // AnnotateLegacy uses a single `date` to select an annotator, and uses that annotator to annotate all
 // `ips`.  It uses the dates from the individual RequestData to form the keys for the result map.
 // Return values include the AnnotatorDate which is the publication date of the annotation dataset.
 // TODO move to annotatormanager package soon.
 // DEPRECATED: This will soon be replaced with AnnotateV2()
 func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoData, time.Time, error) {
-	responseMap := make(map[string]*api.GeoData)
+	rm := newResponseMap(len(ips), asyncAnnotation)
 
 	ann, err := manager.GetAnnotator(date)
 	if err != nil {
@@ -140,34 +158,43 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 	}
 
 	wg := &sync.WaitGroup{}
-	wg.Add(len(ips))
-	respLock := sync.Mutex{}
+	if asyncAnnotation {
+		wg.Add(len(ips))
+	}
 	for i := range ips {
 		request := ips[i]
 		metrics.TotalLookups.Inc()
-		go func(req *api.RequestData) {
-			annotation, err := ann.GetAnnotation(req)
+		if asyncAnnotation {
+			go func(req *api.RequestData) {
+				annotation, err := ann.GetAnnotation(req)
+				if err == nil {
+					dateString := strconv.FormatInt(request.Timestamp.Unix(), encodingBase)
+					rm.Set(request.IP+dateString, &annotation)
+				} else {
+					metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
+				}
+				wg.Done()
+			}(&request)
+		} else {
+			annotation, err := ann.GetAnnotation(&request)
 			if err == nil {
-				respLock.Lock()
-				defer respLock.Unlock()
 				dateString := strconv.FormatInt(request.Timestamp.Unix(), encodingBase)
-				responseMap[request.IP+dateString] = &annotation
+				rm.Set(request.IP+dateString, &annotation)
 			} else {
 				metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
 			}
-			wg.Done()
-		}(&request)
+		}
 	}
 	wg.Wait()
 	// TODO use annotator's actual start date.
-	return responseMap, time.Time{}, nil
+	return rm.data, time.Time{}, nil
 }
+
+var asyncAnnotation = false
 
 // AnnotateV2 finds an appropriate Annotator based on the requested Date, and creates a
 // response with annotations for all parseable IPs.
 func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
-	responseMap := make(map[string]*api.GeoData, len(ips))
-
 	ann, err := manager.GetAnnotator(date)
 	if err != nil {
 		return v2.Response{}, err
@@ -177,9 +204,11 @@ func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 		return v2.Response{}, errNoAnnotator
 	}
 
+	rm := newResponseMap(len(ips), asyncAnnotation)
 	wg := &sync.WaitGroup{}
-	wg.Add(len(ips))
-	respLock := sync.Mutex{}
+	if asyncAnnotation {
+		wg.Add(len(ips))
+	}
 	for i := range ips {
 		ip := net.ParseIP(ips[i])
 		if ip == nil {
@@ -195,20 +224,27 @@ func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 		request := api.RequestData{IP: ip.String(), IPFormat: format, Timestamp: date}
 		metrics.TotalLookups.Inc()
 
-		go func(req *api.RequestData) {
-			annotation, err := ann.GetAnnotation(req)
+		if asyncAnnotation {
+			go func(req *api.RequestData) {
+				annotation, err := ann.GetAnnotation(req)
+				if err == nil {
+					rm.Set(req.IP, &annotation)
+				} else {
+					metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
+				}
+				wg.Done()
+			}(&request)
+		} else {
+			annotation, err := ann.GetAnnotation(&request)
 			if err == nil {
-				respLock.Lock()
-				defer respLock.Unlock()
-				responseMap[req.IP] = &annotation
+				rm.Set(request.IP, &annotation)
 			} else {
 				metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
 			}
-			wg.Done()
-		}(&request)
+		}
 	}
 	wg.Wait()
-	return v2.Response{AnnotatorDate: ann.AnnotatorDate(), Annotations: responseMap}, nil
+	return v2.Response{AnnotatorDate: ann.AnnotatorDate(), Annotations: rm.data}, nil
 }
 
 // BatchAnnotate is a URL handler that expects the body of the request
@@ -236,12 +272,14 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	handleNewOrOld(w, tStart, jsonBuffer)
 }
 
-func latencyStats(label string, count int, tStart time.Time) {
+func latencyStats(label string, count int, tStart time.Time, annLatency time.Duration) {
 	switch {
 	case count >= 400:
 		metrics.RequestTimeHistogram.WithLabelValues(label, "400+").Observe(float64(time.Since(tStart).Nanoseconds()))
+		metrics.RequestTimeHistogram.WithLabelValues(label, "400+ ann").Observe(float64(annLatency.Nanoseconds()))
 	case count >= 100:
 		metrics.RequestTimeHistogram.WithLabelValues(label, "100+").Observe(float64(time.Since(tStart).Nanoseconds()))
+		metrics.RequestTimeHistogram.WithLabelValues(label, "100+ ann").Observe(float64(annLatency.Nanoseconds()))
 	case count >= 20:
 		metrics.RequestTimeHistogram.WithLabelValues(label, "20+").Observe(float64(time.Since(tStart).Nanoseconds()))
 	case count >= 5:
@@ -277,6 +315,7 @@ func handleOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 	var responseMap map[string]*api.GeoData
 
 	// For now, use the date of the first item.  In future the items will not have individual timestamps.
+	annStart := time.Now()
 	if len(dataSlice) > 0 {
 		// For old request format, we use the date of the first RequestData
 		date := dataSlice[0].Timestamp
@@ -287,13 +326,14 @@ func handleOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 	} else {
 		responseMap = make(map[string]*api.GeoData)
 	}
+	annLatency := time.Since(annStart)
 
 	encodedResult, err := json.Marshal(responseMap)
 	if checkError(err, w, "old", tStart) {
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
-	latencyStats("old", len(dataSlice), tStart)
+	latencyStats("old", len(dataSlice), tStart, annLatency)
 }
 
 func handleV2(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
@@ -304,22 +344,23 @@ func handleV2(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 		return
 	}
 
-	// No need to validate IP addresses, as they are net.IP
 	response := v2.Response{}
 
+	annStart := time.Now()
 	if len(request.IPs) > 0 {
 		response, err = AnnotateV2(request.Date, request.IPs)
 		if checkError(err, w, "v2", tStart) {
 			return
 		}
 	}
+	annLatency := time.Since(annStart)
 
 	encodedResult, err := json.Marshal(response)
 	if checkError(err, w, "v2", tStart) {
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
-	latencyStats("v2", len(request.IPs), tStart)
+	latencyStats("v2", len(request.IPs), tStart, annLatency)
 }
 
 func handleNewOrOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
