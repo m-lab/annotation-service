@@ -234,7 +234,8 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 			if backupIndex, err := lookupGeoID(record[2], idMap); err == nil {
 				index = backupIndex
 			} else {
-				// TODO There are an enormous number of these in the log.  Why?  What does it mean?
+				// TODO There are a lot of these in the log.  Why?  What does it mean?
+				// "193.200.150.0/24", "80.231.5.0/24", "86.62.30.0/24", "86.62.5.0/24"
 				log.Printf("Couldn't get a valid Geoname id! %#v\n", record)
 				//TODO: Add a prometheus metric here
 			}
