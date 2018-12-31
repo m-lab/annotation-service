@@ -39,6 +39,10 @@ func TestDir(t *testing.T) {
 	}
 }
 func TestBestAnnotatorName(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
+
 	err := geoloader.UpdateArchivedFilenames()
 	if err != nil {
 		t.Fatal(err)

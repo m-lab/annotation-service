@@ -82,7 +82,7 @@ type RequestWrapper struct {
 // Annotator provides the GetAnnotation method, which retrieves the annotation for a given IP address.
 type Annotator interface {
 	// TODO use simple string IP
-	GetAnnotation(request *RequestData) (GeoData, error)
+	GetAnnotation(ip string) (GeoData, error)
 	// The date associated with the dataset.
 	AnnotatorDate() time.Time
 	// Free any unsafe memory associated with the annotator.

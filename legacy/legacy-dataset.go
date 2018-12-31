@@ -88,6 +88,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"regexp"
 	"strconv"
 	"strings"
@@ -96,6 +97,7 @@ import (
 
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/loader"
+	"github.com/m-lab/annotation-service/metrics"
 )
 
 // This is the regex used to filter for which files we want to consider acceptable for using with legacy dataset
@@ -132,17 +134,28 @@ type Datasets struct {
 
 // GetAnnotation looks up the IP address and returns the corresponding GeoData
 // TODO - improve the format handling.  Perhaps pass in a net.IP ?
-func (gi *Datasets) GetAnnotation(request *api.RequestData) (api.GeoData, error) {
+func (gi *Datasets) GetAnnotation(ipString string) (api.GeoData, error) {
 	gi.lock.RLock()
 	defer gi.lock.RUnlock()
+	metrics.TotalLookups.Inc()
 	if gi.v4Data == nil || gi.v6Data == nil {
 		return api.GeoData{}, ErrDatasetNotLoaded
 	}
+	ip := net.ParseIP(ipString)
+	if ip == nil {
+		metrics.BadIPTotal.Inc()
+		return api.GeoData{}, errors.New("cannot parse ip")
+	}
+	format := 4
+	if ip.To4() == nil {
+		format = 6
+	}
+
 	var record *GeoIPRecord
-	if request.IPFormat == 4 {
-		record = gi.v4Data.GetRecord(request.IP, true)
+	if format == 4 {
+		record = gi.v4Data.GetRecord(ipString, true)
 	} else {
-		record = gi.v6Data.GetRecord(request.IP, false)
+		record = gi.v6Data.GetRecord(ipString, false)
 	}
 
 	// It is very possible that the record missed some fields in legacy dataset.

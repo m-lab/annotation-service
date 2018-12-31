@@ -3,7 +3,6 @@ package legacy_test
 import (
 	"log"
 	"testing"
-	"time"
 
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/legacy"
@@ -24,7 +23,7 @@ func (s *GeoIPSuite) TestLoadBundleLegacyDataset(c *check.C) {
 		log.Printf("Did not load legacy dataset correctly %v", err)
 	}
 
-	record, err := gi.GetAnnotation(&api.RequestData{IP: "2620:0:1003:415:fa1e:73f3:ec68:7709", IPFormat: 6, Timestamp: time.Unix(10, 0)})
+	record, err := gi.GetAnnotation("2620:0:1003:415:fa1e:73f3:ec68:7709")
 	c.Assert(record, check.NotNil)
 	log.Printf("%v\n", record)
 	c.Check(

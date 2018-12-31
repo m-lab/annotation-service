@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
+	"github.com/m-lab/annotation-service/metrics"
 )
 
 const mapMax = 200000
@@ -111,15 +112,27 @@ func convertIPNodeToGeoData(ipNode IPNode, locationNodes []LocationNode) api.Geo
 
 // GetAnnotation looks up the IP address and returns the corresponding GeoData
 // TODO - improve the format handling.  Perhaps pass in a net.IP ?
-func (ds *GeoDataset) GetAnnotation(request *api.RequestData) (api.GeoData, error) {
+func (ds *GeoDataset) GetAnnotation(ips string) (api.GeoData, error) {
+	metrics.TotalLookups.Inc()
+	// TODO - this block of code repeated in legacy.
+	ip := net.ParseIP(ips)
+	if ip == nil {
+		metrics.BadIPTotal.Inc()
+		return api.GeoData{}, errors.New("cannot parse ip")
+	}
+	format := 4
+	if ip.To4() == nil {
+		format = 6
+	}
+
 	var node IPNode
 	err := errors.New("unknown IP format")
-	node, err = ds.SearchBinary(request.IP, request.IPFormat == 4)
+	node, err = ds.SearchBinary(ips, format == 4)
 
 	if err != nil {
 		// ErrNodeNotFound is super spammy - 10% of requests, so suppress those.
 		if err != ErrNodeNotFound {
-			log.Println(err, request.IP)
+			log.Println(err, ips)
 		}
 		//TODO metric here
 		return api.GeoData{}, err
@@ -154,7 +167,6 @@ func checkNumColumns(record []string, size int) error {
 func lookupGeoID(gnid string, idMap map[int]int) (int, error) {
 	geonameID, err := strconv.Atoi(gnid)
 	if err != nil {
-		log.Println("geonameID should be a number", gnid)
 		return 0, errors.New("Corrupted Data: geonameID should be a number")
 	}
 	loadIndex, ok := idMap[geonameID]
