@@ -38,6 +38,7 @@ type GeoIP struct {
 
 	name string
 
+	// TODO - why don't we use the thread-safe API?
 	// We don't use GeoIP's thread-safe API calls, which means there is a
 	// single global netmask variable that gets clobbered in the main
 	// lookup routine.  Any calls which have _GeoIP_seek_record_gl need to

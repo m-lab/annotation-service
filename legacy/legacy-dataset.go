@@ -135,6 +135,7 @@ type Datasets struct {
 func (gi *Datasets) Annotate(IP string, data *api.GeoData) error {
 	gi.lock.RLock()
 	defer gi.lock.RUnlock()
+	metrics.TotalLookups.Inc()
 	if gi.v4Data == nil || gi.v6Data == nil {
 		return ErrDatasetNotLoaded
 	}
@@ -143,6 +144,7 @@ func (gi *Datasets) Annotate(IP string, data *api.GeoData) error {
 		metrics.BadIPTotal.Inc()
 		return errors.New("ErrInvalidIP") // TODO
 	}
+
 	var record *GeoIPRecord
 	if ip.To4() != nil {
 		record = gi.v4Data.GetRecord(IP, true)

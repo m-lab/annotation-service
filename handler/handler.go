@@ -12,7 +12,6 @@ import (
 	"net"
 	"net/http"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
@@ -122,31 +121,13 @@ func NewBatchResponse(size int) *BatchResponse {
 // TODO use error messages defined in the annotator-map PR.
 var errNoAnnotator = errors.New("no Annotator found")
 
-type responseMap struct {
-	lock    sync.Mutex
-	data    map[string]*api.GeoData
-	useLock bool
-}
-
-func (rm *responseMap) Set(key string, value *api.GeoData) {
-	if rm.useLock {
-		rm.lock.Unlock()
-		defer rm.lock.Lock()
-	}
-	rm.data[key] = value
-}
-
-func newResponseMap(size int, mt bool) *responseMap {
-	return &responseMap{data: make(map[string]*api.GeoData, size), useLock: mt}
-}
-
 // AnnotateLegacy uses a single `date` to select an annotator, and uses that annotator to annotate all
 // `ips`.  It uses the dates from the individual RequestData to form the keys for the result map.
 // Return values include the AnnotatorDate which is the publication date of the annotation dataset.
 // TODO move to annotatormanager package soon.
 // DEPRECATED: This will soon be replaced with AnnotateV2()
 func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoData, time.Time, error) {
-	rm := newResponseMap(len(ips), asyncAnnotation)
+	rm := make(map[string]*api.GeoData, len(ips))
 
 	ann, err := manager.GetAnnotator(date)
 	if err != nil {
@@ -157,39 +138,20 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 		return nil, time.Time{}, errNoAnnotator
 	}
 
-	wg := &sync.WaitGroup{}
-	if asyncAnnotation {
-		wg.Add(len(ips))
-	}
 	for i := range ips {
 		request := ips[i]
 		metrics.TotalLookups.Inc()
-		if asyncAnnotation {
-			go func(req *api.RequestData) {
-				annotation := api.GeoData{}
-				err := ann.Annotate(req.IP, &annotation)
-				if err == nil {
-					dateString := strconv.FormatInt(request.Timestamp.Unix(), encodingBase)
-					rm.Set(request.IP+dateString, &annotation)
-				} else {
-					metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
-				}
-				wg.Done()
-			}(&request)
+		annotation := api.GeoData{}
+		err := ann.Annotate(ips[i].IP, &annotation)
+		if err == nil {
+			dateString := strconv.FormatInt(request.Timestamp.Unix(), encodingBase)
+			rm[request.IP+dateString] = &annotation
 		} else {
-			annotation := api.GeoData{}
-			err := ann.Annotate(ips[i].IP, &annotation)
-			if err == nil {
-				dateString := strconv.FormatInt(request.Timestamp.Unix(), encodingBase)
-				rm.Set(request.IP+dateString, &annotation)
-			} else {
-				metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
-			}
+			metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
 		}
 	}
-	wg.Wait()
 	// TODO use annotator's actual start date.
-	return rm.data, time.Time{}, nil
+	return rm, time.Time{}, nil
 }
 
 var asyncAnnotation = false
@@ -206,6 +168,7 @@ func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 		return v2.Response{}, errNoAnnotator
 	}
 
+	rm := make(map[string]*api.GeoData, len(ips))
 	for i := range ips {
 		metrics.TotalLookups.Inc()
 
@@ -222,9 +185,9 @@ func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 			}
 			continue
 		}
-		responseMap[ips[i]] = &annotation
+		rm[ips[i]] = &annotation
 	}
-	return v2.Response{AnnotatorDate: ann.AnnotatorDate(), Annotations: responseMap}, nil
+	return v2.Response{AnnotatorDate: ann.AnnotatorDate(), Annotations: rm}, nil
 }
 
 // BatchAnnotate is a URL handler that expects the body of the request
