@@ -165,8 +165,8 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 		request := ips[i]
 		metrics.TotalLookups.Inc()
 		if asyncAnnotation {
-			go func(req *api.RequestData) {
-				annotation, err := ann.GetAnnotation(req)
+			go func(ip string) {
+				annotation, err := ann.GetAnnotation(ip)
 				if err == nil {
 					dateString := strconv.FormatInt(request.Timestamp.Unix(), encodingBase)
 					rm.Set(request.IP+dateString, &annotation)
@@ -174,9 +174,9 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 					metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
 				}
 				wg.Done()
-			}(&request)
+			}(request.IP)
 		} else {
-			annotation, err := ann.GetAnnotation(&request)
+			annotation, err := ann.GetAnnotation(request.IP)
 			if err == nil {
 				dateString := strconv.FormatInt(request.Timestamp.Unix(), encodingBase)
 				rm.Set(request.IP+dateString, &annotation)
@@ -225,17 +225,17 @@ func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 		metrics.TotalLookups.Inc()
 
 		if asyncAnnotation {
-			go func(req *api.RequestData) {
-				annotation, err := ann.GetAnnotation(req)
+			go func(ip string) {
+				annotation, err := ann.GetAnnotation(ip)
 				if err == nil {
-					rm.Set(req.IP, &annotation)
+					rm.Set(ip, &annotation)
 				} else {
 					metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
 				}
 				wg.Done()
-			}(&request)
+			}(request.IP)
 		} else {
-			annotation, err := ann.GetAnnotation(&request)
+			annotation, err := ann.GetAnnotation(request.IP)
 			if err == nil {
 				rm.Set(request.IP, &annotation)
 			} else {
@@ -423,5 +423,5 @@ func GetMetadataForSingleIP(request *api.RequestData) (api.GeoData, error) {
 		return api.GeoData{}, manager.ErrNilDataset
 	}
 
-	return ann.GetAnnotation(request)
+	return ann.GetAnnotation(request.IP)
 }
