@@ -140,7 +140,6 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 
 	for i := range ips {
 		request := ips[i]
-		metrics.TotalLookups.Inc()
 		annotation, err := ann.GetAnnotation(request.IP)
 		if err == nil {
 			dateString := strconv.FormatInt(request.Timestamp.Unix(), encodingBase)
@@ -169,7 +168,6 @@ func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 
 	rm := make(map[string]*api.GeoData, len(ips))
 	for i := range ips {
-		metrics.TotalLookups.Inc()
 		annotation, err := ann.GetAnnotation(ips[i])
 		if err == nil {
 			rm[ips[i]] = &annotation
@@ -346,7 +344,6 @@ func BatchValidateAndParse(jsonBuffer []byte) ([]api.RequestData, error) {
 // metadata, returning a GeoData.
 // pointer, even if it cannot find the appropriate metadata.
 func GetMetadataForSingleIP(request *api.RequestData) (api.GeoData, error) {
-	metrics.TotalLookups.Inc()
 	ann, err := manager.GetAnnotator(request.Timestamp)
 	if err != nil {
 		return api.GeoData{}, err

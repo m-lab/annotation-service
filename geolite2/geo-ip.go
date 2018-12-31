@@ -107,13 +107,10 @@ func convertIPNodeToGeoData(ipNode IPNode, locationNodes []LocationNode) api.Geo
 
 }
 
-func (ds *GeoDataset) GetAnnotationOld(request *api.RequestData) (api.GeoData, error) {
-	return api.GeoData{}, errors.New("not implemented")
-}
-
 // GetAnnotation looks up the IP address and returns the corresponding GeoData
 // TODO - improve the format handling.  Perhaps pass in a net.IP ?
 func (ds *GeoDataset) GetAnnotation(ips string) (api.GeoData, error) {
+	metrics.TotalLookups.Inc()
 	// TODO - this block of code repeated in legacy.
 	ip := net.ParseIP(ips)
 	if ip == nil {

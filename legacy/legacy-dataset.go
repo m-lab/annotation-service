@@ -130,13 +130,10 @@ type Datasets struct {
 	startDate time.Time
 }
 
-func (gi *Datasets) GetAnnotationOld(request *api.RequestData) (api.GeoData, error) {
-	return api.GeoData{}, errors.New("not implemented")
-}
-
 // GetAnnotation looks up the IP address and returns the corresponding GeoData
 // TODO - improve the format handling.  Perhaps pass in a net.IP ?
 func (gi *Datasets) GetAnnotation(ipString string) (api.GeoData, error) {
+	metrics.TotalLookups.Inc()
 	if gi.v4Data == nil || gi.v6Data == nil {
 		return api.GeoData{}, ErrDatasetNotLoaded
 	}
