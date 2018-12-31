@@ -68,6 +68,8 @@ func SetAnnotatorCacheForTest(ac *AnnotatorCache) {
 	allAnnotators = ac
 }
 
+// TODO - add a timer.AfterFunc() to automatically evict after
+// some time limit, perhaps 2x the minAge?
 type cacheEntry struct {
 	ann api.Annotator
 	// UPDATED ATOMICALLY, or read while holding exclusive AnnotatorCache lock.
@@ -290,6 +292,6 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 // Initialized allAnnotators if not already initialized.
 func InitAnnotatorCache() {
 	if allAnnotators == nil {
-		allAnnotators = NewAnnotatorCache(6, 2, 5*time.Minute, geoloader.ArchivedLoader)
+		allAnnotators = NewAnnotatorCache(8, 2, 5*time.Minute, geoloader.ArchivedLoader)
 	}
 }
