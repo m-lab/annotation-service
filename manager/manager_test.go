@@ -24,12 +24,14 @@ func init() {
 }
 
 func fakeLoader(date string) (api.Annotator, error) {
-	time.Sleep(10 * time.Millisecond)
+	log.Println("Fake loader loading", date)
+	time.Sleep(2 * time.Millisecond)
+	log.Println("Fake loader done loading", date)
 	return &geolite2.GeoDataset{}, nil
 }
 
 func TestAnnotatorCache(t *testing.T) {
-	am := manager.NewAnnotatorCache(3, 2, 0, fakeLoader)
+	am := manager.NewAnnotatorCache(3, 2, 50*time.Millisecond, fakeLoader)
 	names := []string{"Maxmind/2018/01/01/20180101T054119Z-GeoLite2-City-CSV.zip",
 		"Maxmind/2018/01/02/20180201T054119Z-GeoLite2-City-CSV.zip",
 		"Maxmind/2018/01/03/20180301T054119Z-GeoLite2-City-CSV.zip",
@@ -53,7 +55,8 @@ func TestAnnotatorCache(t *testing.T) {
 		t.Fatal("Got", err)
 	}
 
-	// Wait for both annotator to be available.
+	// Wait for both annotator to be available.  These will also prevent
+	// eviction
 	wg := &sync.WaitGroup{}
 	wg.Add(2)
 	go func(date string) {
@@ -81,6 +84,8 @@ func TestAnnotatorCache(t *testing.T) {
 		t.Error("Expecting non-nil annotator")
 	}
 
+	// Make the last access on names[1] 10 msec later.
+	time.Sleep(10 * time.Millisecond)
 	ann, err = am.GetAnnotator(names[1])
 	if err != nil {
 		t.Error("Not expecting:", err)
@@ -97,55 +102,51 @@ func TestAnnotatorCache(t *testing.T) {
 	}
 
 	// Wait until it has loaded.
-	func(date string) {
+	func(key string) {
 		err := errors.New("start")
-		for ; err != nil; _, err = am.GetAnnotator(date) {
-			time.Sleep(3 * time.Millisecond)
+		for ; err != nil; _, err = am.GetAnnotator(key) {
+			time.Sleep(1 * time.Millisecond)
 		}
 	}(names[2])
 
-	log.Println("loading 4th should cause eviction")
-	// And now load the fourth.  This should cause synchronous eviction, and NOT cause loading.
+	// This should fail, because there are no slots available.
 	_, err = am.GetAnnotator(names[3])
-	if err != manager.ErrPendingAnnotatorLoad {
+	if err != manager.ErrAnnotatorCacheFull {
 		t.Fatal("Got", err)
 	}
 
-	// Last load attempt should have caused one to be evicted, so exactly one of these
-	// should no longer be loaded, and return an ErrPendingAnnotatorLoad.
-	// One of these checks will also trigger another load, but that is OK.
-	// Argh - eviction is now asynchronous, so we have to sleep briefly.
+	// Wait for a 4th to be loaded, which requires one to be evicted.
+	// names[0] should be evicted first, since it is the least recently used.
+	func(key string) {
+		err := errors.New("start")
+		for ; err != nil; _, err = am.GetAnnotator(key) {
+			time.Sleep(1 * time.Millisecond)
+		}
+	}(names[3])
+
+	// Now one of the originals should have been evicted.
 	var err0, err1, err2 error
-	start := time.Now()
-	for {
-		_, err0 = am.GetAnnotator(names[0])
-		_, err1 = am.GetAnnotator(names[1])
-		_, err2 = am.GetAnnotator(names[2])
-		if err0 != nil || err1 != nil || err2 != nil {
-			break
-		}
-		if time.Since(start) > 5*time.Second {
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
+	_, err0 = am.GetAnnotator(names[0])
+	_, err1 = am.GetAnnotator(names[1])
+	_, err2 = am.GetAnnotator(names[2])
+
 	switch {
 	case err0 == nil && err1 == nil && err2 == nil:
 		t.Error("One of the items should have been evicted", err0, err1, err2)
-	case err0 == manager.ErrPendingAnnotatorLoad:
+	case err0 != nil:
 		if err1 != nil || err2 != nil {
-			t.Error("More than one nil", err0, err1, err2)
+			t.Error("More than one nil:", err0, ":", err1, ":", err2)
 		}
-	case err1 == manager.ErrPendingAnnotatorLoad:
+	case err1 != nil:
 		if err0 != nil || err2 != nil {
-			t.Error("More than one nil", err0, err1, err2)
+			t.Error("More than one nil:", err0, ":", err1, ":", err2)
 		}
-	case err2 == manager.ErrPendingAnnotatorLoad:
+	case err2 != nil:
 		if err0 != nil || err1 != nil {
-			t.Error("More than one nil", err0, err1, err2)
+			t.Error("More than one nil:", err0, ":", err1, ":", err2)
 		}
 	default:
-		t.Error("Should have had exactly one ErrPending...", err0, err1)
+		t.Error("Should have exactly one ErrPending:", err0, ":", err1, ":", err2)
 	}
 }
 
