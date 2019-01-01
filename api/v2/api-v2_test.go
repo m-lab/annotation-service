@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -60,5 +61,37 @@ func TestDoRequest(t *testing.T) {
 
 	if diff := deep.Equal(expectedResponse, *resp); diff != nil {
 		t.Error(diff)
+	}
+}
+
+func TestSomeErrors(t *testing.T) {
+	callCount := 0
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case callCount == 0:
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "body message")
+		default:
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}
+		callCount++
+	}))
+	url := ts.URL
+
+	ips := []string{"8.8.8.8", "147.1.2.3"}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	_, err := api.GetAnnotations(ctx, url, time.Now(), ips)
+	if callCount != 1 {
+		t.Error("Should have been two calls to server.")
+	}
+	if err == nil {
+		t.Fatal("Should have produced an error")
+	}
+	if !strings.Contains(err.Error(), "body message") {
+		t.Error("Expected err containing body message", err)
+	}
+	if !strings.Contains(err.Error(), "Internal Server Error") {
+		t.Error("Expected err containing Internal Server Error", err)
 	}
 }
