@@ -46,7 +46,7 @@ type Response struct {
 }
 
 /*************************************************************************
-*                           Local Annotator API                          *
+*                           Remote Annotator API                          *
 *************************************************************************/
 
 func post(ctx context.Context, url string, encodedData []byte) (*http.Response, error) {
@@ -62,15 +62,18 @@ func post(ctx context.Context, url string, encodedData []byte) (*http.Response, 
 	return http.DefaultClient.Do(httpReq.WithContext(ctx))
 }
 
+// postWithRetry will retry for some error conditions, up to the deadline in the provided context.
 func postWithRetry(ctx context.Context, url string, encodedData []byte) (*http.Response, error) {
 	resp, err := post(ctx, url, encodedData)
 
 	for err == nil && resp.StatusCode == http.StatusServiceUnavailable {
 		time.Sleep(1 * time.Second)
-		if ctx.Err() != nil {
-			return resp, err
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+			resp, err = post(ctx, url, encodedData)
 		}
-		resp, err = post(ctx, url, encodedData)
 	}
 	return resp, err
 }
