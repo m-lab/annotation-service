@@ -275,10 +275,11 @@ func handleV2(w http.ResponseWriter, jsonBuffer []byte) {
 	if len(request.IPs) > 0 {
 		response, err = AnnotateV2(request.Date, request.IPs)
 		if err != nil {
-			switch err {
-			case manager.ErrPendingAnnotatorLoad:
+			if err == manager.ErrPendingAnnotatorLoad {
+				// Encourage client to try again soon.
 				w.WriteHeader(http.StatusServiceUnavailable)
-			default:
+			} else {
+				// If it isn't loading, client should probably give up instead of retrying.
 				w.WriteHeader(http.StatusInternalServerError)
 			}
 			fmt.Fprintf(w, err.Error())

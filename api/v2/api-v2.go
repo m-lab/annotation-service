@@ -57,10 +57,10 @@ var (
 			Name: "annotator_external_latency_hist_msec",
 			Help: "annotator latency distributions.",
 			Buckets: []float64{
-				1, 1.2, 1.5, 2.0, 2.4, 3.0, 4.0, 4.8, 6.0, 8.0,
-				10, 12, 15, 20, 24, 30, 40, 48, 60, 80,
-				100, 120, 150, 200, 240, 300, 400, 480, 600, 800,
-				1000, 1200, 1500, 2000, 2400, 3000, 4000, 4800, 6000, 8000,
+				1.0, 1.3, 1.6, 2.0, 2.5, 3.2, 4.0, 5.0, 6.3, 7.9,
+				10, 13, 16, 20, 25, 32, 40, 50, 63, 79,
+				100, 130, 160, 200, 250, 320, 400, 500, 630, 790,
+				1000, 1300, 1600, 2000, 2500, 3200, 4000, 5000, 6300, 7900,
 			},
 		},
 		[]string{"detail"})
@@ -86,30 +86,42 @@ func post(ctx context.Context, url string, encodedData []byte) (*http.Response, 
 // ErrStatusNotOK is returned from GetAnnotation if http status is other than OK.  Response body may have more info.
 var ErrStatusNotOK = errors.New("http status not StatusOK")
 
+func waitOneSecond(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(time.Second):
+		return nil
+	}
+}
+
 // postWithRetry will retry for some error conditions, up to the deadline in the provided context.
 // Returns if http status is OK, error is not nil, http status is not ServiceUnavailable or timeout.
 func postWithRetry(ctx context.Context, url string, encodedData []byte) (*http.Response, error) {
 	for {
 		start := time.Now()
 		resp, err := post(ctx, url, encodedData)
-		switch {
-		case err != nil:
+		if err != nil {
 			RequestTimeHistogram.WithLabelValues(err.Error()).Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
 			return nil, err
-		case resp.StatusCode == http.StatusOK:
+		}
+		if resp.StatusCode == http.StatusOK {
 			RequestTimeHistogram.WithLabelValues("success").Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
 			return resp, err
-		case resp.StatusCode == http.StatusServiceUnavailable:
-			select {
-			case <-ctx.Done():
-				RequestTimeHistogram.WithLabelValues(ctx.Err().Error()).Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
-				return nil, ctx.Err()
-			default:
-				RequestTimeHistogram.WithLabelValues("retry").Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
-				time.Sleep(1 * time.Second)
-			}
-		default:
+		}
+		if resp.StatusCode != http.StatusServiceUnavailable {
+			RequestTimeHistogram.WithLabelValues(resp.Status).Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
 			return resp, ErrStatusNotOK
+		}
+		if ctx.Err() != nil {
+			RequestTimeHistogram.WithLabelValues("timeout").Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
+			return nil, ctx.Err()
+		}
+		// This is a recoverable error, so we should retry.
+		RequestTimeHistogram.WithLabelValues("retry").Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
+		err = waitOneSecond(ctx)
+		if err != nil {
+			return nil, err
 		}
 	}
 }
@@ -130,11 +142,12 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 		}
 		defer httpResp.Body.Close()
 		if err == ErrStatusNotOK {
-			body, err2 := ioutil.ReadAll(httpResp.Body)
-			if err2 != nil {
-				return nil, err2
+			body, ioutilErr := ioutil.ReadAll(httpResp.Body)
+			if ioutilErr != nil {
+				return nil, ioutilErr
 			}
-			if len(body) > 60 {
+			// To avoid some bug causing a gigantic error string...
+			if len(body) > 60 { // 60 is completely arbitrary.
 				body = body[0:60]
 			}
 			return nil, fmt.Errorf("%s : %s", httpResp.Status, string(body))
