@@ -25,10 +25,9 @@ func TestDoRequest(t *testing.T) {
 	callCount := 0
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case callCount < 3:
+		if callCount < 3 {
 			w.WriteHeader(http.StatusServiceUnavailable)
-		default:
+		} else {
 			fmt.Fprint(w, expectedJson)
 		}
 		callCount++
@@ -67,11 +66,10 @@ func TestDoRequest(t *testing.T) {
 func TestSomeErrors(t *testing.T) {
 	callCount := 0
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case callCount == 0:
+		if callCount == 0 {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, "body message")
-		default:
+		} else {
 			w.WriteHeader(http.StatusServiceUnavailable)
 		}
 		callCount++

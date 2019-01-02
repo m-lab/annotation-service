@@ -1,5 +1,8 @@
 package handler_test
 
+// TODO 201901 - TestStatusServiceUnavailable()
+// TODO 201901 - TestStatusInternalError()
+
 import (
 	"bytes"
 	"errors"
