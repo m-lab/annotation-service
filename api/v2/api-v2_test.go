@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -21,19 +22,36 @@ func init() {
 
 func TestDoRequest(t *testing.T) {
 	expectedJson := `{"AnnotatorDate":"2018-12-05T00:00:00Z","Annotations":{"147.1.2.3":{"Geo":{"continent_code":"NA","country_code":"US","country_name":"United States","latitude":37.751,"longitude":-97.822},"ASN":{}},"8.8.8.8":{"Geo":{"continent_code":"NA","country_code":"US","country_name":"United States","latitude":37.751,"longitude":-97.822},"ASN":{}}}}`
+	callCount := 0
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, expectedJson)
+		if callCount < 3 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		} else {
+			fmt.Fprint(w, expectedJson)
+		}
+		callCount++
 	}))
 	url := ts.URL
 
 	//url = "https://annotator-dot-mlab-sandbox.appspot.com/batch_annotate"
 	ips := []string{"8.8.8.8", "147.1.2.3"}
-	resp, err := api.GetAnnotations(context.Background(), url, time.Now(), ips)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	resp, err := api.GetAnnotations(ctx, url, time.Now(), ips)
+	if err == nil {
+		t.Fatal("Should have timed out")
+	}
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	resp, err = api.GetAnnotations(ctx, url, time.Now(), ips)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	if callCount != 4 {
+		t.Error("Should have been two calls to server.")
+	}
 	expectedResponse := api.Response{}
 	err = json.Unmarshal([]byte(expectedJson), &expectedResponse)
 	if err != nil {
@@ -42,5 +60,36 @@ func TestDoRequest(t *testing.T) {
 
 	if diff := deep.Equal(expectedResponse, *resp); diff != nil {
 		t.Error(diff)
+	}
+}
+
+func TestSomeErrors(t *testing.T) {
+	callCount := 0
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if callCount == 0 {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "body message")
+		} else {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}
+		callCount++
+	}))
+	url := ts.URL
+
+	ips := []string{"8.8.8.8", "147.1.2.3"}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	_, err := api.GetAnnotations(ctx, url, time.Now(), ips)
+	if callCount != 1 {
+		t.Error("Should have been two calls to server.")
+	}
+	if err == nil {
+		t.Fatal("Should have produced an error")
+	}
+	if !strings.Contains(err.Error(), "body message") {
+		t.Error("Expected err containing body message", err)
+	}
+	if !strings.Contains(err.Error(), "Internal Server Error") {
+		t.Error("Expected err containing Internal Server Error", err)
 	}
 }

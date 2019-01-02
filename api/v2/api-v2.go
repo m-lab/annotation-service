@@ -5,9 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/m-lab/annotation-service/api"
 )
@@ -46,8 +49,82 @@ type Response struct {
 }
 
 /*************************************************************************
-*                           Local Annotator API                          *
+*                           Remote Annotator API                          *
 *************************************************************************/
+var (
+	RequestTimeHistogram = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name: "annotator_external_latency_hist_msec",
+			Help: "annotator latency distributions.",
+			Buckets: []float64{
+				1.0, 1.3, 1.6, 2.0, 2.5, 3.2, 4.0, 5.0, 6.3, 7.9,
+				10, 13, 16, 20, 25, 32, 40, 50, 63, 79,
+				100, 130, 160, 200, 250, 320, 400, 500, 630, 790,
+				1000, 1300, 1600, 2000, 2500, 3200, 4000, 5000, 6300, 7900,
+			},
+		},
+		[]string{"detail"})
+)
+
+func init() {
+	prometheus.MustRegister(RequestTimeHistogram)
+}
+
+func post(ctx context.Context, url string, encodedData []byte) (*http.Response, error) {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	httpReq, err := http.NewRequest("POST", url, bytes.NewReader(encodedData))
+	if err != nil {
+		return nil, err
+	}
+
+	// Make the actual request
+	return http.DefaultClient.Do(httpReq.WithContext(ctx))
+}
+
+// ErrStatusNotOK is returned from GetAnnotation if http status is other than OK.  Response body may have more info.
+var ErrStatusNotOK = errors.New("http status not StatusOK")
+
+func waitOneSecond(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(time.Second):
+		return nil
+	}
+}
+
+// postWithRetry will retry for some error conditions, up to the deadline in the provided context.
+// Returns if http status is OK, error is not nil, http status is not ServiceUnavailable or timeout.
+func postWithRetry(ctx context.Context, url string, encodedData []byte) (*http.Response, error) {
+	for {
+		start := time.Now()
+		resp, err := post(ctx, url, encodedData)
+		if err != nil {
+			RequestTimeHistogram.WithLabelValues(err.Error()).Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
+			return nil, err
+		}
+		if resp.StatusCode == http.StatusOK {
+			RequestTimeHistogram.WithLabelValues("success").Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
+			return resp, err
+		}
+		if resp.StatusCode != http.StatusServiceUnavailable {
+			RequestTimeHistogram.WithLabelValues(resp.Status).Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
+			return resp, ErrStatusNotOK
+		}
+		if ctx.Err() != nil {
+			RequestTimeHistogram.WithLabelValues("timeout").Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
+			return nil, ctx.Err()
+		}
+		// This is a recoverable error, so we should retry.
+		RequestTimeHistogram.WithLabelValues("retry").Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
+		err = waitOneSecond(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+}
 
 // GetAnnotations takes a url, and Request, makes remote call, and returns parsed ResponseV2
 // TODO(gfr) Should pass the annotator's request context through and use it here.
@@ -58,28 +135,31 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 		return nil, err
 	}
 
-	var netClient = &http.Client{
-		// Median response time is < 10 msec, but 99th percentile is 0.6 seconds.
-		Timeout: 2 * time.Second,
-	}
-
-	httpReq, err := http.NewRequest("POST", url, bytes.NewReader(encodedData))
+	httpResp, err := postWithRetry(ctx, url, encodedData)
 	if err != nil {
+		if httpResp == nil || httpResp.Body == nil {
+			return nil, err
+		}
+		defer httpResp.Body.Close()
+		if err == ErrStatusNotOK {
+			body, ioutilErr := ioutil.ReadAll(httpResp.Body)
+			if ioutilErr != nil {
+				return nil, ioutilErr
+			}
+			// To avoid some bug causing a gigantic error string...
+			if len(body) > 60 { // 60 is completely arbitrary.
+				body = body[0:60]
+			}
+			return nil, fmt.Errorf("%s : %s", httpResp.Status, string(body))
+		}
 		return nil, err
 	}
 
-	// Make the actual request
-	httpResp, err := netClient.Do(httpReq.WithContext(ctx))
-	if err != nil {
-		return nil, err
-	}
 	defer httpResp.Body.Close()
-
-	// Catch errors reported by the service
+	// Handle other status codes
 	if httpResp.StatusCode != http.StatusOK {
-		return nil, errors.New("URL:" + url + " gave response code " + httpResp.Status)
+		return nil, errors.New(httpResp.Status)
 	}
-
 	// Copy response into a byte slice
 	body, err := ioutil.ReadAll(httpResp.Body)
 	if err != nil {
