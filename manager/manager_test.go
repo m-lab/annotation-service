@@ -38,7 +38,11 @@ func TestAnnotatorCache(t *testing.T) {
 		"Maxmind/2018/01/04/20180401T054119Z-GeoLite2-City-CSV.zip",
 		"Maxmind/2018/01/05/20180501T054119Z-GeoLite2-City-CSV.zip"}
 
+	start := time.Now()
+
 	// These are all fake names.
+	// Though the loads are asynchronous, the reservations are synchronous, so the first ones
+	// succeed and the last one should fail.
 	_, err := am.GetAnnotator(names[0])
 	if err != manager.ErrPendingAnnotatorLoad {
 		t.Fatal("Got", err)
@@ -51,7 +55,7 @@ func TestAnnotatorCache(t *testing.T) {
 
 	// This one should NOT kick off a load, because numPending already max.
 	_, err = am.GetAnnotator(names[2])
-	if err != manager.ErrPendingAnnotatorLoad {
+	if err != manager.ErrTooManyLoading {
 		t.Fatal("Got", err)
 	}
 
@@ -75,6 +79,9 @@ func TestAnnotatorCache(t *testing.T) {
 	}(names[1])
 	wg.Wait()
 
+	latency := time.Since(start)
+	log.Println(latency)
+
 	// Verify that both annotators are now available.
 	ann, err := am.GetAnnotator(names[0])
 	if err != nil {
@@ -84,7 +91,7 @@ func TestAnnotatorCache(t *testing.T) {
 		t.Error("Expecting non-nil annotator")
 	}
 
-	// Make the last access on names[1] 10 msec later.
+	// Make the last access on names[1] 10 msec later, so eviction happens later, too.
 	time.Sleep(10 * time.Millisecond)
 	ann, err = am.GetAnnotator(names[1])
 	if err != nil {
@@ -95,10 +102,10 @@ func TestAnnotatorCache(t *testing.T) {
 	}
 
 	// Verify that third is NOT available.  This kicks off loading.
-	// TODO - this is flaky
+	// TODO - this is flaky - sometimes get nil error here.
 	_, err = am.GetAnnotator(names[2])
 	if err != manager.ErrPendingAnnotatorLoad {
-		t.Fatal("Got", err)
+		t.Fatal("Got", err, latency)
 	}
 
 	// Wait until it has loaded.
