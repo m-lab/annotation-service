@@ -7,14 +7,6 @@ import (
 	"github.com/m-lab/annotation-service/geoloader"
 )
 
-func date(date string, t *testing.T) time.Time {
-	d, err := time.Parse("20060102", date)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return d
-}
-
 func TestDir(t *testing.T) {
 	dir := geoloader.NewDirectory(10)
 	dir.Insert(date("20170101", t), "file1")
