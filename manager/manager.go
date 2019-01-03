@@ -149,7 +149,7 @@ func (am *AnnotatorMap) maybeSetNil(key string) bool {
 	if len(am.annotators) >= MaxDatasetInMemory {
 		for fileKey := range am.annotators {
 			if am.annotators[fileKey] != nil {
-				log.Println("removing Geolite2 dataset " + fileKey)
+				log.Println("removing dataset " + fileKey)
 				delete(am.annotators, fileKey)
 				metrics.EvictionCount.Inc()
 				metrics.DatasetCount.Dec()
