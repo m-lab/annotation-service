@@ -91,6 +91,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
@@ -123,6 +124,7 @@ var (
 
 // Datasets contains pointers to the datasets used to hold and lookup IP data.
 type Datasets struct {
+	lock      sync.RWMutex // Protect valid and GeoIP fields.
 	v4Data    *GeoIP
 	v6Data    *GeoIP
 	startDate time.Time
@@ -131,6 +133,8 @@ type Datasets struct {
 // GetAnnotation looks up the IP address and returns the corresponding GeoData
 // TODO - improve the format handling.  Perhaps pass in a net.IP ?
 func (gi *Datasets) GetAnnotation(request *api.RequestData) (api.GeoData, error) {
+	gi.lock.RLock()
+	defer gi.lock.RUnlock()
 	if gi.v4Data == nil || gi.v6Data == nil {
 		return api.GeoData{}, ErrDatasetNotLoaded
 	}
@@ -166,6 +170,16 @@ func (gi *Datasets) GetAnnotation(request *api.RequestData) (api.GeoData, error)
 // AnnotatorDate returns the date that the dataset was published.
 func (gi *Datasets) AnnotatorDate() time.Time {
 	return gi.startDate
+}
+
+// Unload unloads the datasets from the C library code.
+func (ds *Datasets) Unload() {
+	ds.lock.Lock()
+	defer ds.lock.Unlock()
+	ds.v4Data.Free()
+	ds.v6Data.Free()
+	ds.v4Data = nil
+	ds.v6Data = nil
 }
 
 // LoadBundleDataset loads both IPv4 and IPv6 version of the requested dataset into memory.
