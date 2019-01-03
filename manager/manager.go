@@ -148,8 +148,10 @@ func (am *AnnotatorMap) maybeSetNil(key string) bool {
 	// limit, some dataset may be removed from memory if needed.
 	if len(am.annotators) >= MaxDatasetInMemory {
 		for fileKey := range am.annotators {
-			if am.annotators[fileKey] != nil {
+			ann, ok := am.annotators[fileKey]
+			if ok {
 				log.Println("removing dataset " + fileKey)
+				ann.Unload()
 				delete(am.annotators, fileKey)
 				metrics.EvictionCount.Inc()
 				metrics.DatasetCount.Dec()
