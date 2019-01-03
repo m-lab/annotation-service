@@ -138,7 +138,7 @@ func UpdateArchivedFilenames() error {
 		}
 		if fileDate.Before(GeoLite2StartDate) {
 			// temporary hack to avoid legacy
-			continue
+			//continue
 		}
 
 		if !fileDate.Before(GeoLite2StartDate) && !GeoLite2Regex.MatchString(file.Name) {
