@@ -342,6 +342,8 @@ func (am *AnnotatorCache) evictExpired() {
 			continue
 		}
 		log.Println("evicting", age, c)
+		// Note that this may block if legacy dataset is currently in use by other threads.
+		am.annotators[c].ann.Unload()
 		delete(am.annotators, c)
 		am.lock.Unlock()
 
