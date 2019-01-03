@@ -177,15 +177,6 @@ func UpdateArchivedFilenames() error {
 			continue
 		}
 
-		if fileDate.Before(GeoLite2StartDate) {
-			// The 2014/01/07 dataset does not load properly.  This causes all sidestream
-			// processing to stall.  So we just avoid all early datasets for now.
-			// ACTUALLY - turns out there are multiple bad datasets.  So we just avoid
-			// all legacy datasets until we have better persistent error handling.
-			// TODO - before removing this, implement a unit test that fails because of it.
-			continue
-		}
-
 		if !fileDate.Before(GeoLite2StartDate) && !GeoLite2Regex.MatchString(file.Name) {
 			continue
 		}
