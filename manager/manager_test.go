@@ -1,17 +1,17 @@
 package manager_test
 
 import (
-	//"errors"
+	"errors"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	//"sync"
+	"sync"
 	"testing"
 	"time"
 
-	//"github.com/m-lab/annotation-service/api"
-	//"github.com/m-lab/annotation-service/geolite2"
+	"github.com/m-lab/annotation-service/api"
+	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/manager"
 )
