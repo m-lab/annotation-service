@@ -64,7 +64,7 @@ func (gi *GeoIP) Free() {
 func (gi *GeoIP) Check() bool {
 	// The proto definition can be found at
 	// https://github.com/maxmind/geoip-api-c/blob/master/libGeoIP/GeoIP.h#L77
-        log.Printf("%v", gi.db)
+	// log.Printf("%v", gi.db)
 	if gi.db.GeoIPDatabase == nil {
 		return false
 	}
