@@ -85,6 +85,9 @@ type Annotator interface {
 	GetAnnotation(request *RequestData) (GeoData, error)
 	// The date associated with the dataset.
 	AnnotatorDate() time.Time
+	// Free any unsafe memory associated with the annotator.
+	// Must not call GetAnnotation after freeing!
+	Unload()
 }
 
 var dateRE = regexp.MustCompile(`[0-9]{8}T`)
