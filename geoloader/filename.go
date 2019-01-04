@@ -2,6 +2,7 @@ package geoloader
 
 import (
 	"context"
+	"errors"
 	"log"
 	"regexp"
 	"sort"
@@ -42,19 +43,44 @@ func setDirectory(dir *directory) {
 	datasetDir = dir
 }
 
-type dateEntry struct {
-	date      time.Time
+var (
+	// ErrAnnotatorLoading is returned (externally) when an annotator is being loaded.
+	ErrAnnotatorLoading = errors.New("annotator is being loaded")
+
+	// These are UNEXPECTED errors!!
+	// ErrGoroutineNotOwner is returned when goroutine attempts to set annotator entry, but is not the owner.
+	ErrGoroutineNotOwner = errors.New("goroutine does not own annotator slot")
+	// ErrMapEntryAlreadySet is returned when goroutine attempts to set annotator, but entry is non-null.
+	ErrMapEntryAlreadySet = errors.New("annotator already set")
+	// ErrNilEntry is returned when map has a nil entry, which should never happen.
+	ErrNilEntry = errors.New("map entry is nil")
+
+	// errAlreadyLoaded  = errors.New("annotator is already loaded")
+	// errAlreadyLoading = errors.New("another goroutine is already loading annotator")
+)
+
+type directoryEntry struct {
+	// date and filenames are immutable.
+	date time.Time // The date associated with this annotator.
+	// All filenames associated with this date/annotator.
+	// Only the first filename is currently required or used.
 	filenames []string
+
+	annotator AnnWrapper
+}
+
+func newEntry(date time.Time) directoryEntry {
+	return directoryEntry{date: date, filenames: make([]string, 0, 2), annotator: NewAnnWrapper()}
 }
 
 // directory maintains a list of datasets.
 type directory struct {
-	entries map[string]*dateEntry // Map to filenames associated with date.
-	dates   []string              // Date strings associated with files.
+	entries map[string]*directoryEntry // Map to filenames associated with date.
+	dates   []string                   // Date strings associated with files.
 }
 
 func newDirectory(size int) directory {
-	return directory{entries: make(map[string]*dateEntry, size), dates: make([]string, 0, size)}
+	return directory{entries: make(map[string]*directoryEntry, size), dates: make([]string, 0, size)}
 }
 
 // Insert inserts a new filename into the directory at the given date.
@@ -71,7 +97,9 @@ func (dir *directory) Insert(date time.Time, fn string) {
 		dir.dates[index] = dateString
 
 		// Create new entry for the date.
-		entry = &dateEntry{filenames: make([]string, 0, 2), date: date}
+		// TODO make this NOT a pointer?
+		e := newEntry(date)
+		entry = &e
 		dir.entries[dateString] = entry
 	}
 
@@ -116,7 +144,7 @@ var GeoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
 func UpdateArchivedFilenames() error {
 	old := getDirectory()
 	size := len(old.dates) + 2
-	dir := directory{entries: make(map[string]*dateEntry, size), dates: make([]string, 0, size)}
+	dir := directory{entries: make(map[string]*directoryEntry, size), dates: make([]string, 0, size)}
 
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
