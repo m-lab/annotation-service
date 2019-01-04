@@ -1,6 +1,9 @@
 package geoloader
 
 // The AnnWrapper struct controls concurrent operations on Annotator objects.
+// It is designed for minimal contention on GetAnnotator(), and safe loading and unloading.
+// TODO - pull this out to an internal package, since it is only used by the directory.
+
 import (
 	"log"
 	"sync"

@@ -49,9 +49,9 @@ var (
 
 	// These are UNEXPECTED errors!!
 	// ErrGoroutineNotOwner is returned when goroutine attempts to set annotator entry, but is not the owner.
-	ErrGoroutineNotOwner = errors.New("goroutine not owner")
+	ErrGoroutineNotOwner = errors.New("goroutine does not own annotator slot")
 	// ErrMapEntryAlreadySet is returned when goroutine attempts to set annotator, but entry is non-null.
-	ErrMapEntryAlreadySet = errors.New("map entry already set")
+	ErrMapEntryAlreadySet = errors.New("annotator already set")
 	// ErrNilEntry is returned when map has a nil entry, which should never happen.
 	ErrNilEntry = errors.New("map entry is nil")
 
@@ -61,8 +61,10 @@ var (
 
 type directoryEntry struct {
 	// date and filenames are immutable.
-	date      time.Time // The date associated with this annotator.
-	filenames []string  // All filenames associated with this date/annotator.
+	date time.Time // The date associated with this annotator.
+	// All filenames associated with this date/annotator.
+	// Only the first filename is currently required or used.
+	filenames []string
 
 	annotator AnnWrapper
 }
