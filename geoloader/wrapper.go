@@ -26,11 +26,13 @@ type AnnWrapper struct {
 	lastUsed unsafe.Pointer // pointer to the lastUsed time.Time.
 }
 
+// UpdateLastUsed updates the last used time to the current time.
 func (ae *AnnWrapper) UpdateLastUsed() {
 	newTime := time.Now()
 	atomic.StorePointer(&ae.lastUsed, unsafe.Pointer(&newTime))
 }
 
+// GetLastUsed returns the time that the annotator was last successfully fetched with GetAnnotator.
 func (ae *AnnWrapper) GetLastUsed() time.Time {
 	ptr := atomic.LoadPointer(&ae.lastUsed)
 	if ptr == nil {
@@ -40,12 +42,9 @@ func (ae *AnnWrapper) GetLastUsed() time.Time {
 	return *(*time.Time)(ptr)
 }
 
-func (ae *AnnWrapper) Status() error {
-	ae.lock.RLock()
-	defer ae.lock.RUnlock()
-	return ae.err
-}
-
+// ReserveForLoad attempts to set the state to loading, indicated by the `err` field
+// containing ErrAnnotatorLoading.
+// Returns true IFF the reservation was obtained.
 func (ae *AnnWrapper) ReserveForLoad() bool {
 	ae.lock.Lock()
 	defer ae.lock.Unlock()
@@ -60,6 +59,8 @@ func (ae *AnnWrapper) ReserveForLoad() bool {
 	return true
 }
 
+// SetAnnotator attempts to store `ann`, and update the error state.
+// It may fail if the state has changed, e.g. because of an unload.
 func (ae *AnnWrapper) SetAnnotator(ann api.Annotator, err error) error {
 	ae.lock.Lock()
 	defer ae.lock.Unlock()
@@ -83,19 +84,19 @@ func (ae *AnnWrapper) SetAnnotator(ann api.Annotator, err error) error {
 	return nil
 }
 
+// GetAnnotator gets the current annotator, if there is one, and the error state.
 func (ae *AnnWrapper) GetAnnotator() (ann api.Annotator, err error) {
 	ae.lock.RLock()
 	defer ae.lock.RUnlock()
 	return ae.ann, ae.err
 }
 
+// Unload unloads the annotator and resets the state to the empty state.
+// If another goroutine is concurrently trying to load this, we don't
+// really care.  The other goroutine will fail when it attempts to SetAnnotator()
 func (ae *AnnWrapper) Unload() {
 	ae.lock.Lock()
 	defer ae.lock.Unlock()
-	if ae.err == ErrAnnotatorLoading {
-		// Someone is concurrently trying to load this.
-		// We really don't care - the other goroutine will just fail.
-	}
 
 	if ae.ann != nil {
 		ae.ann.Unload()
