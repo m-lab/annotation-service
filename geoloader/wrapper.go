@@ -86,8 +86,11 @@ func (ae *AnnWrapper) SetAnnotator(ann api.Annotator, err error) error {
 
 // GetAnnotator gets the current annotator, if there is one, and the error state.
 func (ae *AnnWrapper) GetAnnotator() (ann api.Annotator, err error) {
+	ae.UpdateLastUsed()
+
 	ae.lock.RLock()
 	defer ae.lock.RUnlock()
+
 	return ae.ann, ae.err
 }
 
