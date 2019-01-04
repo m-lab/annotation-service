@@ -81,13 +81,13 @@ func UncompressGzFile(ctx context.Context, bucketName string, fileName string, o
 
 	rdr, err := obj.NewReader(ctx)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return err
 	}
 
 	gzr, err := gzip.NewReader(rdr)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return err
 	}
 	data, err := ioutil.ReadAll(gzr)

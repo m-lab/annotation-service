@@ -136,9 +136,9 @@ func TestAnnotatorMap(t *testing.T) {
 	}
 }
 
-func xTestE2ELoadMultipleDataset(t *testing.T) {
+func TestE2ELoadMultipleDataset(t *testing.T) {
 	manager.InitDataset()
-
+	manager.MaxDatasetInMemory = 2
 	tests := []struct {
 		ip   string
 		time string
@@ -146,10 +146,14 @@ func xTestE2ELoadMultipleDataset(t *testing.T) {
 	}{
 		// This request needs a legacy binary dataset
 		{"1.4.128.0", "1199145600", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"ASN":{}}`},
+		// This request needs another legacy binary dataset
+		{"1.4.128.0", "1399145600", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"ASN":{}}`},
 		// This request needs a geolite2 dataset
 		{"1.9.128.0", "1512086400", `{"Geo":{"continent_code":"AS","country_code":"MY","country_name":"Malaysia","region":"14","city":"Kuala Lumpur","postal_code":"50400","latitude":3.149,"longitude":101.697},"ASN":{}}`},
 		// This request needs the latest dataset in the memory.
 		{"1.22.128.0", "1544400000", `{"Geo":{"continent_code":"AS","country_code":"IN","country_name":"India","region":"HR","city":"Gurgaon","postal_code":"122017","latitude":28.4667,"longitude":77.0333},"ASN":{}}`},
+		// This request used a loaded & removed legacy dataset.
+		{"1.4.128.0", "1199145600", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"ASN":{}}`},
 	}
 	for _, test := range tests {
 		w := httptest.NewRecorder()
