@@ -1,10 +1,11 @@
-package geoloader
+package wrapper
 
 // The AnnWrapper struct controls concurrent operations on Annotator objects.
 // It is designed for minimal contention on GetAnnotator(), and safe loading and unloading.
 // TODO - pull this out to an internal package, since it is only used by the directory.
 
 import (
+	"errors"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -13,6 +14,22 @@ import (
 
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/metrics"
+)
+
+var (
+	// ErrAnnotatorLoading is returned (externally) when an annotator is being loaded.
+	ErrAnnotatorLoading = errors.New("annotator is being loaded")
+	// ErrNilEntry is returned when wrapper is empty, and eligible for loading.
+	ErrNilEntry = errors.New("map entry is nil")
+
+	// These are UNEXPECTED errors!!
+	// ErrGoroutineNotOwner is returned when goroutine attempts to set annotator entry, but is not the owner.
+	// NOTE: this may happen if a goroutine for some reason calls unload when another goroutine is loading.
+	ErrGoroutineNotOwner = errors.New("goroutine does not own annotator slot")
+
+	// ErrMapEntryAlreadySet is returned when goroutine attempts to set annotator, but entry is non-nil.
+	// This should never happen.
+	ErrMapEntryAlreadySet = errors.New("annotator already set")
 )
 
 type AnnWrapper struct {
@@ -72,8 +89,11 @@ func (ae *AnnWrapper) SetAnnotator(ann api.Annotator, err error) error {
 	ae.lock.Lock()
 	defer ae.lock.Unlock()
 
+	metrics.PendingLoads.Dec()
+
 	if ae.err != ErrAnnotatorLoading {
-		log.Println("This should never happen", ErrGoroutineNotOwner)
+		// This may happen if another thread has caused an unload, though
+		// this should not happen in normal operation.
 		return ErrGoroutineNotOwner
 	}
 	if ae.ann != nil {
@@ -85,7 +105,6 @@ func (ae *AnnWrapper) SetAnnotator(ann api.Annotator, err error) error {
 	ae.UpdateLastUsed()
 
 	metrics.LoadCount.Inc()
-	metrics.PendingLoads.Dec()
 	metrics.DatasetCount.Inc()
 
 	return nil
@@ -117,6 +136,6 @@ func (ae *AnnWrapper) Unload() {
 	atomic.StorePointer(&ae.lastUsed, unsafe.Pointer(&time.Time{}))
 }
 
-func NewAnnWrapper() AnnWrapper {
+func New() AnnWrapper {
 	return AnnWrapper{err: ErrNilEntry, lastUsed: unsafe.Pointer(&time.Time{})}
 }
