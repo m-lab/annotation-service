@@ -16,10 +16,17 @@ import (
 )
 
 type AnnWrapper struct {
-	lock sync.RWMutex // Should be held when reading or modifying the annotator pointer or err fields
-	// The lock must be held when accessing either of these.
-	ann api.Annotator // Updated only while holding write lock.
-	err error         // Non-nil if annotator is unloaded or loading, OR there was a non-recoverable load error.
+	// The lock must be held when accessing ann or err fields.
+	lock sync.RWMutex
+
+	// Updated only while holding write lock.
+	ann api.Annotator
+
+	// err field is used to indicate the wrapper status.
+	// nil error means that the annotator is populated and ready for use.
+	// An empty wrapper will have a non-nil error, indicating whether a previous load failed,
+	// or annotator is currently loading, or annotator is nil and wrapper is idle.
+	err error
 
 	// This field is accessed using atomics.
 	// In an empty wrapper, this should point to time.Time{} zero value.
