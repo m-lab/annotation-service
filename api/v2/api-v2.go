@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"time"
 
@@ -150,7 +151,14 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 			if len(body) > 60 { // 60 is completely arbitrary.
 				body = body[0:60]
 			}
-			return nil, fmt.Errorf("%s : %s", httpResp.Status, string(body))
+			// URGENT TODO This is producing too many unique error types, spamming Prometheus!!
+			// Started Jan 7, 16:27 UTC
+			// This will require a rebuild of ETL clients.
+			log.Printf("%s : %s\n", httpResp.Status, string(body))
+			if len(httpResp.Status) > 30 {
+				return nil, fmt.Errorf("%d %s...%s", httpResp.StatusCode, httpResp.Status[:15], httpResp.Status[len(httpResp.Status)-15:])
+			}
+			return nil, fmt.Errorf("%s", httpResp.Status)
 		}
 		return nil, err
 	}
