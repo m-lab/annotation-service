@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
-	"github.com/m-lab/annotation-service/geoloader"
 	"github.com/m-lab/annotation-service/geoloader/internal/wrapper"
 )
 
@@ -37,7 +36,7 @@ func TestAnnWrapper(t *testing.T) {
 
 	// Check status.
 	_, err := aw.GetAnnotator()
-	if err != geoloader.ErrNilEntry {
+	if err != wrapper.ErrNilEntry {
 		t.Error(err)
 	}
 
@@ -72,7 +71,7 @@ func TestAnnWrapper(t *testing.T) {
 	}
 	// Attempt to get the annotator should give loading error status.
 	_, err = aw.GetAnnotator()
-	if err != geoloader.ErrAnnotatorLoading {
+	if err != wrapper.ErrAnnotatorLoading {
 		t.Error(err)
 	}
 
