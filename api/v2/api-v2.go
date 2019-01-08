@@ -117,10 +117,13 @@ func postWithRetry(ctx context.Context, url string, encodedData []byte) (*http.R
 			RequestTimeHistogram.WithLabelValues("timeout").Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
 			return nil, ctx.Err()
 		}
+
 		// This is a recoverable error, so we should retry.
 		RequestTimeHistogram.WithLabelValues("retry").Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
+
 		err = waitOneSecond(ctx)
 		if err != nil {
+			RequestTimeHistogram.WithLabelValues("context").Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
 			return nil, err
 		}
 	}
