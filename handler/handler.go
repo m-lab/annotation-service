@@ -215,7 +215,7 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	handleNewOrOld(w, tStart, jsonBuffer)
 }
 
-func latencyStats(label string, count int, tStart time.Time, annLatency time.Duration) {
+func latencyStats(label string, count int, tStart time.Time) {
 	switch {
 	case count >= 400:
 		metrics.RequestTimeHistogramUsec.WithLabelValues(label, "400+").Observe(float64(time.Since(tStart).Nanoseconds()) / 1000)
@@ -236,11 +236,15 @@ func checkError(err error, w http.ResponseWriter, ipCount int, label string, tSt
 		case manager.ErrPendingAnnotatorLoad:
 			// Encourage client to try again soon.
 			w.WriteHeader(http.StatusServiceUnavailable)
-			latencyStats(label+" reject (loading)", ipCount, tStart, time.Microsecond)
+			latencyStats(label+" reject (loading)", ipCount, tStart)
+		case manager.ErrAnnotatorCacheFull:
+			// If it isn't loading, client should probably give up instead of retrying.
+			w.WriteHeader(http.StatusInternalServerError)
+			metrics.RequestTimeHistogramUsec.WithLabelValues(label, " reject (cache full)").Observe(float64(time.Since(tStart).Nanoseconds() / 1000))
 		default:
 			// If it isn't loading, client should probably give up instead of retrying.
 			w.WriteHeader(http.StatusInternalServerError)
-			metrics.RequestTimeHistogramUsec.WithLabelValues(label, "InternalServerError").Observe(float64(time.Since(tStart).Nanoseconds()) / 1000)
+			metrics.RequestTimeHistogramUsec.WithLabelValues(label, "other").Observe(float64(time.Since(tStart).Nanoseconds() / 1000))
 			fmt.Fprintf(w, err.Error())
 		}
 		return true
@@ -258,7 +262,6 @@ func handleOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 	var responseMap map[string]*api.GeoData
 
 	// For now, use the date of the first item.  In future the items will not have individual timestamps.
-	annStart := time.Now()
 	if len(dataSlice) > 0 {
 		// For old request format, we use the date of the first RequestData
 		date := dataSlice[0].Timestamp
@@ -269,14 +272,13 @@ func handleOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 	} else {
 		responseMap = make(map[string]*api.GeoData)
 	}
-	annLatency := time.Since(annStart)
 
 	encodedResult, err := json.Marshal(responseMap)
 	if checkError(err, w, len(dataSlice), "old", tStart) {
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
-	latencyStats("old", len(dataSlice), tStart, annLatency)
+	latencyStats("old", len(dataSlice), tStart)
 }
 
 func handleV2(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
@@ -289,21 +291,19 @@ func handleV2(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 
 	response := v2.Response{}
 
-	annStart := time.Now()
 	if len(request.IPs) > 0 {
 		response, err = AnnotateV2(request.Date, request.IPs)
 		if checkError(err, w, len(request.IPs), "v2", tStart) {
 			return
 		}
 	}
-	annLatency := time.Since(annStart)
 
 	encodedResult, err := json.Marshal(response)
 	if checkError(err, w, len(request.IPs), "v2", tStart) {
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
-	latencyStats("v2", len(request.IPs), tStart, annLatency)
+	latencyStats("v2", len(request.IPs), tStart)
 }
 
 func handleNewOrOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
