@@ -119,32 +119,37 @@ func TestAnnWrapper(t *testing.T) {
 	}
 }
 
+// This is a helper function that exercises loading and unloading annotator.
 func race(t *testing.T, wg *sync.WaitGroup, aw *wrapper.AnnWrapper, fake *fakeAnnotator, stop chan struct{}) {
 	defer wg.Done()
 	for {
+		// Get the annotator.  May be nil, but should not error.
 		ann, err := aw.GetAnnotator()
 		if err == nil && ann == nil {
 			t.Fatal(err)
 			return
 		}
 
+		// Test getting the lastUsed time.
 		aw.GetLastUsed()
 
+		// Unload the annotator.  It may or may not be loaded, and typically this is done
+		// by the eviction code.
 		aw.Unload()
 
+		// Get the annotator again.  Might be loaded or not, depending on activity of other goroutines.
 		ann, err = aw.GetAnnotator()
+		// If the wrapper state is ErrNilEntry, then it is eligible to be loaded.
 		if err == wrapper.ErrNilEntry {
+			// Try to get the reservation.
 			if aw.ReserveForLoad() {
+				// If we got the reservation, then wait a brief time and try to set the annotator.
 				time.Sleep(time.Millisecond)
-				// This may sometimes fail if another goroutine has called unload.
+
+				// This should always succeed.
 				err := aw.SetAnnotator(fake, nil)
 				if err != nil {
-					if err == wrapper.ErrGoroutineNotOwner {
-						// Annotator was unloaded by another goroutine.
-					} else {
-						t.Fatal(err)
-						return
-					}
+					t.Error(err)
 				}
 			}
 		}
@@ -157,6 +162,9 @@ func race(t *testing.T, wg *sync.WaitGroup, aw *wrapper.AnnWrapper, fake *fakeAn
 	}
 }
 
+// TestRaces launches 10 goroutines, each of which competes to manipulate the wrapper,
+// by getting the reservation, loading the annotator, setting the annotator, unloading.
+// Each goroutine just runs a tight loop.
 // This test should be run with -race
 func TestRaces(t *testing.T) {
 	aw := wrapper.New()

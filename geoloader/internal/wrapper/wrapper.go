@@ -121,11 +121,14 @@ func (ae *AnnWrapper) GetAnnotator() (ann api.Annotator, err error) {
 }
 
 // Unload unloads the annotator and resets the state to the empty state.
-// If another goroutine is concurrently trying to load this, we don't
-// really care.  The other goroutine will fail when it attempts to SetAnnotator()
 func (ae *AnnWrapper) Unload() {
 	ae.lock.Lock()
 	defer ae.lock.Unlock()
+
+	// If another goroutine is loading, then do nothing.
+	if ae.err == ErrAnnotatorLoading {
+		return
+	}
 
 	if ae.ann != nil {
 		ae.ann.Unload()
@@ -136,6 +139,7 @@ func (ae *AnnWrapper) Unload() {
 	atomic.StorePointer(&ae.lastUsed, unsafe.Pointer(&time.Time{}))
 }
 
+// New creates and initializes a new AnnWrapper
 func New() AnnWrapper {
 	return AnnWrapper{err: ErrNilEntry, lastUsed: unsafe.Pointer(&time.Time{})}
 }
