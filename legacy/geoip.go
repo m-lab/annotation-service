@@ -43,6 +43,9 @@ type GeoIP struct {
 	// lookup routine.  Any calls which have _GeoIP_seek_record_gl need to
 	// be wrapped in this mutex.
 	mu sync.Mutex
+	
+	// Counter that how many times Free() was called.
+	freeCalled uint32
 }
 
 // Free the memory hold by GeoIP dataset. Mutex should be held for this operation.
@@ -57,7 +60,12 @@ func (gi *GeoIP) Free() {
 	}
 	log.Println("free memory for legacy dataset: " + gi.name)
 	C.GeoIP_delete(gi.db)
+	freeCalled += 1
 	return
+}
+
+func (gi *GeoIP) GetFreeCalled() uint32 {
+	return gi.freeCalled
 }
 
 // Open opens a DB. It is a default convenience wrapper around OpenDB.
