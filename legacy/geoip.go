@@ -54,7 +54,7 @@ func (gi *GeoIP) Free() {
 		log.Println("Attempt to free from nil GeoIP pointer")
 		return
 	}
-	if gi.db == nil {
+	if gi.db == nil || gi.freeCalled == 1 {
 		log.Println("GeoIP db already nil")
 		return
 	}
@@ -103,6 +103,7 @@ func OpenDB(file string, flag int, datasetName string) (*GeoIP, error) {
 
 	C.GeoIP_set_charset(g.db, C.GEOIP_CHARSET_UTF8)
 	g.name = datasetName
+	g.freeCalled = 0
 	return g, nil
 }
 
@@ -135,7 +136,7 @@ func OpenTypeFlag(dbType int, flag int) (*GeoIP, error) {
 	}
 
 	C.GeoIP_set_charset(g.db, C.GEOIP_CHARSET_UTF8)
-
+        g.freeCalled = 0
 	return g, nil
 }
 
