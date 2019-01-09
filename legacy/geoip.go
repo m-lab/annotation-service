@@ -60,7 +60,7 @@ func (gi *GeoIP) Free() {
 	}
 	log.Println("free memory for legacy dataset: " + gi.name)
 	C.GeoIP_delete(gi.db)
-	freeCalled += 1
+	gi.freeCalled += 1
 	return
 }
 
