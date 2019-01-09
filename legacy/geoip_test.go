@@ -19,8 +19,4 @@ func TestOpenAndFree(t *testing.T) {
 		t.Fatal("legacy file not loaded")
 	}
 	gi.Free()
-
-	if gi.Check() {
-		t.Error("Not correctly freed")
-	}
 }
