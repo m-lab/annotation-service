@@ -3,6 +3,7 @@ package metrics_test
 import (
 	"bytes"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"testing"
 
@@ -11,16 +12,17 @@ import (
 )
 
 func TestPrometheusMetrics(t *testing.T) {
-	server := metrics.SetupPrometheus()
+	server := metrics.SetupPrometheus(0)
 	defer server.Shutdown(nil)
+	log.Println(server.Addr)
 
-	metricReader, err := http.Get("http://localhost:9090/metrics")
+	metricReader, err := http.Get("http://localhost" + server.Addr + "/metrics")
 	if err != nil || metricReader == nil {
-		t.Errorf("Could not GET metrics: %v", err)
+		t.Fatalf("Could not GET metrics: %v", err)
 	}
 	metricBytes, err := ioutil.ReadAll(metricReader.Body)
 	if err != nil {
-		t.Errorf("Could not read metrics: %v", err)
+		t.Fatalf("Could not read metrics: %v", err)
 	}
 	metricsLinter := promlint.New(bytes.NewBuffer(metricBytes))
 	problems, err := metricsLinter.Lint()
