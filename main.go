@@ -52,7 +52,7 @@ func main() {
 	http.HandleFunc("/status", Status)
 
 	handler.InitHandler()
-	metrics.SetupPrometheus()
+	metrics.SetupPrometheus(9090)
 	log.Print("Listening on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
