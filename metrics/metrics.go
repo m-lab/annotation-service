@@ -2,10 +2,10 @@ package metrics
 
 import (
 	"fmt"
-	"net"
 	"net/http"
 	"net/http/pprof"
 
+	"github.com/m-lab/go/httpx"
 	"github.com/m-lab/go/rtx"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -97,21 +97,10 @@ func SetupPrometheus(port int) *http.Server {
 	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
-	// TODO PBOOTHE - integrate common function into httpx.
-	// Don't ListenAndServe because we want to be able to GET as soon as this function returns.
-	// Listen synchronously.
-	addr := fmt.Sprintf(":%d", port)
-	listener, err := net.Listen("tcp", addr)
-	rtx.Must(err, "Could not open listening socket for Prometheus metrics")
-	port = listener.Addr().(*net.TCPAddr).Port
-
 	server := &http.Server{
 		Addr:    fmt.Sprintf(":%d", port),
 		Handler: mux,
 	}
-
-	// Serve asynchronously.
-	go server.Serve(listener.(*net.TCPListener))
-
+	rtx.Must(httpx.ListenAndServeAsync(server), "Could not start metrics server")
 	return server
 }
