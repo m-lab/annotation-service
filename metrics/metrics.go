@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -81,7 +82,7 @@ func init() {
 }
 
 // SetupPrometheus sets up and runs a webserver to export prometheus metrics.
-func SetupPrometheus() *http.Server {
+func SetupPrometheus(port int) *http.Server {
 	// Define a custom serve mux for prometheus to listen on a separate port.
 	// We listen on a separate port so we can forward this port on the host VM.
 	// We cannot forward port 8080 because it is used by AppEngine.
@@ -96,15 +97,19 @@ func SetupPrometheus() *http.Server {
 	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
+	// TODO PBOOTHE - integrate common function into httpx.
+	// Don't ListenAndServe because we want to be able to GET as soon as this function returns.
+	// Listen synchronously.
+	addr := fmt.Sprintf(":%d", port)
+	listener, err := net.Listen("tcp", addr)
+	rtx.Must(err, "Could not open listening socket for Prometheus metrics")
+	port = listener.Addr().(*net.TCPAddr).Port
+
 	server := &http.Server{
-		Addr:    ":9090",
+		Addr:    fmt.Sprintf(":%d", port),
 		Handler: mux,
 	}
 
-	// Don't ListenAndServe because we want to be able to GET as soon as this function returns.
-	// Listen synchronously.
-	listener, err := net.Listen("tcp", server.Addr)
-	rtx.Must(err, "Could not open listening socket for Prometheus metrics")
 	// Serve asynchronously.
 	go server.Serve(listener.(*net.TCPListener))
 
