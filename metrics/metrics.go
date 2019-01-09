@@ -97,6 +97,7 @@ func SetupPrometheus(port int) *http.Server {
 	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
+	// TODO PBOOTHE - integrate common function into httpx.
 	// Don't ListenAndServe because we want to be able to GET as soon as this function returns.
 	// Listen synchronously.
 	addr := fmt.Sprintf(":%d", port)
