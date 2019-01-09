@@ -60,16 +60,6 @@ func (gi *GeoIP) Free() {
 	return
 }
 
-// Check returns true if gi.db is not freed.
-func (gi *GeoIP) Check() bool {
-	// The proto definition can be found at
-	// https://github.com/maxmind/geoip-api-c/blob/master/libGeoIP/GeoIP.h#L77
-	if gi.db.GeoIPDatabase == nil {
-		return false
-	}
-	return true
-}
-
 // Open opens a DB. It is a default convenience wrapper around OpenDB.
 func Open(filename string, datasetName string) (*GeoIP, error) {
 	return OpenDB(filename, MemoryCache, datasetName)
