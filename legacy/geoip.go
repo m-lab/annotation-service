@@ -43,7 +43,7 @@ type GeoIP struct {
 	// lookup routine.  Any calls which have _GeoIP_seek_record_gl need to
 	// be wrapped in this mutex.
 	mu sync.Mutex
-	
+
 	// Counter that how many times Free() was called.
 	freeCalled uint32
 }
@@ -54,13 +54,13 @@ func (gi *GeoIP) Free() {
 		log.Println("Attempt to free from nil GeoIP pointer")
 		return
 	}
-	if gi.db == nil || gi.freeCalled == 1 {
+	if gi.db == nil || gi.freeCalled >= 1 {
 		log.Println("GeoIP db already nil")
 		return
 	}
 	log.Println("free memory for legacy dataset: " + gi.name)
 	C.GeoIP_delete(gi.db)
-	gi.freeCalled += 1
+	gi.freeCalled++
 	return
 }
 
@@ -136,7 +136,7 @@ func OpenTypeFlag(dbType int, flag int) (*GeoIP, error) {
 	}
 
 	C.GeoIP_set_charset(g.db, C.GEOIP_CHARSET_UTF8)
-        g.freeCalled = 0
+	g.freeCalled = 0
 	return g, nil
 }
 
