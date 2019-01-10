@@ -43,6 +43,9 @@ type GeoIP struct {
 	// lookup routine.  Any calls which have _GeoIP_seek_record_gl need to
 	// be wrapped in this mutex.
 	mu sync.Mutex
+
+	// Counter that how many times Free() was called.
+	freeCalled uint32
 }
 
 // Free the memory hold by GeoIP dataset. Mutex should be held for this operation.
@@ -51,23 +54,18 @@ func (gi *GeoIP) Free() {
 		log.Println("Attempt to free from nil GeoIP pointer")
 		return
 	}
-	if gi.db == nil {
+	if gi.db == nil || gi.freeCalled >= 1 {
 		log.Println("GeoIP db already nil")
 		return
 	}
 	log.Println("free memory for legacy dataset: " + gi.name)
 	C.GeoIP_delete(gi.db)
+	gi.freeCalled++
 	return
 }
 
-// Check returns true if gi.db is not freed.
-func (gi *GeoIP) Check() bool {
-	// The proto definition can be found at
-	// https://github.com/maxmind/geoip-api-c/blob/master/libGeoIP/GeoIP.h#L77
-	if gi.db.GeoIPDatabase == nil {
-		return false
-	}
-	return true
+func (gi *GeoIP) GetFreeCalled() uint32 {
+	return gi.freeCalled
 }
 
 // Open opens a DB. It is a default convenience wrapper around OpenDB.
@@ -105,6 +103,7 @@ func OpenDB(file string, flag int, datasetName string) (*GeoIP, error) {
 
 	C.GeoIP_set_charset(g.db, C.GEOIP_CHARSET_UTF8)
 	g.name = datasetName
+	g.freeCalled = 0
 	return g, nil
 }
 
@@ -137,7 +136,7 @@ func OpenTypeFlag(dbType int, flag int) (*GeoIP, error) {
 	}
 
 	C.GeoIP_set_charset(g.db, C.GEOIP_CHARSET_UTF8)
-
+	g.freeCalled = 0
 	return g, nil
 }
 

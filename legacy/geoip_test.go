@@ -20,7 +20,7 @@ func TestOpenAndFree(t *testing.T) {
 	}
 	gi.Free()
 
-	if gi.Check() {
-		t.Error("Not correctly freed")
+	if gi.GetFreeCalled() != 1 {
+		t.Fatal("Space not freed properly")
 	}
 }
