@@ -13,6 +13,7 @@ import (
 	"google.golang.org/api/iterator"
 
 	"github.com/m-lab/annotation-service/api"
+	"github.com/m-lab/annotation-service/geoloader/internal/wrapper"
 )
 
 // GeoLite2StartDate is the date we have the first GeoLite2 dataset.
@@ -54,9 +55,6 @@ var (
 	ErrMapEntryAlreadySet = errors.New("annotator already set")
 	// ErrNilEntry is returned when map has a nil entry, which should never happen.
 	ErrNilEntry = errors.New("map entry is nil")
-
-	// errAlreadyLoaded  = errors.New("annotator is already loaded")
-	// errAlreadyLoading = errors.New("another goroutine is already loading annotator")
 )
 
 type directoryEntry struct {
@@ -66,11 +64,11 @@ type directoryEntry struct {
 	// Only the first filename is currently required or used.
 	filenames []string
 
-	annotator AnnWrapper
+	annotator wrapper.AnnWrapper
 }
 
 func newEntry(date time.Time) directoryEntry {
-	return directoryEntry{date: date, filenames: make([]string, 0, 2), annotator: NewAnnWrapper()}
+	return directoryEntry{date: date, filenames: make([]string, 0, 2), annotator: wrapper.New()}
 }
 
 // directory maintains a list of datasets.
