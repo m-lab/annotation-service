@@ -201,6 +201,7 @@ func LoadBundleDataset(filename string, bucketname string) (*Datasets, error) {
 		}
 		v6, err := LoadGeoliteDataset(strings.Replace(filename, "GeoLiteCity", "GeoLiteCityv6", -1), bucketname)
 		if err != nil {
+			v4.Free()
 			return nil, ErrLoadIPv6LegacyFailed
 		}
 		return &Datasets{v4Data: v4, v6Data: v6, startDate: date}, nil
@@ -213,6 +214,7 @@ func LoadBundleDataset(filename string, bucketname string) (*Datasets, error) {
 		}
 		v4, err := LoadGeoliteDataset(strings.Replace(filename, "GeoLiteCityv6", "GeoLiteCity", -1), bucketname)
 		if err != nil {
+			v6.Free()
 			return nil, ErrLoadIPv4LegacyFailed
 		}
 		return &Datasets{v4Data: v4, v6Data: v6, startDate: date}, nil
