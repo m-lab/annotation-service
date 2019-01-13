@@ -215,6 +215,7 @@ func (am *AnnotatorCache) validateAndSetAnnotator(fn string, ann api.Annotator, 
 	}
 
 	// HACK for now
+	// TODO - test this functionality
 	if err != nil {
 		metrics.ErrorTotal.WithLabelValues("load failed").Inc()
 		log.Println("Loading failed.  Hack for now - deleting entry")
@@ -385,6 +386,8 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 		return ann, err
 	}
 	// Try an earlier annotator...
+	// Found that 2014/01/07 fails to load, so we need to deal with it.
+	// TODO test this functionality
 	log.Println("Substituting an earlier annotator")
 	return GetAnnotator(date.Add(-30 * 24 * time.Hour))
 }
