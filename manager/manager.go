@@ -377,19 +377,23 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 	}
 
 	ann, err := allAnnotators.GetAnnotator(filename)
-	if time.Since(lastLog) > 5*time.Minute && ann != nil {
-		lastLog = time.Now()
-		log.Println("Using", ann.AnnotatorDate().Format("20060102"), err, "for", date.Format("20060102"))
-	}
 	errorMetricWithLabel(err)
 	if err == nil || err == ErrAnnotatorCacheFull || err == ErrPendingAnnotatorLoad || err == ErrTooManyLoading {
+		if time.Since(lastLog) > 5*time.Minute {
+			lastLog = time.Now()
+			log.Println("Using", ann.AnnotatorDate().Format("20060102"), err, "for", date.Format("20060102"))
+		}
 		return ann, err
 	}
 	// Try an earlier annotator...
 	// Found that 2014/01/07 fails to load, so we need to deal with it.
 	// TODO test this functionality
-	log.Println("Substituting an earlier annotator")
-	return GetAnnotator(date.Add(-30 * 24 * time.Hour))
+	ann, err = GetAnnotator(date.Add(-30 * 24 * time.Hour))
+	if time.Since(lastLog) > 5*time.Minute && ann != nil {
+		lastLog = time.Now()
+		log.Println("Substituting", ann.AnnotatorDate().Format("20060102"), err, "for", date.Format("20060102"))
+	}
+	return ann, err
 }
 
 func (am *AnnotatorCache) evictEvery(interval time.Duration) {
