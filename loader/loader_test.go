@@ -18,16 +18,16 @@ func TestCreateZipReader(t *testing.T) {
 	ctx, done, err := aetest.NewContext()
 	if err != nil {
 		log.Println(err)
-		t.Errorf("Failed to create aecontext")
+		t.Error("Failed to create aecontext")
 	}
 	defer done()
 	zipReader, err := loader.CreateZipReader(ctx, "test-annotator-sandbox", "MaxMind/2017/08/15/GeoLite2City.zip")
 	if err != nil {
 		log.Println(err)
-		t.Errorf("Failed to create zipReader")
+		t.Error("Failed to create zipReader")
 	}
 
 	if len(zipReader.File) != 3 {
-		t.Errorf("wrong number of files", len(zipReader.File))
+		t.Error("wrong number of files", len(zipReader.File))
 	}
 }
