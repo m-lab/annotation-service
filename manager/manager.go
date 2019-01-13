@@ -218,8 +218,8 @@ func (am *AnnotatorCache) validateAndSetAnnotator(fn string, ann api.Annotator, 
 	// TODO - test this functionality
 	if err != nil {
 		metrics.ErrorTotal.WithLabelValues("load failed").Inc()
-		log.Println("Loading failed.  Hack for now - deleting entry")
-		// HACK so this doesn't take up a slot.
+		log.Println("Loading failed.  Hack for now - ignoring entry", fn, err)
+		// HACK so this doesn't take up a slot.  But "total" count will still show it.
 		am.releaseLimit()
 	} else {
 		metrics.DatasetCount.Inc()
