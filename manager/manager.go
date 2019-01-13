@@ -366,6 +366,7 @@ func (am *AnnotatorCache) evictExpired() {
 }
 
 var lastLog = time.Time{}
+var lastSubLog = time.Time{}
 
 // GetAnnotator gets the current annotator.
 func GetAnnotator(date time.Time) (api.Annotator, error) {
@@ -389,8 +390,9 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 	// Found that 2014/01/07 fails to load, so we need to deal with it.
 	// TODO test this functionality
 	ann, err = GetAnnotator(date.Add(-30 * 24 * time.Hour))
-	if time.Since(lastLog) > 5*time.Minute && ann != nil {
-		lastLog = time.Now()
+	if time.Since(lastSubLog) > 10*time.Seconds && ann != nil {
+		lastSubLog = time.Now()
+		// Very unlikely to see these.  8-(
 		log.Println("Substituting", ann.AnnotatorDate().Format("20060102"), err, "for", date.Format("20060102"))
 	}
 	return ann, err
