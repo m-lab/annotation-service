@@ -213,6 +213,9 @@ func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 	return ann, nil
 }
 
+var lastLog = time.Time{}
+var lastSubLog = time.Time{}
+
 // GetAnnotator returns the correct annotator to use for a given timestamp.
 // TODO: Update to properly handle legacy datasets.
 func GetAnnotator(date time.Time) (api.Annotator, error) {
@@ -231,7 +234,26 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 		return nil, errors.New("No Appropriate Dataset")
 	}
 
-	return archivedAnnotator.GetAnnotator(filename)
+	ann, err := archivedAnnotator.GetAnnotator(filename)
+
+	if err == nil || err == ErrPendingAnnotatorLoad {
+		if time.Since(lastLog) > 5*time.Minute && ann != nil {
+			lastLog = time.Now()
+			log.Println("Using", ann.AnnotatorDate().Format("20060102"), err, "for", date.Format("20060102"))
+		}
+		return ann, err
+	}
+
+	// Try an earlier annotator...
+	// Found that 2014/01/07 fails to load, so we need to deal with it.
+	// TODO test this functionality
+	ann, err = GetAnnotator(date.Add(-30 * 24 * time.Hour))
+	if time.Since(lastSubLog) > 10*time.Second && ann != nil {
+		lastSubLog = time.Now()
+		// Very unlikely to see these.  8-(
+		log.Println("Substituting", ann.AnnotatorDate().Format("20060102"), err, "for", date.Format("20060102"))
+	}
+	return ann, err
 }
 
 // InitDataset will update the filename list of archived dataset in memory
