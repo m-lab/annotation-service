@@ -213,16 +213,24 @@ func (am *AnnotatorCache) validateAndSetAnnotator(dateString string, ann api.Ann
 		log.Println("This should never happen", ErrMapEntryAlreadySet)
 		return ErrMapEntryAlreadySet
 	}
-	entry.ann = ann
-	entry.err = err
-	entry.updateLastUsed()
+
+	// HACK for now
+	if err != nil {
+		metrics.ErrorTotal.WithLabelValues("load failed").Inc()
+		log.Println("Loading failed.  Hack for now - deleting entry")
+		delete(am.annotators, dateString)
+	} else {
+		entry.ann = ann
+		entry.err = err
+		entry.updateLastUsed()
+		metrics.DatasetCount.Inc()
+	}
 	total := len(am.annotators)
 	am.lock.Unlock()
 
 	metrics.LoadCount.Inc()
 	log.Println("total", total)
 	metrics.PendingLoads.Dec()
-	metrics.DatasetCount.Inc()
 	log.Println("Loaded", dateString)
 
 	return nil
@@ -235,7 +243,6 @@ func (am *AnnotatorCache) loadAnnotator(dateString string) {
 	ann, err := am.config.loader(dateString)
 	if errorMetricWithLabel(err) {
 		log.Println("Loading error", err)
-		return
 	}
 	// Set the new annotator value.  Entry should be nil.
 	err = am.validateAndSetAnnotator(dateString, ann, err)
@@ -264,7 +271,7 @@ func (am *AnnotatorCache) tryLoading(fn string) error {
 
 		// There is no entry yet for this date, so we take ownership by
 		// creating an entry.
-		am.annotators[fn] = &cacheEntry{}
+		am.annotators[fn] = &cacheEntry{} // Note: this changes the "total" logs.
 		metrics.PendingLoads.Inc()
 		// Implicitly pass the semaphore to the loader.
 		go am.loadAnnotator(fn)
@@ -297,6 +304,7 @@ func (am *AnnotatorCache) GetAnnotator(filename string) (api.Annotator, error) {
 	entry.updateLastUsed()
 
 	if entry.err != nil {
+		metrics.RejectionCount.WithLabelValues("Permanent loading error").Inc()
 		return nil, entry.err
 	}
 	if entry.ann == nil {
@@ -345,6 +353,7 @@ func (am *AnnotatorCache) evictExpired() {
 		// Note that this may block if legacy dataset is currently in use by other threads.
 		am.annotators[c].ann.Close()
 		delete(am.annotators, c)
+		log.Println("total datasets", len(am.annotators))
 		am.lock.Unlock()
 
 		am.releaseLimit() // Allow additional dataset to be loaded.
