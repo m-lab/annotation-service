@@ -242,12 +242,12 @@ func (am *AnnotatorCache) loadAnnotator(dateString string) {
 	defer am.releasePending() // Release the token when loading completes or fails.
 	ann, err := am.config.loader(dateString)
 	if errorMetricWithLabel(err) {
-		log.Println("Loading error", err)
+		log.Println("Loading error", err, dateString)
 	}
 	// Set the new annotator value.  Entry should be nil.
 	err = am.validateAndSetAnnotator(dateString, ann, err)
 	if errorMetricWithLabel(err) {
-		log.Println("Loading error", err)
+		log.Println("Loading error", err, dateString)
 	}
 }
 
