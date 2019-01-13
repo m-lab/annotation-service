@@ -15,6 +15,10 @@ sudo: required
 go:
 - 1.8
 
+env:
+  - DEP_VERSION=0.5.0
+
+
 before_install:
 - go get github.com/mattn/goveralls
 - go get github.com/wadey/gocovmerge
@@ -36,6 +40,11 @@ before_install:
 - tar tvf /tmp/service-accounts.tar
 
 - echo Branch is ${TRAVIS_BRANCH} and Tag is $TRAVIS_TAG
+
+install:
+- go get -u github.com/golang/dep/...
+- dep ensure
+- dep status
 
 # These directories will be cached on successful "script" builds, and restored,
 # if available, to save time on future builds.
