@@ -197,12 +197,12 @@ func NewAnnotatorCache(maxEntries int, maxPending int, minAge time.Duration, loa
 // The calling goroutine should "own" the responsibility for
 // setting the annotator.
 // TODO Add unit tests for load error cases.
-func (am *AnnotatorCache) validateAndSetAnnotator(dateString string, ann api.Annotator, err error) error {
+func (am *AnnotatorCache) validateAndSetAnnotator(fn string, ann api.Annotator, err error) error {
 	// This prevents readers from trying to read structures while they
 	// are being updated.
 	am.lock.Lock()
 
-	entry, ok := am.annotators[dateString]
+	entry, ok := am.annotators[fn]
 	if !ok || entry == nil {
 		am.lock.Unlock()
 		log.Println("This should never happen", ErrGoroutineNotOwner)
@@ -218,7 +218,7 @@ func (am *AnnotatorCache) validateAndSetAnnotator(dateString string, ann api.Ann
 	if err != nil {
 		metrics.ErrorTotal.WithLabelValues("load failed").Inc()
 		log.Println("Loading failed.  Hack for now - deleting entry")
-		delete(am.annotators, dateString)
+		delete(am.annotators, fn)
 	} else {
 		entry.ann = ann
 		entry.err = err
@@ -231,23 +231,23 @@ func (am *AnnotatorCache) validateAndSetAnnotator(dateString string, ann api.Ann
 	metrics.LoadCount.Inc()
 	log.Println("total", total)
 	metrics.PendingLoads.Dec()
-	log.Println("Loaded", dateString)
+	log.Println("Loaded", fn)
 
 	return nil
 }
 
 // This loads and saves the new dataset.
 // It should only be called asynchronously from GetAnnotator.
-func (am *AnnotatorCache) loadAnnotator(dateString string) {
+func (am *AnnotatorCache) loadAnnotator(fn string) {
 	defer am.releasePending() // Release the token when loading completes or fails.
-	ann, err := am.config.loader(dateString)
+	ann, err := am.config.loader(fn)
 	if errorMetricWithLabel(err) {
-		log.Println("Loading error", err, dateString)
+		log.Println("Loading error", err, fn)
 	}
 	// Set the new annotator value.  Entry should be nil.
-	err = am.validateAndSetAnnotator(dateString, ann, err)
+	err = am.validateAndSetAnnotator(fn, ann, err)
 	if errorMetricWithLabel(err) {
-		log.Println("Loading error", err, dateString)
+		log.Println("Loading error", err, fn)
 	}
 }
 
@@ -275,7 +275,7 @@ func (am *AnnotatorCache) tryLoading(fn string) error {
 		metrics.PendingLoads.Inc()
 		// Implicitly pass the semaphore to the loader.
 		go am.loadAnnotator(fn)
-		log.Println("Loading asynchronously")
+		log.Println("Loading", fn, "asynchronously")
 	}()
 	return nil
 }
