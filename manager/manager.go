@@ -379,7 +379,7 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 	ann, err := allAnnotators.GetAnnotator(filename)
 	errorMetricWithLabel(err)
 	if err == nil || err == ErrAnnotatorCacheFull || err == ErrPendingAnnotatorLoad || err == ErrTooManyLoading {
-		if time.Since(lastLog) > 5*time.Minute {
+		if time.Since(lastLog) > 5*time.Minute && ann != nil {
 			lastLog = time.Now()
 			log.Println("Using", ann.AnnotatorDate().Format("20060102"), err, "for", date.Format("20060102"))
 		}
