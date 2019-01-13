@@ -218,13 +218,15 @@ func (am *AnnotatorCache) validateAndSetAnnotator(fn string, ann api.Annotator, 
 	if err != nil {
 		metrics.ErrorTotal.WithLabelValues("load failed").Inc()
 		log.Println("Loading failed.  Hack for now - deleting entry")
-		delete(am.annotators, fn)
+		// HACK so this doesn't take up a slot.
+		am.releaseLimit()
 	} else {
-		entry.ann = ann
-		entry.err = err
-		entry.updateLastUsed()
 		metrics.DatasetCount.Inc()
 	}
+
+	entry.ann = ann
+	entry.err = err
+	entry.updateLastUsed()
 	total := len(am.annotators)
 	am.lock.Unlock()
 
@@ -374,12 +376,17 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 	}
 
 	ann, err := allAnnotators.GetAnnotator(filename)
-	errorMetricWithLabel(err)
 	if time.Since(lastLog) > 5*time.Minute && ann != nil {
 		lastLog = time.Now()
 		log.Println("Using", ann.AnnotatorDate().Format("20060102"), err, "for", date.Format("20060102"))
 	}
-	return ann, err
+	errorMetricWithLabel(err)
+	if err == nil || err == ErrAnnotatorCacheFull || err == ErrPendingAnnotatorLoad || err == ErrTooManyLoading {
+		return ann, err
+	}
+	// Try an earlier annotator...
+	log.Println("Substituting an earlier annotator")
+	return GetAnnotator(date.Add(-30 * 24 * time.Hour))
 }
 
 func (am *AnnotatorCache) evictEvery(interval time.Duration) {
