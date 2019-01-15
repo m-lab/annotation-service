@@ -94,6 +94,7 @@ func init() {
 	prometheus.MustRegister(EvictionCount)
 	prometheus.MustRegister(LoadCount)
 	prometheus.MustRegister(RejectionCount)
+	prometheus.MustRegister(RequestTimeHistogramUsec)
 }
 
 // SetupPrometheus sets up and runs a webserver to export prometheus metrics.
