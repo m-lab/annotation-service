@@ -36,7 +36,7 @@ func TestAnnotate(t *testing.T) {
 		res  string
 	}{
 		{"1.4.128.0", "625600", `{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":42.1,"longitude":-73.1},"ASN":{}}`},
-		{"This will be an error.", "1000", "Invalid request"},
+		{"This will be an error.", "1000", "invalid IP address"},
 	}
 	// TODO - make and use an annotator generator
 	manager.CurrentAnnotator = &geolite2.GeoDataset{
@@ -198,7 +198,7 @@ func TestBatchAnnotate(t *testing.T) {
 	}{
 		{
 			body: "{",
-			res:  "Invalid Request!",
+			res:  "unexpected end of JSON input",
 			alt:  "",
 		},
 		{
@@ -290,6 +290,9 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 }
 
 func TestE2ELoadMultipleDataset(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping test that uses GCS")
+	}
 	manager.InitDataset()
 	tests := []struct {
 		ip   string
