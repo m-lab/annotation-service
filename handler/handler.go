@@ -173,25 +173,15 @@ func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 	}
 
 	for i := range ips {
-		ip := net.ParseIP(ips[i])
-		if ip == nil {
-			metrics.BadIPTotal.Inc()
-			continue
-		}
-		format := 4
-		if ip.To4() == nil {
-			format = 6
-		}
-		// TODO - this is kinda hacky.  Should change the GetAnnotation api instead.
-		request := api.RequestData{IP: ip.String(), IPFormat: format, Timestamp: date}
 		metrics.TotalLookups.Inc()
 
-		annotation, err := ann.GetAnnotation(&request)
+		annotation := api.GeoData{}
+		err := ann.Annotate(ips[i], &annotation)
 		if err != nil {
-			metrics.ErrorTotal.WithLabelValues("GetAnnotation Error").Inc()
+			metrics.ErrorTotal.WithLabelValues("Annotate Error").Inc()
 			continue
 		}
-		responseMap[request.IP] = &annotation
+		responseMap[ips[i]] = &annotation
 	}
 	return v2.Response{AnnotatorDate: ann.AnnotatorDate(), Annotations: responseMap}, nil
 }
@@ -361,7 +351,6 @@ func BatchValidateAndParse(jsonBuffer []byte) ([]api.RequestData, error) {
 // pointer, even if it cannot find the appropriate metadata.
 func GetMetadataForSingleIP(request *api.RequestData) (result api.GeoData, err error) {
 	metrics.TotalLookups.Inc()
-	// TODO replace with generic GetAnnotator, that respects time.
 	ann, err := manager.GetAnnotator(request.Timestamp)
 	if err != nil {
 		return
