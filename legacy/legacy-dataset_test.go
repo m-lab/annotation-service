@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-test/deep"
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/legacy"
 	check "gopkg.in/check.v1"
@@ -18,18 +19,21 @@ type GeoIPSuite struct {
 
 var _ = check.Suite(&GeoIPSuite{})
 
-func (s *GeoIPSuite) TestLoadBundleLegacyDataset(c *check.C) {
+func TestLoadBundleLegacyDataset(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping test that accesses GCS")
+	}
 	gi, err := legacy.LoadBundleDataset("Maxmind/2017/04/08/20170408T080000Z-GeoLiteCity.dat.gz", "downloader-mlab-testing")
 	if err != nil {
-		log.Printf("Did not load legacy dataset correctly %v", err)
+		t.Fatal(err)
 	}
 
 	record, err := gi.GetAnnotation(&api.RequestData{IP: "2620:0:1003:415:fa1e:73f3:ec68:7709", IPFormat: 6, Timestamp: time.Unix(10, 0)})
-	c.Assert(record, check.NotNil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	log.Printf("%v\n", record)
-	c.Check(
-		*(record.Geo),
-		check.Equals,
+	if diff := deep.Equal(*record.Geo,
 		api.GeolocationIP{
 			ContinentCode: "NA",
 			CountryCode:   "US",
@@ -42,9 +46,9 @@ func (s *GeoIPSuite) TestLoadBundleLegacyDataset(c *check.C) {
 			PostalCode:    "",
 			Latitude:      37.751,
 			Longitude:     -97.822,
-		},
-	)
-
+		}); diff != nil {
+		t.Error(diff)
+	}
 }
 
 func (s *GeoIPSuite) TestLoadLegacyGeoliteDataset(c *check.C) {
