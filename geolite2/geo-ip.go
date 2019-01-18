@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
+	"github.com/m-lab/annotation-service/metrics"
 )
 
 const mapMax = 200000
@@ -62,6 +63,7 @@ var ErrNodeNotFound = errors.New("node not found")
 func (ds *GeoDataset) SearchBinary(ipLookUp string) (p IPNode, e error) {
 	ip := net.ParseIP(ipLookUp)
 	if ip == nil {
+		metrics.BadIPTotal.Inc()
 		return p, errors.New("ErrInvalidIP") // TODO
 	}
 	list := ds.IP6Nodes
@@ -131,7 +133,7 @@ func (ds *GeoDataset) Annotate(ip string, data *api.GeoData) error {
 
 // GetAnnotation looks up the IP address and returns the corresponding GeoData
 func (ds *GeoDataset) GetAnnotation(request *api.RequestData) (api.GeoData, error) {
-	data := api.GeoData{ASN: &api.ASNData{}} // TODO make the ASN nil!!
+	data := api.GeoData{}
 	ds.Annotate(request.IP, &data)
 	return data, nil
 }

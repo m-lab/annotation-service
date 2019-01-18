@@ -97,6 +97,7 @@ import (
 
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/loader"
+	"github.com/m-lab/annotation-service/metrics"
 )
 
 // This is the regex used to filter for which files we want to consider acceptable for using with legacy dataset
@@ -139,6 +140,7 @@ func (gi *Datasets) Annotate(IP string, data *api.GeoData) error {
 	}
 	ip := net.ParseIP(IP)
 	if ip == nil {
+		metrics.BadIPTotal.Inc()
 		return errors.New("ErrInvalidIP") // TODO
 	}
 	var record *GeoIPRecord

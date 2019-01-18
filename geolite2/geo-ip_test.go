@@ -93,18 +93,18 @@ func TestPopulateLocationData(t *testing.T) {
 			locs: []geolite2.LocationNode{{CityName: "Not A Real City", RegionCode: "ME"}},
 			res: api.GeoData{
 				Geo: &api.GeolocationIP{City: "Not A Real City", PostalCode: "10583", Region: "ME"},
-				ASN: &api.ASNData{}},
+				ASN: nil},
 		},
 		{
 			node: geolite2.IPNode{LocationIndex: -1, PostalCode: "10583"},
 			locs: nil,
 			res: api.GeoData{
 				Geo: &api.GeolocationIP{PostalCode: "10583"},
-				ASN: &api.ASNData{}},
+				ASN: nil},
 		},
 	}
 	for _, test := range tests {
-		data := api.GeoData{ASN: &api.ASNData{}}
+		data := api.GeoData{}
 		geolite2.PopulateLocationData(test.node, test.locs, &data)
 		if diff := deep.Equal(data, test.res); diff != nil {
 			t.Error(diff)
