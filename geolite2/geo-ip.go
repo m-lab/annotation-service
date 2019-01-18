@@ -50,7 +50,7 @@ type GeoDataset struct {
 	LocationNodes []LocationNode // The location nodes corresponding to the IPNodes
 }
 
-// Unload does nothing for geolite2 datasets.  Normal garbage collection is sufficient.
+// Close does nothing for geolite2 datasets.  Normal garbage collection is sufficient.
 func (ds *GeoDataset) Close() {}
 
 // ErrNodeNotFound is returned when we can't find data in our system.

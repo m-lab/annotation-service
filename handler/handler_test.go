@@ -255,7 +255,7 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 			req: &api.RequestData{IP: "127.0.0.1", IPFormat: 4, Timestamp: time.Unix(0, 0)},
 			res: api.GeoData{
 				Geo: &api.GeolocationIP{City: "Not A Real City", PostalCode: "10583"},
-				ASN: &api.IPASNData{}},
+				ASN: &api.ASNData{}},
 		},
 	}
 	manager.CurrentAnnotator = &geolite2.GeoDataset{

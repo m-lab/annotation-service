@@ -151,7 +151,7 @@ func (am *AnnotatorMap) maybeSetNil(key string) bool {
 			ann, ok := am.annotators[fileKey]
 			if ok {
 				log.Println("removing dataset " + fileKey)
-				ann.Unload()
+				ann.Close()
 				delete(am.annotators, fileKey)
 				metrics.EvictionCount.Inc()
 				metrics.DatasetCount.Dec()

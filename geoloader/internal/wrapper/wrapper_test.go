@@ -21,7 +21,7 @@ type fakeAnnotator struct {
 	unloadCount int
 }
 
-func (f *fakeAnnotator) Unload() {
+func (f *fakeAnnotator) Close() {
 	f.unloadCount++
 }
 

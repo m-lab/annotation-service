@@ -181,8 +181,8 @@ func (gi *Datasets) AnnotatorDate() time.Time {
 	return gi.startDate
 }
 
-// Unload unloads the datasets from the C library code.
-func (ds *Datasets) Unload() {
+// Close unloads the datasets from the C library code.
+func (ds *Datasets) Close() {
 	ds.lock.Lock()
 	defer ds.lock.Unlock()
 	ds.v4Data.Free()
