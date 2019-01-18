@@ -8,11 +8,11 @@ import (
 	"log"
 	"math/rand"
 	"net"
-	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/loader"
@@ -82,7 +82,7 @@ func isEqualLocLists(list, listComp []geolite2.LocationNode) error {
 	return nil
 }
 
-func TestConvertIPNodeToGeoData(t *testing.T) {
+func TestPopulateLocationData(t *testing.T) {
 	tests := []struct {
 		node geolite2.IPNode
 		locs []geolite2.LocationNode
@@ -93,20 +93,21 @@ func TestConvertIPNodeToGeoData(t *testing.T) {
 			locs: []geolite2.LocationNode{{CityName: "Not A Real City", RegionCode: "ME"}},
 			res: api.GeoData{
 				Geo: &api.GeolocationIP{City: "Not A Real City", PostalCode: "10583", Region: "ME"},
-				ASN: &api.IPASNData{}},
+				ASN: &api.ASNData{}},
 		},
 		{
 			node: geolite2.IPNode{LocationIndex: -1, PostalCode: "10583"},
 			locs: nil,
 			res: api.GeoData{
 				Geo: &api.GeolocationIP{PostalCode: "10583"},
-				ASN: &api.IPASNData{}},
+				ASN: &api.ASNData{}},
 		},
 	}
 	for _, test := range tests {
-		res := geolite2.ConvertIPNodeToGeoData(test.node, test.locs)
-		if !reflect.DeepEqual(res, test.res) {
-			t.Errorf("Expected %v, got %v", test.res, res)
+		data := api.GeoData{ASN: &api.ASNData{}}
+		geolite2.PopulateLocationData(test.node, test.locs, &data)
+		if diff := deep.Equal(data, test.res); diff != nil {
+			t.Error(diff)
 		}
 	}
 }
@@ -159,7 +160,7 @@ func TestGeoLite2(t *testing.T) {
 	gl2ipv6 := annotator.IP6Nodes
 	for i < len(gl2ipv6) {
 		ipMiddle := findMiddle(gl2ipv6[i].IPAddressLow, gl2ipv6[i].IPAddressHigh)
-		ipBin, errBin := annotator.SearchBinary(ipMiddle.String(), false)
+		ipBin, errBin := annotator.SearchBinary(ipMiddle.String())
 		// Linear search, starting at current node, since it can't be earlier.
 		ipLin, errLin := searchList(gl2ipv6[i:], ipMiddle.String())
 		if errBin != nil && errLin != nil && errBin.Error() != errLin.Error() {
@@ -179,7 +180,7 @@ func TestGeoLite2(t *testing.T) {
 	for i < len(gl2ipv4) {
 		ipMiddle := findMiddle(gl2ipv4[i].IPAddressLow, gl2ipv4[i].IPAddressHigh)
 
-		ipBin, errBin := annotator.SearchBinary(ipMiddle.String(), true)
+		ipBin, errBin := annotator.SearchBinary(ipMiddle.String())
 		// Linear search, starting at current node, since it can't be earlier.
 		ipLin, errLin := searchList(gl2ipv4[i:], ipMiddle.String())
 		if errBin != nil && errLin != nil && errBin.Error() != errLin.Error() {
@@ -229,7 +230,7 @@ func BenchmarkGeoLite2ipv4(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		i := rand.Intn(len(gl2ipv4))
 		ipMiddle := findMiddle(gl2ipv4[i].IPAddressLow, gl2ipv4[i].IPAddressHigh)
-		_, _ = annotator.SearchBinary(ipMiddle.String(), true)
+		_, _ = annotator.SearchBinary(ipMiddle.String())
 	}
 }
 
