@@ -85,7 +85,7 @@ type Annotator interface {
 	// Annotate replaces GetAnnotation.  It is used to populate one or more annotation fields
 	// in the GeoData object.
 	// If it fails, it will return a non-nil error and will leave the target unmodified.
-	Annotate(IP string, ann *GeoData) error
+	Annotate(ip string, ann *GeoData) error
 
 	// The date associated with the dataset.
 	AnnotatorDate() time.Time
@@ -105,4 +105,38 @@ func ExtractDateFromFilename(filename string) (time.Time, error) {
 		return time.Time{}, errors.New("cannot extract date from input filename")
 	}
 	return time.Parse(time.RFC3339, filedate[0][0:4]+"-"+filedate[0][4:6]+"-"+filedate[0][6:8]+"T00:00:00Z")
+}
+
+// CompositeAnnotator wraps several annotators, and calls to Annotate() apply all of them.
+type CompositeAnnotator struct {
+	annotators []Annotator
+}
+
+func (ca CompositeAnnotator) Annotate(ip string, ann *GeoData) error {
+	for i := range ca.annotators {
+		err := ca.annotators[i].Annotate(ip, ann)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (ca CompositeAnnotator) AnnotatorDate() time.Time {
+	t := time.Time{}
+	for i := range ca.annotators {
+		at := ca.annotators[i].AnnotatorDate()
+		if at.After(t) {
+			t = at
+		}
+	}
+	return t
+}
+
+func (ca CompositeAnnotator) Close() {
+	// Does nothing.  Other mechanisms are responsible for closing underlying annotators.
+}
+
+func NewCompositeAnnotator(annotators []Annotator) Annotator {
+	return CompositeAnnotator{annotators: annotators}
 }
