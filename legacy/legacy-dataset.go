@@ -172,7 +172,7 @@ func (gi *Datasets) Annotate(IP string, data *api.GeoData) error {
 
 // GetAnnotation looks up the IP address and returns the corresponding GeoData
 // Deprecated
-func (gi *Datasets) GetAnnotation(request *api.RequestData) (api.GeoData, error) {
+func (gi *Datasets) xGetAnnotation(request *api.RequestData) (api.GeoData, error) {
 	data := api.GeoData{}
 	err := gi.Annotate(request.IP, &data)
 	return data, err
