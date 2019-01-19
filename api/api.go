@@ -50,6 +50,7 @@ type ASNData struct{}
 // GeoData is the main struct for the geo metadata, which holds pointers to the
 // Geolocation data and the IP/ASN data. This is what we parse the JSON
 // response from the annotator into.
+// TODO - replace this with type Annotations struct.
 type GeoData struct {
 	Geo *GeolocationIP // Holds the geolocation data
 	ASN *ASNData       // Holds the ASN data
@@ -85,9 +86,6 @@ type Annotator interface {
 	// in the GeoData object.
 	// If it fails, it will return a non-nil error and will leave the target unmodified.
 	Annotate(IP string, ann *GeoData) error
-
-	// GetAnnotation is the deprecated api to request an annotation.
-	GetAnnotation(request *RequestData) (GeoData, error)
 
 	// The date associated with the dataset.
 	AnnotatorDate() time.Time
