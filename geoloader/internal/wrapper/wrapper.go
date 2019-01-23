@@ -131,7 +131,7 @@ func (ae *AnnWrapper) Unload() {
 	}
 
 	if ae.ann != nil {
-		ae.ann.Unload()
+		ae.ann.Close()
 	}
 
 	ae.ann = nil

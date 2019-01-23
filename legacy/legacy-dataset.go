@@ -88,6 +88,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"regexp"
 	"strconv"
 	"strings"
@@ -96,6 +97,7 @@ import (
 
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/loader"
+	"github.com/m-lab/annotation-service/metrics"
 )
 
 // This is the regex used to filter for which files we want to consider acceptable for using with legacy dataset
@@ -130,41 +132,50 @@ type Datasets struct {
 	startDate time.Time
 }
 
-// GetAnnotation looks up the IP address and returns the corresponding GeoData
-// TODO - improve the format handling.  Perhaps pass in a net.IP ?
-func (gi *Datasets) GetAnnotation(request *api.RequestData) (api.GeoData, error) {
+func (gi *Datasets) Annotate(IP string, data *api.GeoData) error {
 	gi.lock.RLock()
 	defer gi.lock.RUnlock()
 	if gi.v4Data == nil || gi.v6Data == nil {
-		return api.GeoData{}, ErrDatasetNotLoaded
+		return ErrDatasetNotLoaded
+	}
+	ip := net.ParseIP(IP)
+	if ip == nil {
+		metrics.BadIPTotal.Inc()
+		return errors.New("ErrInvalidIP") // TODO
 	}
 	var record *GeoIPRecord
-	if request.IPFormat == 4 {
-		record = gi.v4Data.GetRecord(request.IP, true)
+	if ip.To4() != nil {
+		record = gi.v4Data.GetRecord(IP, true)
 	} else {
-		record = gi.v6Data.GetRecord(request.IP, false)
+		record = gi.v6Data.GetRecord(IP, false)
 	}
 
 	// It is very possible that the record missed some fields in legacy dataset.
-	if record != nil {
-		return api.GeoData{
-			Geo: &api.GeolocationIP{
-				ContinentCode: record.ContinentCode,
-				CountryCode:   record.CountryCode,
-				CountryCode3:  record.CountryCode3,
-				CountryName:   record.CountryName,
-				Region:        record.Region,
-				MetroCode:     int64(record.MetroCode),
-				City:          record.City,
-				AreaCode:      int64(record.AreaCode),
-				PostalCode:    record.PostalCode,
-				Latitude:      round(record.Latitude),
-				Longitude:     round(record.Longitude),
-			},
-			ASN: &api.IPASNData{},
-		}, nil
+	if record == nil {
+		return ErrNoRecord
 	}
-	return api.GeoData{}, ErrNoRecord
+	data.Geo = &api.GeolocationIP{
+		ContinentCode: record.ContinentCode,
+		CountryCode:   record.CountryCode,
+		CountryCode3:  record.CountryCode3,
+		CountryName:   record.CountryName,
+		Region:        record.Region,
+		MetroCode:     int64(record.MetroCode),
+		City:          record.City,
+		AreaCode:      int64(record.AreaCode),
+		PostalCode:    record.PostalCode,
+		Latitude:      round(record.Latitude),
+		Longitude:     round(record.Longitude),
+	}
+	return nil
+}
+
+// GetAnnotation looks up the IP address and returns the corresponding GeoData
+// Deprecated
+func (gi *Datasets) GetAnnotation(request *api.RequestData) (api.GeoData, error) {
+	data := api.GeoData{}
+	err := gi.Annotate(request.IP, &data)
+	return data, err
 }
 
 // AnnotatorDate returns the date that the dataset was published.
@@ -172,8 +183,8 @@ func (gi *Datasets) AnnotatorDate() time.Time {
 	return gi.startDate
 }
 
-// Unload unloads the datasets from the C library code.
-func (ds *Datasets) Unload() {
+// Close unloads the datasets from the C library code.
+func (ds *Datasets) Close() {
 	ds.lock.Lock()
 	defer ds.lock.Unlock()
 	ds.v4Data.Free()

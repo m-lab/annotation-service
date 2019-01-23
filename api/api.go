@@ -43,16 +43,16 @@ type GeolocationIP struct {
 	Longitude     float64 `json:"longitude,,omitempty"      bigquery:"longitude"`      // Longitude
 }
 
-// IPASNData is the struct that will hold the IP/ASN data when it gets added to the
+// ASNData is the struct that will hold the IP/ASN data when it gets added to the
 // schema. Currently empty and unused.
-type IPASNData struct{}
+type ASNData struct{}
 
 // GeoData is the main struct for the geo metadata, which holds pointers to the
 // Geolocation data and the IP/ASN data. This is what we parse the JSON
 // response from the annotator into.
 type GeoData struct {
 	Geo *GeolocationIP // Holds the geolocation data
-	ASN *IPASNData     // Holds the IP/ASN data
+	ASN *ASNData       // Holds the ASN data
 }
 
 /*************************************************************************
@@ -79,15 +79,21 @@ type RequestWrapper struct {
 *                           Local Annotator API                          *
 *************************************************************************/
 
-// Annotator provides the GetAnnotation method, which retrieves the annotation for a given IP address.
+// Annotator defines the methods required annotating
 type Annotator interface {
-	// TODO use simple string IP
+	// Annotate replaces GetAnnotation.  It is used to populate one or more annotation fields
+	// in the GeoData object.
+	// If it fails, it will return a non-nil error and will leave the target unmodified.
+	Annotate(IP string, ann *GeoData) error
+
+	// GetAnnotation is the deprecated api to request an annotation.
 	GetAnnotation(request *RequestData) (GeoData, error)
+
 	// The date associated with the dataset.
 	AnnotatorDate() time.Time
+
 	// Free any unsafe memory associated with the annotator.
-	// Must not call GetAnnotation after freeing!
-	Unload()
+	Close()
 }
 
 var dateRE = regexp.MustCompile(`[0-9]{8}T`)

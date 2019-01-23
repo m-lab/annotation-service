@@ -143,7 +143,8 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 	for i := range ips {
 		request := ips[i]
 		metrics.TotalLookups.Inc()
-		annotation, err := ann.GetAnnotation(&request)
+		data := api.GeoData{}
+		err := ann.Annotate(request.IP, &data)
 		if err != nil {
 			// TODO need better error handling.
 			continue
@@ -151,7 +152,7 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 		// This requires that the caller should ignore the dateString.
 		// TODO - the unit tests do not catch this problem, so maybe it isn't a problem.
 		dateString := strconv.FormatInt(request.Timestamp.Unix(), encodingBase)
-		responseMap[request.IP+dateString] = &annotation
+		responseMap[request.IP+dateString] = &data
 	}
 	// TODO use annotator's actual start date.
 	return responseMap, time.Time{}, nil
@@ -358,17 +359,18 @@ func BatchValidateAndParse(jsonBuffer []byte) ([]api.RequestData, error) {
 // struct and will use it to fetch the appropriate associated
 // metadata, returning a GeoData.
 // pointer, even if it cannot find the appropriate metadata.
-func GetMetadataForSingleIP(request *api.RequestData) (api.GeoData, error) {
+func GetMetadataForSingleIP(request *api.RequestData) (result api.GeoData, err error) {
 	metrics.TotalLookups.Inc()
 	// TODO replace with generic GetAnnotator, that respects time.
 	ann, err := manager.GetAnnotator(request.Timestamp)
 	if err != nil {
-		return api.GeoData{}, err
+		return
 	}
 	if ann == nil {
 		log.Println("This shouldn't happen")
-		return api.GeoData{}, manager.ErrNilDataset
+		return result, manager.ErrNilDataset
 	}
 
-	return ann.GetAnnotation(request)
+	err = ann.Annotate(request.IP, &result)
+	return
 }

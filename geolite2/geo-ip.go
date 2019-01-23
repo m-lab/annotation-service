@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
+	"github.com/m-lab/annotation-service/metrics"
 )
 
 const mapMax = 200000
@@ -42,6 +43,7 @@ type LocationNode struct {
 
 // The GeoDataset struct bundles all the data needed to search and
 // find data into one common structure
+// It implements the api.Annotator interface.
 type GeoDataset struct {
 	start         time.Time      // Date from which to start using this dataset
 	IP4Nodes      []IPNode       // The IPNode list containing IP4Nodes
@@ -49,8 +51,8 @@ type GeoDataset struct {
 	LocationNodes []LocationNode // The location nodes corresponding to the IPNodes
 }
 
-// Unload does nothing for geolite2 datasets.  Normal garbage collection is sufficient.
-func (ds *GeoDataset) Unload() {}
+// Close does nothing for geolite2 datasets.  Normal garbage collection is sufficient.
+func (ds *GeoDataset) Close() {}
 
 // ErrNodeNotFound is returned when we can't find data in our system.
 // TODO SearchBinary and associated code should go in legacy, NOT here.
@@ -58,21 +60,25 @@ func (ds *GeoDataset) Unload() {}
 var ErrNodeNotFound = errors.New("node not found")
 
 // SearchBinary does a binary search for a list element.
-func (ds *GeoDataset) SearchBinary(ipLookUp string, IsIP4 bool) (p IPNode, e error) {
+func (ds *GeoDataset) SearchBinary(ipLookUp string) (p IPNode, e error) {
+	ip := net.ParseIP(ipLookUp)
+	if ip == nil {
+		metrics.BadIPTotal.Inc()
+		return p, errors.New("ErrInvalidIP") // TODO
+	}
 	list := ds.IP6Nodes
-	if IsIP4 {
+	if ip.To4() != nil {
 		list = ds.IP4Nodes
 	}
 	start := 0
 	end := len(list) - 1
 
-	userIP := net.ParseIP(ipLookUp)
 	for start <= end {
 		median := (start + end) / 2
-		if bytes.Compare(userIP, list[median].IPAddressLow) >= 0 && bytes.Compare(userIP, list[median].IPAddressHigh) <= 0 {
+		if bytes.Compare(ip, list[median].IPAddressLow) >= 0 && bytes.Compare(ip, list[median].IPAddressHigh) <= 0 {
 			return list[median], nil
 		}
-		if bytes.Compare(userIP, list[median].IPAddressLow) > 0 {
+		if bytes.Compare(ip, list[median].IPAddressLow) > 0 {
 			start = median + 1
 		} else {
 			end = median - 1
@@ -82,50 +88,54 @@ func (ds *GeoDataset) SearchBinary(ipLookUp string, IsIP4 bool) (p IPNode, e err
 }
 
 // ConvertIPNodeToGeoData takes a parser.IPNode, plus a list of
-// locationNodes. It will then use that data to fill in a GeoData
-// struct and return its pointer.
-// TODO make this unexported
-func convertIPNodeToGeoData(ipNode IPNode, locationNodes []LocationNode) api.GeoData {
+// locationNodes. It will then use that data to fill in a GeoData struct.
+func populateLocationData(ipNode IPNode, locationNodes []LocationNode, data *api.GeoData) {
 	locNode := LocationNode{}
 	if ipNode.LocationIndex >= 0 {
 		locNode = locationNodes[ipNode.LocationIndex]
 	}
-	return api.GeoData{
-		Geo: &api.GeolocationIP{
-			ContinentCode: locNode.ContinentCode,
-			CountryCode:   locNode.CountryCode,
-			CountryCode3:  "", // missing from geoLite2 ?
-			CountryName:   locNode.CountryName,
-			Region:        locNode.RegionCode,
-			MetroCode:     locNode.MetroCode,
-			City:          locNode.CityName,
-			AreaCode:      0, // new geoLite2 does not have area code.
-			PostalCode:    ipNode.PostalCode,
-			Latitude:      ipNode.Latitude,
-			Longitude:     ipNode.Longitude,
-		},
-		ASN: &api.IPASNData{},
+	data.Geo = &api.GeolocationIP{
+		ContinentCode: locNode.ContinentCode,
+		CountryCode:   locNode.CountryCode,
+		CountryCode3:  "", // missing from geoLite2 ?
+		CountryName:   locNode.CountryName,
+		Region:        locNode.RegionCode,
+		MetroCode:     locNode.MetroCode,
+		City:          locNode.CityName,
+		AreaCode:      0, // new geoLite2 does not have area code.
+		PostalCode:    ipNode.PostalCode,
+		Latitude:      ipNode.Latitude,
+		Longitude:     ipNode.Longitude,
 	}
-
 }
 
-// GetAnnotation looks up the IP address and returns the corresponding GeoData
-// TODO - improve the format handling.  Perhaps pass in a net.IP ?
-func (ds *GeoDataset) GetAnnotation(request *api.RequestData) (api.GeoData, error) {
-	var node IPNode
-	err := errors.New("unknown IP format")
-	node, err = ds.SearchBinary(request.IP, request.IPFormat == 4)
+func (ds *GeoDataset) Annotate(ip string, data *api.GeoData) error {
+	if data == nil {
+		return errors.New("ErrNilGeoData") // TODO
+	}
+	if data.Geo != nil {
+		return errors.New("ErrAlreadyPopulated") // TODO
+	}
 
+	node, err := ds.SearchBinary(ip)
 	if err != nil {
 		// ErrNodeNotFound is super spammy - 10% of requests, so suppress those.
 		if err != ErrNodeNotFound {
-			log.Println(err, request.IP)
+			log.Println(err, ip)
 		}
 		//TODO metric here
-		return api.GeoData{}, err
+		return err
 	}
 
-	return convertIPNodeToGeoData(node, ds.LocationNodes), nil
+	populateLocationData(node, ds.LocationNodes, data)
+	return nil
+}
+
+// GetAnnotation looks up the IP address and returns the corresponding GeoData
+func (ds *GeoDataset) GetAnnotation(request *api.RequestData) (api.GeoData, error) {
+	data := api.GeoData{}
+	ds.Annotate(request.IP, &data)
+	return data, nil
 }
 
 // AnnotatorDate returns the date that the dataset was published.
