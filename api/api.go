@@ -83,7 +83,7 @@ type RequestWrapper struct {
 type Annotator interface {
 	// Annotate replaces GetAnnotation.  It is used to populate one or more annotation fields
 	// in the GeoData object.
-	// It may return an non-nil error instead of annotating the object.
+	// If it fails, it will return a non-nil error and will leave the target unmodified.
 	Annotate(IP string, ann *GeoData) error
 
 	// GetAnnotation is the deprecated api to request an annotation.
@@ -93,7 +93,6 @@ type Annotator interface {
 	AnnotatorDate() time.Time
 
 	// Free any unsafe memory associated with the annotator.
-	// GetAnnotation and Annotate may return error after Close().
 	Close()
 }
 
