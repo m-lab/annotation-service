@@ -240,11 +240,11 @@ func checkError(err error, w http.ResponseWriter, ipCount int, label string, tSt
 		case manager.ErrAnnotatorCacheFull:
 			// If it isn't loading, client should probably give up instead of retrying.
 			w.WriteHeader(http.StatusInternalServerError)
-			metrics.RequestTimeHistogramUsec.WithLabelValues(label, " reject (cache full)").Observe(float64(time.Since(tStart).Nanoseconds() / 1000))
+			metrics.RequestTimeHistogramUsec.WithLabelValues(label, " reject (cache full)").Observe(float64(time.Since(tStart).Nanoseconds()) / 1000)
 		default:
 			// If it isn't loading, client should probably give up instead of retrying.
 			w.WriteHeader(http.StatusInternalServerError)
-			metrics.RequestTimeHistogramUsec.WithLabelValues(label, "other").Observe(float64(time.Since(tStart).Nanoseconds() / 1000))
+			metrics.RequestTimeHistogramUsec.WithLabelValues(label, "other").Observe(float64(time.Since(tStart).Nanoseconds()) / 1000)
 			fmt.Fprintf(w, err.Error())
 		}
 		return true
