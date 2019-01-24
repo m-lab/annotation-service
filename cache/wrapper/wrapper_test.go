@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
-	"github.com/m-lab/annotation-service/geoloader/internal/wrapper"
+	"github.com/m-lab/annotation-service/cache/wrapper"
 )
 
 func init() {
