@@ -6,16 +6,13 @@ package cache
 
 import (
 	"errors"
-	"fmt"
 	"log"
-	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
 
 	"github.com/m-lab/annotation-service/metrics"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 /**************************************************************************************************
@@ -59,30 +56,6 @@ var (
 	// ErrMapEntryAlreadySet is returned when goroutine attempts to set object, but entry is non-null.
 	ErrMapEntryAlreadySet = newCacheError("map entry already set")
 )
-
-/**************************************************************************************************
-*                                            Metrics                                              *
-**************************************************************************************************/
-var (
-	ErrorTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: "cache_error_total",
-		Help: "The total number of cache errors.",
-	}, []string{"type"})
-)
-
-func init() {
-	prometheus.MustRegister(ErrorTotal)
-}
-
-func errorMetricWithLabel(err error) bool {
-	if err != nil {
-		_, _, line, _ := runtime.Caller(1)
-		label := fmt.Sprintf("%3d %s", line+2, err)
-		metrics.ErrorTotal.WithLabelValues(label).Inc()
-		return true
-	}
-	return false
-}
 
 type entry struct {
 	loader func() (interface{}, error) // functimmutable
