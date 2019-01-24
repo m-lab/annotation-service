@@ -131,13 +131,6 @@ func (ds *GeoDataset) Annotate(ip string, data *api.GeoData) error {
 	return nil
 }
 
-// GetAnnotation looks up the IP address and returns the corresponding GeoData
-func (ds *GeoDataset) GetAnnotation(request *api.RequestData) (api.GeoData, error) {
-	data := api.GeoData{}
-	ds.Annotate(request.IP, &data)
-	return data, nil
-}
-
 // AnnotatorDate returns the date that the dataset was published.
 // TODO implement actual dataset time!!
 func (ds *GeoDataset) AnnotatorDate() time.Time {

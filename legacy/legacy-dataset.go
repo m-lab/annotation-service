@@ -170,27 +170,19 @@ func (gi *Datasets) Annotate(IP string, data *api.GeoData) error {
 	return nil
 }
 
-// GetAnnotation looks up the IP address and returns the corresponding GeoData
-// Deprecated
-func (gi *Datasets) GetAnnotation(request *api.RequestData) (api.GeoData, error) {
-	data := api.GeoData{}
-	err := gi.Annotate(request.IP, &data)
-	return data, err
-}
-
 // AnnotatorDate returns the date that the dataset was published.
 func (gi *Datasets) AnnotatorDate() time.Time {
 	return gi.startDate
 }
 
 // Close unloads the datasets from the C library code.
-func (ds *Datasets) Close() {
-	ds.lock.Lock()
-	defer ds.lock.Unlock()
-	ds.v4Data.Free()
-	ds.v6Data.Free()
-	ds.v4Data = nil
-	ds.v6Data = nil
+func (gi *Datasets) Close() {
+	gi.lock.Lock()
+	defer gi.lock.Unlock()
+	gi.v4Data.Free()
+	gi.v6Data.Free()
+	gi.v4Data = nil
+	gi.v6Data = nil
 }
 
 // LoadBundleDataset loads both IPv4 and IPv6 version of the requested dataset into memory.
