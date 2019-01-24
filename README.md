@@ -56,9 +56,37 @@ Annotatation service will respond with the following data:
 - Latitude
 - Longitude
 - Continent Code
-- Country Code 
+- Country Code
 - Country Name
 - Metro Code
 - City Name
 
+## TTL-cache
+The TTL-cache provides a cache of objects managed by TTL.
+When an object's TTL expires, the object's Free() function is called, and it is removed from the cache.
+Each object's TTL is reset whenever an object is Loaded or returned by Get().
+
+Each object provides
+  ```
+  Load()
+  Free()
+  ```
+
+The cache provides:
+  ```
+  Add(Key string, loader func() (interface, error))
+  Get(Key string) (interface, error)
+  ```
+The cache periodically enumerates all objects, and Frees those that have exceeded TTL.
+The interval is set to 1/5 of the cache's TTL.
+
+### Errors:
+
+`ErrLoading` is returned by Get when an annotator is loading but not yet available.
+`ErrCacheFull` is returned if an object cannot be loaded because there is no room in the cache.
+
+### Use
+The annototor-service uses the TTL cache to manage low level Annotator objects, including GeoLite2 annotators, Geolite legacy v4 and v6 annotators, and ASN annotators.
+
+These annotators are generally aggregated into CompositeAnnotators that maintain the keys to the individual annotators, and call all of the annotators sequentially to annotate a single object.
 
