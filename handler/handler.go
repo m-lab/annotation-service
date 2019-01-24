@@ -178,7 +178,14 @@ func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 		annotation := api.GeoData{}
 		err := ann.Annotate(ips[i], &annotation)
 		if err != nil {
-			metrics.ErrorTotal.WithLabelValues("Annotate Error").Inc()
+			switch err.Error {
+			// TODO - enumerate interesting error types here...
+			// Consider testing for an error subtype, rather than enumerating every error.
+			default:
+				// This collapses all other error types into a single error, to avoid excessive
+				// time serices if there are variable error strings.
+				metrics.ErrorTotal.WithLabelValues("Annotate Error").Inc()
+			}
 			continue
 		}
 		responseMap[ips[i]] = &annotation

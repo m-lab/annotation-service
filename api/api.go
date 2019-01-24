@@ -107,11 +107,12 @@ func ExtractDateFromFilename(filename string) (time.Time, error) {
 	return time.Parse(time.RFC3339, filedate[0][0:4]+"-"+filedate[0][4:6]+"-"+filedate[0][6:8]+"T00:00:00Z")
 }
 
-// CompositeAnnotator wraps several annotators, and calls to Annotate() apply all of them.
+// CompositeAnnotator wraps several annotators, and calls to Annotate() are forwarded to all of them.
 type CompositeAnnotator struct {
 	annotators []Annotator
 }
 
+// Annotate calls each of the wrapped annotators to annotate the ann object.
 func (ca CompositeAnnotator) Annotate(ip string, ann *GeoData) error {
 	for i := range ca.annotators {
 		err := ca.annotators[i].Annotate(ip, ann)
@@ -122,6 +123,9 @@ func (ca CompositeAnnotator) Annotate(ip string, ann *GeoData) error {
 	return nil
 }
 
+// AnnotatorDate returns the date of the most recent wrapped annotator.  Most recent is returned
+// as we try to apply the most recent annotators that predate the test we are annotating.  So the
+// most recent of all the annotators is the date that should be compared to the test date.
 func (ca CompositeAnnotator) AnnotatorDate() time.Time {
 	t := time.Time{}
 	for i := range ca.annotators {
@@ -133,10 +137,15 @@ func (ca CompositeAnnotator) AnnotatorDate() time.Time {
 	return t
 }
 
-func (ca CompositeAnnotator) Close() {
-	// Does nothing.  Other mechanisms are responsible for closing underlying annotators.
-}
+// Close is included only to complete the current API.  We are removing Close from the API
+// in upcoming PRs.
+// DEPRECATED
+func (ca CompositeAnnotator) Close() {}
 
+// Creates a new CompositeAnnotator wrapping the provided slice. Returns nil if the slice is nil.
 func NewCompositeAnnotator(annotators []Annotator) Annotator {
+	if annotators == nil {
+		return nil
+	}
 	return CompositeAnnotator{annotators: annotators}
 }
