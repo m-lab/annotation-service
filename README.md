@@ -82,8 +82,18 @@ The interval is set to 1/5 of the cache's TTL.
 
 ### Errors:
 
-`ErrLoading` is returned by Get when an annotator is loading but not yet available.
+`ErrObjectLoading` is returned by Get when an annotator is loading but not yet available.
+
+`ErrObjectUnloaded` is stored in entry.err when the object is nil, and no-one is loading it.
+
+`ErrObjectLoadFailed` is returned when a requested object load failed.
+
 `ErrCacheFull` is returned if an object cannot be loaded because there is no room in the cache.
+
+`ErrTooManyLoading` is returned when a unloaded object is requested, but there are too many objects
+already being loaded.
+
+`ErrCacheFull` is returned when an unloaded object is requested, but the cache is full.
 
 ### Use
 The annototor-service uses the TTL cache to manage low level Annotator objects, including GeoLite2 annotators, Geolite legacy v4 and v6 annotators, and ASN annotators.

@@ -1,4 +1,4 @@
-package wrapper
+package cache
 
 // The AnnWrapper struct controls concurrent operations on Annotator objects.
 // It is designed for minimal contention on GetAnnotator(), and safe loading and unloading.
@@ -6,58 +6,114 @@ package wrapper
 
 import (
 	"errors"
+	"fmt"
 	"log"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
 
-	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/metrics"
+	"github.com/prometheus/client_golang/prometheus"
 )
+
+/**************************************************************************************************
+*                                            Errors                                               *
+**************************************************************************************************/
+
+// Error is the error type for all errors related to the  cache.
+type Error interface {
+	error
+}
+
+func newCacheError(msg string) Error {
+	return Error(errors.New(msg))
+}
 
 var (
-	// ErrAnnotatorLoading is returned (externally) when an annotator is being loaded.
-	ErrAnnotatorLoading = errors.New("annotator is being loaded")
-	// ErrNilEntry is returned when wrapper is empty, and eligible for loading.
-	ErrNilEntry = errors.New("map entry is nil")
+	// These errors are used in entry.err to indicate the entry's object status.  They may also
+	// be returned by Cache.Get()
+
+	// ErrObjectUnloaded is stored in entry.err when the object is nil, and no-one is loading it.
+	ErrObjectUnloaded = newCacheError("object is not loaded")
+
+	// ErrObjectLoading is returned when a new annotator is requested, but not yet loaded.
+	ErrObjectLoading = newCacheError("object is loading")
+
+	// ErrObjectLoadFailed is returned when a requested annotator has failed to load.
+	ErrObjectLoadFailed = newCacheError("object load failed")
+
+	// These are errors returned by the cache, but not stored in entries.
+
+	// ErrTooManyLoading is returned when a new annotator is requested, but not yet loaded.
+	ErrTooManyLoading = newCacheError("too many object already loading")
+
+	// ErrCacheFull is returned when a new annotator is requested, but cache is full.
+	ErrCacheFull = newCacheError("cache is full")
 
 	// These are UNEXPECTED errors!!
-	// ErrGoroutineNotOwner is returned when goroutine attempts to set annotator entry, but is not the owner.
-	// NOTE: this may happen if a goroutine for some reason calls unload when another goroutine is loading.
-	ErrGoroutineNotOwner = errors.New("goroutine does not own annotator slot")
 
-	// ErrMapEntryAlreadySet is returned when goroutine attempts to set annotator, but entry is non-nil.
-	// This should never happen.
-	ErrMapEntryAlreadySet = errors.New("annotator already set")
+	// ErrGoroutineNotOwner is returned when goroutine attempts to set object entry, but is not the owner.
+	ErrGoroutineNotOwner = newCacheError("goroutine not owner")
+	// ErrMapEntryAlreadySet is returned when goroutine attempts to set object, but entry is non-null.
+	ErrMapEntryAlreadySet = newCacheError("map entry already set")
 )
 
-type AnnWrapper struct {
-	// The lock must be held when accessing ann or err fields.
+/**************************************************************************************************
+*                                            Metrics                                              *
+**************************************************************************************************/
+var (
+	ErrorTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "cache_error_total",
+		Help: "The total number of cache errors.",
+	}, []string{"type"})
+)
+
+func init() {
+	prometheus.MustRegister(ErrorTotal)
+}
+
+func errorMetricWithLabel(err error) bool {
+	if err != nil {
+		_, _, line, _ := runtime.Caller(1)
+		label := fmt.Sprintf("%3d %s", line+2, err)
+		metrics.ErrorTotal.WithLabelValues(label).Inc()
+		return true
+	}
+	return false
+}
+
+type entry struct {
+	loader func() (interface{}, error) // functimmutable
+	free   func(interface{})           // immutable
+
+	// The lock must be held when accessing object or err fields.
 	lock sync.RWMutex
 
 	// Updated only while holding write lock.
-	ann api.Annotator
+	object interface{}
 
-	// err field is used to indicate the wrapper status.
-	// nil error means that the annotator is populated and ready for use.
-	// An empty wrapper will have a non-nil error, indicating whether a previous load failed,
-	// or annotator is currently loading, or annotator is nil and wrapper is idle.
-	err error
+	// err field is used to indicate the entry status.
+	// nil error means that the object is populated and ready for use.
+	// An empty entry will have a non-nil error, indicating whether a previous load failed,
+	// or object is currently loading, or object is nil and entry is idle.
+	err     Error
+	loadErr error // Optional additional error detail from a loading error.
 
 	// This field is accessed using atomics.
-	// In an empty wrapper, this should point to time.Time{} zero value.
+	// In an empty entry, this should point to time.Time{} zero value.
 	lastUsed unsafe.Pointer // pointer to the lastUsed time.Time.
 }
 
-// UpdateLastUsed updates the last used time to the current time.
-func (ae *AnnWrapper) UpdateLastUsed() {
+// updateLastUsed updates the last used time to the current time.
+func (ae *entry) UpdateLastUsed() {
 	newTime := time.Now()
 	atomic.StorePointer(&ae.lastUsed, unsafe.Pointer(&newTime))
 }
 
-// GetLastUsed returns the time that the annotator was last successfully fetched with GetAnnotator.
-func (ae *AnnWrapper) GetLastUsed() time.Time {
+// getLastUsed returns the time that the object was last successfully fetched with GetAnnotator.
+func (ae *entry) GetLastUsed() time.Time {
 	ptr := atomic.LoadPointer(&ae.lastUsed)
 	if ptr == nil {
 		log.Println("Error in getLastUsed for", ae)
@@ -66,41 +122,40 @@ func (ae *AnnWrapper) GetLastUsed() time.Time {
 	return *(*time.Time)(ptr)
 }
 
-// ReserveForLoad attempts to set the state to loading, indicated by the `err` field
+// reserveForLoad attempts to set the state to loading, indicated by the `err` field
 // containing ErrAnnotatorLoading.
 // Returns true IFF the reservation was obtained.
-func (ae *AnnWrapper) ReserveForLoad() bool {
+func (ae *entry) ReserveForLoad() bool {
 	ae.lock.Lock()
 	defer ae.lock.Unlock()
 	if ae.err == nil {
 		return false
 	}
-	if ae.err == ErrAnnotatorLoading { // This is the public error
+	if ae.err == ErrObjectLoading { // This is the public error
 		return false
 	}
 	// This takes ownership of the slot
-	ae.err = ErrAnnotatorLoading
+	ae.err = ErrObjectLoading
 	return true
 }
 
-// SetAnnotator attempts to store `ann`, and update the error state.
-// It may fail if the state has changed, e.g. because of an unload.
-func (ae *AnnWrapper) SetAnnotator(ann api.Annotator, err error) error {
+// store attempts to store `object`, and update the error state.
+func (ae *entry) Set(obj interface{}, err error) error {
 	ae.lock.Lock()
 	defer ae.lock.Unlock()
 
 	metrics.PendingLoads.Dec()
 
-	if ae.err != ErrAnnotatorLoading {
+	if ae.err != ErrObjectLoading {
 		// This may happen if another thread has caused an unload, though
 		// this should not happen in normal operation.
 		return ErrGoroutineNotOwner
 	}
-	if ae.ann != nil {
+	if ae.object != nil {
 		log.Println("This should never happen", ErrMapEntryAlreadySet)
 		return ErrMapEntryAlreadySet
 	}
-	ae.ann = ann
+	ae.object = obj
 	ae.err = err
 	ae.UpdateLastUsed()
 
@@ -111,35 +166,37 @@ func (ae *AnnWrapper) SetAnnotator(ann api.Annotator, err error) error {
 }
 
 // GetAnnotator gets the current annotator, if there is one, and the error state.
-func (ae *AnnWrapper) GetAnnotator() (ann api.Annotator, err error) {
-	ae.UpdateLastUsed()
-
+func (ae *entry) Get() (interface{}, error) {
 	ae.lock.RLock()
 	defer ae.lock.RUnlock()
+	ae.UpdateLastUsed()
 
-	return ae.ann, ae.err
+	return ae.object, ae.err
 }
 
 // Unload unloads the annotator and resets the state to the empty state.
-func (ae *AnnWrapper) Unload() {
+// If there was a previous load error, this clears it.
+func (ae *entry) Unload() error {
 	ae.lock.Lock()
 	defer ae.lock.Unlock()
 
 	// If another goroutine is loading, then do nothing.
-	if ae.err == ErrAnnotatorLoading {
-		return
+	if ae.err == ErrObjectLoading {
+		return ae.err
 	}
 
-	if ae.ann != nil {
-		ae.ann.Close()
+	if ae.object != nil {
+		ae.free(ae.object)
 	}
 
-	ae.ann = nil
-	ae.err = ErrNilEntry
+	ae.object = nil
+	ae.err = ErrObjectUnloaded
 	atomic.StorePointer(&ae.lastUsed, unsafe.Pointer(&time.Time{}))
+
+	return nil
 }
 
-// New creates and initializes a new AnnWrapper
-func New() AnnWrapper {
-	return AnnWrapper{err: ErrNilEntry, lastUsed: unsafe.Pointer(&time.Time{})}
+// New creates and initializes a new entry.
+func newEntry(loader func() (interface{}, error), free func(interface{})) entry {
+	return entry{loader: loader, free: free, err: ErrObjectUnloaded, lastUsed: unsafe.Pointer(&time.Time{})}
 }
