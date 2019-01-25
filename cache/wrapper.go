@@ -79,13 +79,13 @@ type entry struct {
 	lastUsed unsafe.Pointer // pointer to the lastUsed time.Time.
 }
 
-// updateLastUsed updates the last used time to the current time.
+// UpdateLastUsed updates the last used time to the current time.
 func (ae *entry) UpdateLastUsed() {
 	newTime := time.Now()
 	atomic.StorePointer(&ae.lastUsed, unsafe.Pointer(&newTime))
 }
 
-// getLastUsed returns the time that the object was last successfully fetched with GetAnnotator.
+// GetLastUsed returns the time that the object was last successfully fetched with GetAnnotator.
 func (ae *entry) GetLastUsed() time.Time {
 	ptr := atomic.LoadPointer(&ae.lastUsed)
 	if ptr == nil {
@@ -95,7 +95,7 @@ func (ae *entry) GetLastUsed() time.Time {
 	return *(*time.Time)(ptr)
 }
 
-// reserveForLoad attempts to set the state to loading, indicated by the `err` field
+// ReserveForLoad attempts to set the state to loading, indicated by the `err` field
 // containing ErrAnnotatorLoading.
 // Returns true IFF the reservation was obtained.
 func (ae *entry) ReserveForLoad() bool {
@@ -112,7 +112,7 @@ func (ae *entry) ReserveForLoad() bool {
 	return true
 }
 
-// store attempts to store `object`, and update the error state.
+// Set attempts to store `object`, and update the error state.
 func (ae *entry) Set(obj interface{}, err error) error {
 	ae.lock.Lock()
 	defer ae.lock.Unlock()
@@ -138,7 +138,7 @@ func (ae *entry) Set(obj interface{}, err error) error {
 	return nil
 }
 
-// GetAnnotator gets the current annotator, if there is one, and the error state.
+// Get gets the current object, if there is one, and the error state.
 func (ae *entry) Get() (interface{}, error) {
 	ae.lock.RLock()
 	defer ae.lock.RUnlock()
@@ -169,7 +169,7 @@ func (ae *entry) Unload() error {
 	return nil
 }
 
-// New creates and initializes a new entry.
+// newEntry creates and initializes a new entry.
 func newEntry(loader func() (interface{}, error), free func(interface{})) entry {
 	return entry{loader: loader, free: free, err: ErrObjectUnloaded, lastUsed: unsafe.Pointer(&time.Time{})}
 }

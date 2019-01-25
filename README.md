@@ -88,12 +88,9 @@ The interval is set to 1/5 of the cache's TTL.
 
 `ErrObjectLoadFailed` is returned when a requested object load failed.
 
-`ErrCacheFull` is returned if an object cannot be loaded because there is no room in the cache.
+`ErrCacheFull` is returned when there is a request to load an object, but the cache is full.
 
-`ErrTooManyLoading` is returned when a unloaded object is requested, but there are too many objects
-already being loaded.
-
-`ErrCacheFull` is returned when an unloaded object is requested, but the cache is full.
+`ErrTooManyLoading` is returned when there is a request to load an object, but too many other objects are currently being loaded.
 
 ### Use
 The annototor-service uses the TTL cache to manage low level Annotator objects, including GeoLite2 annotators, Geolite legacy v4 and v6 annotators, and ASN annotators.
