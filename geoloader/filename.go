@@ -2,7 +2,6 @@ package geoloader
 
 import (
 	"context"
-	"errors"
 	"log"
 	"regexp"
 	"sort"
@@ -13,7 +12,6 @@ import (
 	"google.golang.org/api/iterator"
 
 	"github.com/m-lab/annotation-service/api"
-	"github.com/m-lab/annotation-service/geoloader/internal/wrapper"
 )
 
 // GeoLite2StartDate is the date we have the first GeoLite2 dataset.
@@ -44,41 +42,19 @@ func setDirectory(dir *directory) {
 	datasetDir = dir
 }
 
-var (
-	// ErrAnnotatorLoading is returned (externally) when an annotator is being loaded.
-	ErrAnnotatorLoading = errors.New("annotator is being loaded")
-
-	// These are UNEXPECTED errors!!
-	// ErrGoroutineNotOwner is returned when goroutine attempts to set annotator entry, but is not the owner.
-	ErrGoroutineNotOwner = errors.New("goroutine does not own annotator slot")
-	// ErrMapEntryAlreadySet is returned when goroutine attempts to set annotator, but entry is non-null.
-	ErrMapEntryAlreadySet = errors.New("annotator already set")
-	// ErrNilEntry is returned when map has a nil entry, which should never happen.
-	ErrNilEntry = errors.New("map entry is nil")
-)
-
-type directoryEntry struct {
-	// date and filenames are immutable.
-	date time.Time // The date associated with this annotator.
-	// All filenames associated with this date/annotator.
-	// Only the first filename is currently required or used.
+type dateEntry struct {
+	date      time.Time
 	filenames []string
-
-	annotator wrapper.AnnWrapper
-}
-
-func newEntry(date time.Time) directoryEntry {
-	return directoryEntry{date: date, filenames: make([]string, 0, 2), annotator: wrapper.New()}
 }
 
 // directory maintains a list of datasets.
 type directory struct {
-	entries map[string]*directoryEntry // Map to filenames associated with date.
-	dates   []string                   // Date strings associated with files.
+	entries map[string]*dateEntry // Map to filenames associated with date.
+	dates   []string              // Date strings associated with files.
 }
 
 func newDirectory(size int) directory {
-	return directory{entries: make(map[string]*directoryEntry, size), dates: make([]string, 0, size)}
+	return directory{entries: make(map[string]*dateEntry, size), dates: make([]string, 0, size)}
 }
 
 // Insert inserts a new filename into the directory at the given date.
@@ -95,9 +71,7 @@ func (dir *directory) Insert(date time.Time, fn string) {
 		dir.dates[index] = dateString
 
 		// Create new entry for the date.
-		// TODO make this NOT a pointer?
-		e := newEntry(date)
-		entry = &e
+		entry = &dateEntry{filenames: make([]string, 0, 2), date: date}
 		dir.entries[dateString] = entry
 	}
 
@@ -142,7 +116,7 @@ var GeoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
 func UpdateArchivedFilenames() error {
 	old := getDirectory()
 	size := len(old.dates) + 2
-	dir := directory{entries: make(map[string]*directoryEntry, size), dates: make([]string, 0, size)}
+	dir := directory{entries: make(map[string]*dateEntry, size), dates: make([]string, 0, size)}
 
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
@@ -162,13 +136,8 @@ func UpdateArchivedFilenames() error {
 		if err != nil {
 			continue
 		}
-
 		if fileDate.Before(GeoLite2StartDate) {
-			// The 2014/01/07 dataset does not load properly.  This causes all sidestream
-			// processing to stall.  So we just avoid all early datasets for now.
-			// ACTUALLY - turns out there are multiple bad datasets.  So we just avoid
-			// all legacy datasets until we have better persistent error handling.
-			// TODO - before removing this, implement a unit test that fails because of it.
+			// temporary hack to avoid legacy
 			continue
 		}
 
