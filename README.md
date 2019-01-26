@@ -84,13 +84,50 @@ Important descrepencies to note include:
    information while GeoLiteLatest includes only end user location.
    www.maxmind.com/en/geoip2-precision-city-service
 
----
-### Older material:
+Annotatation service will respond with the following data:
+- IP Address range
+- Postal Code
+- Latitude
+- Longitude
+- Continent Code
+- Country Code
+- Country Name
+- Metro Code
+- City Name
 
-If an annotation request is dated prior to August 2017, location data will be derived from
-MaxMind GeoLiteLatest databases. Otherwise, data will be provided by
-MaxMind GeoLite2 databases. The discrepencies between provided databases are
-provided below.
+## TTL-cache
+The TTL-cache provides a cache of objects managed by TTL.
+When an object's TTL expires, the object's Free() function is called, and it is removed from the cache.
+Each object's TTL is reset whenever an object is Loaded or returned by Get().
 
+Each object provides
+  ```
+  Load()
+  Free()
+  ```
 
+The cache provides:
+  ```
+  Add(Key string, loader func() (interface, error))
+  Get(Key string) (interface, error)
+  ```
+The cache periodically enumerates all objects, and Frees those that have exceeded TTL.
+The interval is set to 1/5 of the cache's TTL.
+
+### Errors:
+
+`ErrObjectLoading` is returned by Get when an annotator is loading but not yet available.
+
+`ErrObjectUnloaded` is stored in entry.err when the object is nil, and no-one is loading it.
+
+`ErrObjectLoadFailed` is returned when a requested object load failed.
+
+`ErrCacheFull` is returned when there is a request to load an object, but the cache is full.
+
+`ErrTooManyLoading` is returned when there is a request to load an object, but too many other objects are currently being loaded.
+
+### Use
+The annototor-service uses the TTL cache to manage low level Annotator objects, including GeoLite2 annotators, Geolite legacy v4 and v6 annotators, and ASN annotators.
+
+These annotators are generally aggregated into CompositeAnnotators that maintain the keys to the individual annotators, and call all of the annotators sequentially to annotate a single object.
 
