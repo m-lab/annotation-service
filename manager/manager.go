@@ -427,6 +427,7 @@ func (am *AnnotatorCache) Cleanup() {
 // Initialized allAnnotators if not already initialized.
 func InitAnnotatorCache() {
 	if allAnnotators == nil {
-		allAnnotators = NewAnnotatorCache(300, 5, 60*time.Minute, geoloader.ArchivedLoader)
+		// This is intended to allow ALL datasets to be loaded, to see the memory footprint.
+		allAnnotators = NewAnnotatorCache(300, 5, 12*time.Hour, geoloader.ArchivedLoader)
 	}
 }
