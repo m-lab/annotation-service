@@ -155,6 +155,7 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 }
 
 var asyncAnnotation = false
+var lastAnnErrLog = time.Time{}
 
 // AnnotateV2 finds an appropriate Annotator based on the requested Date, and creates a
 // response with annotations for all parseable IPs.
@@ -182,6 +183,11 @@ func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 				// This collapses all other error types into a single error, to avoid excessive
 				// time serices if there are variable error strings.
 				metrics.ErrorTotal.WithLabelValues("Annotate Error").Inc()
+				// NOTE: There is a benign race here.  Should probably fix.
+				if time.Since(lastAnnErrLog) > time.Second {
+					log.Println(err)
+					lastAnnErrLog = time.Now()
+				}
 			}
 			continue
 		}
