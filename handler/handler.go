@@ -12,10 +12,13 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/m-lab/annotation-service/api"
 	v2 "github.com/m-lab/annotation-service/api/v2"
+	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/manager"
 	"github.com/m-lab/annotation-service/metrics"
 )
@@ -121,6 +124,42 @@ func NewBatchResponse(size int) *BatchResponse {
 // TODO use error messages defined in the annotator-map PR.
 var errNoAnnotator = errors.New("no Annotator found")
 
+// Should never be set to nil.
+var lastAnnErrLog = unsafe.Pointer(&time.Time{})
+
+func shouldLog() bool {
+	pt := atomic.LoadPointer(&lastAnnErrLog)
+	t := *(*time.Time)(pt)
+	if time.Since(t) > time.Second {
+		now := time.Now()
+		ok := atomic.CompareAndSwapPointer(&lastAnnErrLog, pt, unsafe.Pointer(&now))
+		return ok
+	}
+	return false
+}
+
+func logIfError(err error) bool {
+	if err == nil {
+		return false
+	}
+	switch err {
+	// TODO - move this error to api?
+	case geolite2.ErrNodeNotFound:
+		metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
+	// TODO - enumerate interesting error types here...
+	// Consider testing for an error subtype, rather than enumerating every error.
+	default:
+		// This collapses all other error types into a single error, to avoid excessive
+		// time serices if there are variable error strings.
+		metrics.ErrorTotal.WithLabelValues("Annotate Error").Inc()
+	}
+	// Avoid spam by logging only once per second.
+	if shouldLog() {
+		log.Println(err)
+	}
+	return true
+}
+
 // AnnotateLegacy uses a single `date` to select an annotator, and uses that annotator to annotate all
 // `ips`.  It uses the dates from the individual RequestData to form the keys for the result map.
 // Return values include the AnnotatorDate which is the publication date of the annotation dataset.
@@ -143,19 +182,14 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 		metrics.TotalLookups.Inc()
 		annotation := api.GeoData{}
 		err := ann.Annotate(ips[i].IP, &annotation)
-		if err == nil {
+		if !logIfError(err) {
 			dateString := strconv.FormatInt(request.Timestamp.Unix(), encodingBase)
 			rm[request.IP+dateString] = &annotation
-		} else {
-			metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
 		}
 	}
 	// TODO use annotator's actual start date.
 	return rm, time.Time{}, nil
 }
-
-var asyncAnnotation = false
-var lastAnnErrLog = time.Time{}
 
 // AnnotateV2 finds an appropriate Annotator based on the requested Date, and creates a
 // response with annotations for all parseable IPs.
@@ -175,23 +209,9 @@ func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 
 		annotation := api.GeoData{}
 		err := ann.Annotate(ips[i], &annotation)
-		if err != nil {
-			switch err.Error {
-			// TODO - enumerate interesting error types here...
-			// Consider testing for an error subtype, rather than enumerating every error.
-			default:
-				// This collapses all other error types into a single error, to avoid excessive
-				// time serices if there are variable error strings.
-				metrics.ErrorTotal.WithLabelValues("Annotate Error").Inc()
-				// NOTE: There is a benign race here.  Should probably fix.
-				if time.Since(lastAnnErrLog) > time.Second {
-					log.Println(err)
-					lastAnnErrLog = time.Now()
-				}
-			}
-			continue
+		if !logIfError(err) {
+			rm[ips[i]] = &annotation
 		}
-		rm[ips[i]] = &annotation
 	}
 	return v2.Response{AnnotatorDate: ann.AnnotatorDate(), Annotations: rm}, nil
 }
