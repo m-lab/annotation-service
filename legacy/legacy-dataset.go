@@ -91,7 +91,6 @@ import (
 	"net"
 	"regexp"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -108,11 +107,8 @@ var (
 	// ErrDateExtractionFailed is returned when no valid date can be extracted from filename.
 	ErrDateExtractionFailed = errors.New("Date extraction from dataset filename failed")
 
-	// ErrLoadIPv4LegacyFailed is returned when loading the legacy IPv4 dataset failed.
-	ErrLoadIPv4LegacyFailed = errors.New("Fail to load IPv4 dataset")
-
-	// ErrLoadIPv6LegacyFailed is returned when loading the legacy IPv6 dataset failed.
-	ErrLoadIPv6LegacyFailed = errors.New("Fail to load IPv6 dataset")
+	// ErrLoadLegacyFailed is returned when loading the legacy dataset failed.
+	ErrLoadLegacyFailed = errors.New("Fail to load legacy dataset")
 
 	// ErrInvalidDatasetFilename is returned when provided dataset filename is invalid.
 	ErrInvalidDatasetFilename = errors.New("Invalid input dataset name")
@@ -125,17 +121,17 @@ var (
 )
 
 // Datasets contains pointers to the datasets used to hold and lookup IP data.
+// There is only one IPv4 OR IPv6 dataset per Datasets structure.
 type Datasets struct {
 	lock      sync.RWMutex // Protect valid and GeoIP fields.
-	v4Data    *GeoIP
-	v6Data    *GeoIP
+	Data      *GeoIP
 	startDate time.Time
 }
 
 func (gi *Datasets) Annotate(IP string, data *api.GeoData) error {
 	gi.lock.RLock()
 	defer gi.lock.RUnlock()
-	if gi.v4Data == nil || gi.v6Data == nil {
+	if gi.Data == nil {
 		return ErrDatasetNotLoaded
 	}
 	ip := net.ParseIP(IP)
@@ -145,9 +141,9 @@ func (gi *Datasets) Annotate(IP string, data *api.GeoData) error {
 	}
 	var record *GeoIPRecord
 	if ip.To4() != nil {
-		record = gi.v4Data.GetRecord(IP, true)
+		record = gi.Data.GetRecord(IP, true)
 	} else {
-		record = gi.v6Data.GetRecord(IP, false)
+		record = gi.Data.GetRecord(IP, false)
 	}
 
 	// It is very possible that the record missed some fields in legacy dataset.
@@ -179,44 +175,22 @@ func (gi *Datasets) AnnotatorDate() time.Time {
 func (gi *Datasets) Close() {
 	gi.lock.Lock()
 	defer gi.lock.Unlock()
-	gi.v4Data.Free()
-	gi.v6Data.Free()
-	gi.v4Data = nil
-	gi.v6Data = nil
+	gi.Data.Free()
+	gi.Data = nil
 }
 
-// LoadBundleDataset loads both IPv4 and IPv6 version of the requested dataset into memory.
-func LoadBundleDataset(filename string, bucketname string) (*Datasets, error) {
+// LoadLegacyDataset loads the requested dataset into memory.
+func LoadLegacyDataset(filename string, bucketname string) (*Datasets, error) {
 	date, err := api.ExtractDateFromFilename(filename)
 	if err != nil {
 		log.Println("Error extracting date:", filename)
 		return nil, ErrDateExtractionFailed
 	}
-	if geoLegacyRegex.MatchString(filename) {
-		v4, err := LoadGeoliteDataset(filename, bucketname)
-		if err != nil {
-			return nil, ErrLoadIPv4LegacyFailed
-		}
-		v6, err := LoadGeoliteDataset(strings.Replace(filename, "GeoLiteCity", "GeoLiteCityv6", -1), bucketname)
-		if err != nil {
-			return nil, ErrLoadIPv6LegacyFailed
-		}
-		return &Datasets{v4Data: v4, v6Data: v6, startDate: date}, nil
+	ann, err := LoadGeoliteDataset(filename, bucketname)
+	if err != nil {
+		return nil, ErrLoadLegacyFailed
 	}
-
-	if geoLegacyv6Regex.MatchString(filename) {
-		v6, err := LoadGeoliteDataset(filename, bucketname)
-		if err != nil {
-			return nil, ErrLoadIPv6LegacyFailed
-		}
-		v4, err := LoadGeoliteDataset(strings.Replace(filename, "GeoLiteCityv6", "GeoLiteCity", -1), bucketname)
-		if err != nil {
-			return nil, ErrLoadIPv4LegacyFailed
-		}
-		return &Datasets{v4Data: v4, v6Data: v6, startDate: date}, nil
-	}
-
-	return nil, ErrInvalidDatasetFilename
+	return &Datasets{Data: ann, startDate: date}, nil
 }
 
 // LoadGeoliteDataset will check GCS for the matching dataset, download
