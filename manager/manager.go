@@ -213,6 +213,24 @@ func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 	return ann, nil
 }
 
+// FetchAnnotator returns the annoator in memory based on filename.
+func (am *AnnotatorMap) FetchAnnotator(key string) (api.Annotator, error) {
+	am.mutex.RLock()
+	ann, _ := am.annotators[key]
+	am.mutex.RUnlock()
+
+	if ann == nil {
+		metrics.RejectionCount.WithLabelValues("Dataset not loaded").Inc()
+		return nil, ErrPendingAnnotatorLoad
+	}
+	return ann, nil
+}
+
+// LoadAllDatasets load all available datasets into memory
+func (am *AnnotatorMap) LoadAllDatasets() error {
+	return geoloader.LoadAllDatasets(am.annotators)
+}
+
 // GetAnnotator returns the correct annotator to use for a given timestamp.
 // TODO: Update to properly handle legacy datasets.
 func GetAnnotator(date time.Time) (api.Annotator, error) {
@@ -224,6 +242,8 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 		return ann, nil
 	}
 
+	// TODO: for legacy dataset, we need to know whether it is IPv4 or IPv6 to
+	// return a correct filename.
 	filename := geoloader.BestAnnotatorName(date)
 
 	if filename == "" {
@@ -231,11 +251,15 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 		return nil, errors.New("No Appropriate Dataset")
 	}
 
-	return archivedAnnotator.GetAnnotator(filename)
+	// return archivedAnnotator.GetAnnotator(filename)
+
+	// Since all datasets have been loaded into memory during initialization,
+	// We can fetch any annotator by filename.
+	return archivedAnnotator.FetchAnnotator(filename)
 }
 
 // InitDataset will update the filename list of archived dataset in memory
-// and load the latest Geolite2 dataset in memory.
+// and load ALL legacy and Geolite2 dataset in memory.
 func InitDataset() {
 	geoloader.UpdateArchivedFilenames()
 
@@ -243,4 +267,6 @@ func InitDataset() {
 	currentDataMutex.Lock()
 	CurrentAnnotator = ann
 	currentDataMutex.Unlock()
+
+	archivedAnnotator.LoadAllDatasets()
 }
