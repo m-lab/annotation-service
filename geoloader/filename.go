@@ -30,7 +30,6 @@ var earliestArchiveDate = time.Unix(1377648000, 0) // "August 28, 2013")
 var datasetDir = &directory{}
 var datasetDirLock sync.RWMutex // lock to be held when accessing or updating datasetDir pointer.
 
-
 var DatasetFilenames []string
 
 func getDirectory() *directory {
@@ -149,7 +148,7 @@ func UpdateArchivedFilenames() error {
 		}
 
 		dir.Insert(fileDate, file.Name)
-                DatasetFilenames = append(DatasetFilenames, file.Name)
+		DatasetFilenames = append(DatasetFilenames, file.Name)
 	}
 	if err != nil {
 		log.Println(err)

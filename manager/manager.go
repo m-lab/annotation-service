@@ -234,7 +234,9 @@ func (am *AnnotatorMap) LoadAllDatasets() error {
 		if err != nil {
 			continue
 		}
+		am.mutex.Lock()
 		am.annotators[filename] = ann
+		am.mutex.Unlock()
 	}
 	return nil
 }

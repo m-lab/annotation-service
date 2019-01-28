@@ -189,9 +189,13 @@ func TestE2ELoadMultipleDataset(t *testing.T) {
 */
 func TestLoadAllDatasets(t *testing.T) {
 	am := manager.NewAnnotatorMap(fakeLoader)
-	log.Println(am.NumDatasetInMemory())
+	if am.NumDatasetInMemory() != 0 {
+		t.Fatal("Should be 0")
+	}
 
 	geoloader.UpdateArchivedFilenames()
 	am.LoadAllDatasets()
-	log.Println(am.NumDatasetInMemory())
+	if am.NumDatasetInMemory() != 36 {
+		t.Fatal("Should be 36")
+	}
 }
