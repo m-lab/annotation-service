@@ -30,6 +30,9 @@ var earliestArchiveDate = time.Unix(1377648000, 0) // "August 28, 2013")
 var datasetDir = &directory{}
 var datasetDirLock sync.RWMutex // lock to be held when accessing or updating datasetDir pointer.
 
+
+var DatasetFilenames []string
+
 func getDirectory() *directory {
 	datasetDirLock.RLock()
 	defer datasetDirLock.RUnlock()
@@ -146,55 +149,7 @@ func UpdateArchivedFilenames() error {
 		}
 
 		dir.Insert(fileDate, file.Name)
-	}
-	if err != nil {
-		log.Println(err)
-	}
-
-	setDirectory(&dir)
-
-	return nil
-}
-
-func LoadAllDatasets(annMap map[string]api.Annotator) error {
-	old := getDirectory()
-	size := len(old.dates) + 2
-	dir := directory{entries: make(map[string]*dateEntry, size), dates: make([]string, 0, size)}
-
-	ctx := context.Background()
-	client, err := storage.NewClient(ctx)
-	if err != nil {
-		return err
-	}
-	prospectiveFiles := client.Bucket(api.MaxmindBucketName).Objects(ctx, &storage.Query{Prefix: api.MaxmindPrefix})
-	for file, err := prospectiveFiles.Next(); err != iterator.Done; file, err = prospectiveFiles.Next() {
-		if err != nil {
-			return err
-		}
-		if !GeoLite2Regex.MatchString(file.Name) && !GeoLegacyRegex.MatchString(file.Name) && !GeoLegacyv6Regex.MatchString(file.Name) {
-			continue
-		}
-		// We archived but do not use legacy datasets after GeoLite2StartDate.
-		fileDate, err := api.ExtractDateFromFilename(file.Name)
-		if err != nil {
-			continue
-		}
-		if fileDate.Before(GeoLite2StartDate) {
-			// temporary hack to avoid legacy
-			continue
-		}
-
-		if !fileDate.Before(GeoLite2StartDate) && !GeoLite2Regex.MatchString(file.Name) {
-			continue
-		}
-
-		// dir.Insert(fileDate, file.Name)
-		ann, err := ArchivedLoader(file.Name)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		annMap[file.Name] = ann
+                DatasetFilenames = append(DatasetFilenames, file.Name)
 	}
 	if err != nil {
 		log.Println(err)

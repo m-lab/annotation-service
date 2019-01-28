@@ -227,8 +227,20 @@ func (am *AnnotatorMap) FetchAnnotator(key string) (api.Annotator, error) {
 }
 
 // LoadAllDatasets load all available datasets into memory
+// Must be called after geoloader.UpdateArchivedFilenames()
 func (am *AnnotatorMap) LoadAllDatasets() error {
-	return geoloader.LoadAllDatasets(am.annotators)
+	for _, filename := range geoloader.DatasetFilenames {
+		ann, err := am.loader(filename)
+		if err != nil {
+			continue
+		}
+		am.annotators[filename] = ann
+	}
+	return nil
+}
+
+func (am *AnnotatorMap) NumDatasetInMemory() int {
+	return len(am.annotators)
 }
 
 // GetAnnotator returns the correct annotator to use for a given timestamp.
