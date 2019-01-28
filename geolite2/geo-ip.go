@@ -59,12 +59,14 @@ func (ds *GeoDataset) Close() {}
 // Need to clean up handler code first, though.
 var ErrNodeNotFound = errors.New("node not found")
 
+var ErrInvalidIP = errors.New("Invalid IP address")
+
 // SearchBinary does a binary search for a list element.
 func (ds *GeoDataset) SearchBinary(ipLookUp string) (p IPNode, e error) {
 	ip := net.ParseIP(ipLookUp)
 	if ip == nil {
 		metrics.BadIPTotal.Inc()
-		return p, errors.New("ErrInvalidIP") // TODO
+		return p, ErrInvalidIP
 	}
 	list := ds.IP6Nodes
 	if ip.To4() != nil {

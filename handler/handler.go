@@ -143,7 +143,9 @@ func logIfError(err error) bool {
 		return false
 	}
 	switch err {
-	// TODO - move this error to api?
+	// TODO - move these errors to api?
+	case geolite2.ErrInvalidIP:
+		fallthrough
 	case geolite2.ErrNodeNotFound:
 		metrics.ErrorTotal.WithLabelValues(err.Error()).Inc()
 	// TODO - enumerate interesting error types here...
