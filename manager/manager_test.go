@@ -195,7 +195,7 @@ func TestLoadAllDatasets(t *testing.T) {
 
 	geoloader.UpdateArchivedFilenames()
 	am.LoadAllDatasets()
-	if am.NumDatasetInMemory() != 36 {
-		t.Fatal("Should be 36")
+	if am.NumDatasetInMemory() != 136 {
+		t.Fatal("Should be 136")
 	}
 }
