@@ -120,15 +120,15 @@ var (
 	ErrDatasetNotLoaded = errors.New("Dataset was not loaded properly")
 )
 
-// Datasets contains pointers to the datasets used to hold and lookup IP data.
-// There is only one IPv4 OR IPv6 dataset per Datasets structure.
-type Datasets struct {
+// Annotator contains pointer to the dataset used to hold and lookup IP data.
+// There is only one IPv4 OR IPv6 dataset per Annotator structure.
+type Annotator struct {
 	lock      sync.RWMutex // Protect valid and GeoIP fields.
 	Data      *GeoIP
 	startDate time.Time
 }
 
-func (gi *Datasets) Annotate(IP string, data *api.GeoData) error {
+func (gi *Annotator) Annotate(IP string, data *api.GeoData) error {
 	gi.lock.RLock()
 	defer gi.lock.RUnlock()
 	if gi.Data == nil {
@@ -167,12 +167,12 @@ func (gi *Datasets) Annotate(IP string, data *api.GeoData) error {
 }
 
 // AnnotatorDate returns the date that the dataset was published.
-func (gi *Datasets) AnnotatorDate() time.Time {
+func (gi *Annotator) AnnotatorDate() time.Time {
 	return gi.startDate
 }
 
 // Close unloads the datasets from the C library code.
-func (gi *Datasets) Close() {
+func (gi *Annotator) Close() {
 	gi.lock.Lock()
 	defer gi.lock.Unlock()
 	gi.Data.Free()
@@ -180,7 +180,7 @@ func (gi *Datasets) Close() {
 }
 
 // LoadLegacyDataset loads the requested dataset into memory.
-func LoadLegacyDataset(filename string, bucketname string) (*Datasets, error) {
+func LoadLegacyDataset(filename string, bucketname string) (*Annotator, error) {
 	date, err := api.ExtractDateFromFilename(filename)
 	if err != nil {
 		log.Println("Error extracting date:", filename)
@@ -190,7 +190,7 @@ func LoadLegacyDataset(filename string, bucketname string) (*Datasets, error) {
 	if err != nil {
 		return nil, ErrLoadLegacyFailed
 	}
-	return &Datasets{Data: ann, startDate: date}, nil
+	return &Annotator{Data: ann, startDate: date}, nil
 }
 
 // LoadGeoliteDataset will check GCS for the matching dataset, download

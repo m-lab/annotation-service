@@ -9,7 +9,7 @@ import (
 	"github.com/m-lab/annotation-service/legacy"
 )
 
-func TestLoadBundleLegacyDataset(t *testing.T) {
+func TestLoadLegacyDataset(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping test that accesses GCS")
 	}
@@ -44,7 +44,7 @@ func TestLoadBundleLegacyDataset(t *testing.T) {
 	}
 }
 
-func TestLoadLegacyGeoliteDataset(t *testing.T) {
+func TestLoadGeoliteDataset(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping test that accesses GCS")
 	}
