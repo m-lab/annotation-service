@@ -191,29 +191,8 @@ func (am *AnnotatorMap) checkAndLoadAnnotator(key string) {
 	}
 }
 
-// GetAnnotator gets the named annotator, if already in the map.
-// If not already loaded, this will trigger loading, and return ErrPendingAnnotatorLoad
+// GetAnnotator returns the annoator in memory based on filename.
 func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
-	am.mutex.RLock()
-	ann, ok := am.annotators[key]
-	am.mutex.RUnlock()
-
-	if !ok {
-		am.checkAndLoadAnnotator(key)
-		metrics.RejectionCount.WithLabelValues("New Dataset").Inc()
-		return nil, ErrPendingAnnotatorLoad
-	}
-
-	if ann == nil {
-		// Another goroutine is already loading this entry.  Return error.
-		metrics.RejectionCount.WithLabelValues("Dataset Pending").Inc()
-		return nil, ErrPendingAnnotatorLoad
-	}
-	return ann, nil
-}
-
-// FetchAnnotator returns the annoator in memory based on filename.
-func (am *AnnotatorMap) FetchAnnotator(key string) (api.Annotator, error) {
 	am.mutex.RLock()
 	ann, _ := am.annotators[key]
 	am.mutex.RUnlock()
@@ -262,11 +241,9 @@ func GetAnnotator(request *api.RequestData) (api.Annotator, error) {
 		return nil, errors.New("No Appropriate Dataset")
 	}
 
-	// return archivedAnnotator.GetAnnotator(filename)
-
 	// Since all datasets have been loaded into memory during initialization,
 	// We can fetch any annotator by filename.
-	return archivedAnnotator.FetchAnnotator(filename)
+	return archivedAnnotator.GetAnnotator(filename)
 }
 
 // InitDataset will update the filename list of archived dataset in memory
