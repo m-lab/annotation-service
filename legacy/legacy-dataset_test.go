@@ -9,12 +9,12 @@ import (
 	"github.com/m-lab/annotation-service/legacy"
 )
 
-func TestLoadBundleLegacyDataset(t *testing.T) {
+func TestLoadLegacyDataset(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping test that accesses GCS")
 	}
 	// Note this is slow - 3 to 5 seconds.
-	gi, err := legacy.LoadBundleDataset("Maxmind/2017/04/08/20170408T080000Z-GeoLiteCity.dat.gz", "downloader-mlab-testing")
+	gi, err := legacy.LoadLegacyDataset("Maxmind/2017/04/08/20170408T080000Z-GeoLiteCityv6.dat.gz", "downloader-mlab-testing")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestLoadBundleLegacyDataset(t *testing.T) {
 	}
 }
 
-func TestLoadLegacyGeoliteDataset(t *testing.T) {
+func TestLoadGeoliteDataset(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping test that accesses GCS")
 	}
