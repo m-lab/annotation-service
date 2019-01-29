@@ -28,6 +28,6 @@ func ArchivedLoader(filename string) (api.Annotator, error) {
 	if GeoLite2Regex.MatchString(filename) {
 		return geolite2.LoadGeoLite2Dataset(filename, api.MaxmindBucketName)
 	} else {
-		return legacy.LoadBundleDataset(filename, api.MaxmindBucketName)
+		return legacy.LoadLegacyDataset(filename, api.MaxmindBucketName)
 	}
 }
