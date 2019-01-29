@@ -23,51 +23,43 @@ var GeoLite2StartDate = time.Unix(1502755200, 0) //"August 15, 2017"
 // earliestArchiveDate is the date of the earliest archived dataset.
 var earliestArchiveDate = time.Unix(1377648000, 0) // "August 28, 2013")
 
-// datasetDir stores info on all the available datasets.  It is initially empty, just to
+// datasetDirV4 and datasetDirV6 stores info on all the available datasets.  It is initially empty, just to
 // provide the LatestDate() function.
 // The current directory is regarded as immutable, but the pointer is dynamically updated, so accesses
 // should only be done through getDirectory() and setDirectory().
 var datasetDirV4 = &directory{}
-var datasetDirLockV4 sync.RWMutex // lock to be held when accessing or updating datasetDir pointer.
-
-// To speed up online matching, we build another directory for IPv6 as well.
 var datasetDirV6 = &directory{}
-var datasetDirLockV6 sync.RWMutex
+var datasetDirLock sync.RWMutex // lock to be held when accessing or updating datasetDir pointer.
 
 var DatasetFilenames []string
 
 func getDirectoryV4() *directory {
-	datasetDirLockV4.RLock()
-	defer datasetDirLockV4.RUnlock()
+	datasetDirLock.RLock()
+	defer datasetDirLock.RUnlock()
 	return datasetDirV4
 }
 
 func getDirectoryV6() *directory {
-	datasetDirLockV6.RLock()
-	defer datasetDirLockV6.RUnlock()
+	datasetDirLock.RLock()
+	defer datasetDirLock.RUnlock()
 	return datasetDirV6
 }
 
-func setDirectoryV4(dir *directory) {
-	datasetDirLockV4.Lock()
-	defer datasetDirLockV4.Unlock()
-	datasetDirV4 = dir
-}
-
-func setDirectoryV6(dir *directory) {
-	datasetDirLockV6.Lock()
-	defer datasetDirLockV6.Unlock()
-	datasetDirV6 = dir
+func setDirectory(dirv4 *directory, dirv6 *directory) {
+	datasetDirLock.Lock()
+	defer datasetDirLock.Unlock()
+	datasetDirV4 = dirv4
+	datasetDirV6 = dirv6
 }
 
 type dateEntry struct {
-	date      time.Time
-	filenames []string
+	date     time.Time
+	filename string
 }
 
 // directory maintains a list of datasets.
 type directory struct {
-	entries map[string]*dateEntry // Map to filenames associated with date.
+	entries map[string]*dateEntry // Map to filename associated with date.
 	dates   []string              // Date strings associated with files.
 }
 
@@ -89,11 +81,9 @@ func (dir *directory) Insert(date time.Time, fn string) {
 		dir.dates[index] = dateString
 
 		// Create new entry for the date.
-		entry = &dateEntry{filenames: make([]string, 0, 2), date: date}
+		entry = &dateEntry{filename: fn, date: date}
 		dir.entries[dateString] = entry
 	}
-
-	entry.filenames = append(entry.filenames, fn)
 }
 
 func (dir *directory) latestDate() time.Time {
@@ -116,9 +106,9 @@ func (dir *directory) LastFilenameEarlierThan(date time.Time) string {
 	dateString := date.Format("20060102")
 	index := sort.SearchStrings(dir.dates, dateString)
 	if index == 0 {
-		return dir.entries[dir.dates[index]].filenames[0]
+		return dir.entries[dir.dates[index]].filename
 	}
-	return dir.entries[dir.dates[index-1]].filenames[0]
+	return dir.entries[dir.dates[index-1]].filename
 }
 
 // TODO: These regex are duplicated in geolite2 and legacy packages.
@@ -132,16 +122,17 @@ var GeoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
 // UpdateArchivedFilenames extracts the dataset filenames from downloader bucket
 // This job is run at the beginning of deployment and daily cron job.
 func UpdateArchivedFilenames() error {
-	old := getDirectoryV4()
-	size := len(old.dates) + 2
-	dirV4 := directory{entries: make(map[string]*dateEntry, size), dates: make([]string, 0, size)}
-	dirV6 := directory{entries: make(map[string]*dateEntry, size), dates: make([]string, 0, size)}
+	sizev4 := len(getDirectoryV4().dates) + 2
+	sizev6 := len(getDirectoryV6().dates) + 2
+	dirV4 := directory{entries: make(map[string]*dateEntry, sizev4), dates: make([]string, 0, sizev4)}
+	dirV6 := directory{entries: make(map[string]*dateEntry, sizev6), dates: make([]string, 0, sizev6)}
 
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	if err != nil {
 		return err
 	}
+        DatasetFilenames = []
 	prospectiveFiles := client.Bucket(api.MaxmindBucketName).Objects(ctx, &storage.Query{Prefix: api.MaxmindPrefix})
 	for file, err := prospectiveFiles.Next(); err != iterator.Done; file, err = prospectiveFiles.Next() {
 		if err != nil {
@@ -186,8 +177,7 @@ func UpdateArchivedFilenames() error {
 		log.Println(err)
 	}
 
-	setDirectoryV4(&dirV4)
-	setDirectoryV6(&dirV6)
+	setDirectory(&dirV4, &dirV6)
 	return nil
 }
 
