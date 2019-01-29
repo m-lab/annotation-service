@@ -132,7 +132,7 @@ func UpdateArchivedFilenames() error {
 	if err != nil {
 		return err
 	}
-        DatasetFilenames = []
+	DatasetFilenames = []string{}
 	prospectiveFiles := client.Bucket(api.MaxmindBucketName).Objects(ctx, &storage.Query{Prefix: api.MaxmindPrefix})
 	for file, err := prospectiveFiles.Next(); err != iterator.Done; file, err = prospectiveFiles.Next() {
 		if err != nil {
