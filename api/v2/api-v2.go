@@ -44,7 +44,7 @@ func NewRequest(date time.Time, ips []string) Request {
 // Response describes data returned in V2 responses (json encoded).
 type Response struct {
 	// TODO should we include additional metadata about the annotator sources?  Perhaps map of filenames?
-	AnnotatorDate time.Time               // The publication date of the dataset used for the annotation
+	AnnotatorDate time.Time               // The publication date(s) of the dataset used for the annotation
 	Annotations   map[string]*api.GeoData // Map from human readable IP address to GeoData
 }
 

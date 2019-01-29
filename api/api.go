@@ -43,16 +43,17 @@ type GeolocationIP struct {
 	Longitude     float64 `json:"longitude,,omitempty"      bigquery:"longitude"`      // Longitude
 }
 
-// IPASNData is the struct that will hold the IP/ASN data when it gets added to the
+// ASNData is the struct that will hold the IP/ASN data when it gets added to the
 // schema. Currently empty and unused.
-type IPASNData struct{}
+type ASNData struct{}
 
 // GeoData is the main struct for the geo metadata, which holds pointers to the
 // Geolocation data and the IP/ASN data. This is what we parse the JSON
 // response from the annotator into.
+// TODO - replace this with type Annotations struct.
 type GeoData struct {
 	Geo *GeolocationIP // Holds the geolocation data
-	ASN *IPASNData     // Holds the IP/ASN data
+	ASN *ASNData       // Holds the ASN data
 }
 
 /*************************************************************************
@@ -79,15 +80,18 @@ type RequestWrapper struct {
 *                           Local Annotator API                          *
 *************************************************************************/
 
-// Annotator provides the GetAnnotation method, which retrieves the annotation for a given IP address.
+// Annotator defines the methods required annotating
 type Annotator interface {
-	// TODO use simple string IP
-	GetAnnotation(request *RequestData) (GeoData, error)
+	// Annotate replaces GetAnnotation.  It is used to populate one or more annotation fields
+	// in the GeoData object.
+	// If it fails, it will return a non-nil error and will leave the target unmodified.
+	Annotate(ip string, ann *GeoData) error
+
 	// The date associated with the dataset.
 	AnnotatorDate() time.Time
+
 	// Free any unsafe memory associated with the annotator.
-	// Must not call GetAnnotation after freeing!
-	Unload()
+	Close()
 }
 
 var dateRE = regexp.MustCompile(`[0-9]{8}T`)
@@ -101,4 +105,47 @@ func ExtractDateFromFilename(filename string) (time.Time, error) {
 		return time.Time{}, errors.New("cannot extract date from input filename")
 	}
 	return time.Parse(time.RFC3339, filedate[0][0:4]+"-"+filedate[0][4:6]+"-"+filedate[0][6:8]+"T00:00:00Z")
+}
+
+// CompositeAnnotator wraps several annotators, and calls to Annotate() are forwarded to all of them.
+type CompositeAnnotator struct {
+	annotators []Annotator
+}
+
+// Annotate calls each of the wrapped annotators to annotate the ann object.
+func (ca CompositeAnnotator) Annotate(ip string, ann *GeoData) error {
+	for i := range ca.annotators {
+		err := ca.annotators[i].Annotate(ip, ann)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// AnnotatorDate returns the date of the most recent wrapped annotator.  Most recent is returned
+// as we try to apply the most recent annotators that predate the test we are annotating.  So the
+// most recent of all the annotators is the date that should be compared to the test date.
+func (ca CompositeAnnotator) AnnotatorDate() time.Time {
+	t := time.Time{}
+	for i := range ca.annotators {
+		at := ca.annotators[i].AnnotatorDate()
+		if at.After(t) {
+			t = at
+		}
+	}
+	return t
+}
+
+// Close is included only to complete the current API.  We are removing Close from the API
+// in upcoming PRs.
+// DEPRECATED
+func (ca CompositeAnnotator) Close() {}
+
+// Creates a new CompositeAnnotator wrapping the provided slice. Returns nil if the slice is nil.
+func NewCompositeAnnotator(annotators []Annotator) Annotator {
+	if annotators == nil {
+		return nil
+	}
+	return CompositeAnnotator{annotators: annotators}
 }
