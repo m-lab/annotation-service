@@ -27,21 +27,37 @@ var earliestArchiveDate = time.Unix(1377648000, 0) // "August 28, 2013")
 // provide the LatestDate() function.
 // The current directory is regarded as immutable, but the pointer is dynamically updated, so accesses
 // should only be done through getDirectory() and setDirectory().
-var datasetDir = &directory{}
-var datasetDirLock sync.RWMutex // lock to be held when accessing or updating datasetDir pointer.
+var datasetDirV4 = &directory{}
+var datasetDirLockV4 sync.RWMutex // lock to be held when accessing or updating datasetDir pointer.
+
+// To speed up online matching, we build another directory for IPv6 as well.
+var datasetDirV6 = &directory{}
+var datasetDirLockV6 sync.RWMutex
 
 var DatasetFilenames []string
 
-func getDirectory() *directory {
-	datasetDirLock.RLock()
-	defer datasetDirLock.RUnlock()
-	return datasetDir
+func getDirectoryV4() *directory {
+	datasetDirLockV4.RLock()
+	defer datasetDirLockV4.RUnlock()
+	return datasetDirV4
 }
 
-func setDirectory(dir *directory) {
-	datasetDirLock.Lock()
-	defer datasetDirLock.Unlock()
-	datasetDir = dir
+func getDirectoryV6() *directory {
+	datasetDirLockV6.RLock()
+	defer datasetDirLockV6.RUnlock()
+	return datasetDirV6
+}
+
+func setDirectoryV4(dir *directory) {
+	datasetDirLockV4.Lock()
+	defer datasetDirLockV4.Unlock()
+	datasetDirV4 = dir
+}
+
+func setDirectoryV6(dir *directory) {
+	datasetDirLockV6.Lock()
+	defer datasetDirLockV6.Unlock()
+	datasetDirV6 = dir
 }
 
 type dateEntry struct {
@@ -116,9 +132,10 @@ var GeoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
 // UpdateArchivedFilenames extracts the dataset filenames from downloader bucket
 // This job is run at the beginning of deployment and daily cron job.
 func UpdateArchivedFilenames() error {
-	old := getDirectory()
+	old := getDirectoryV4()
 	size := len(old.dates) + 2
-	dir := directory{entries: make(map[string]*dateEntry, size), dates: make([]string, 0, size)}
+	dirV4 := directory{entries: make(map[string]*dateEntry, size), dates: make([]string, 0, size)}
+	dirV6 := directory{entries: make(map[string]*dateEntry, size), dates: make([]string, 0, size)}
 
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
@@ -138,9 +155,14 @@ func UpdateArchivedFilenames() error {
 		if err != nil {
 			continue
 		}
+		IPtype := 0
 		if fileDate.Before(GeoLite2StartDate) {
 			// temporary hack to avoid legacy
-			if !GeoLegacyRegex.MatchString(file.Name) && !GeoLegacyv6Regex.MatchString(file.Name) {
+			if GeoLegacyRegex.MatchString(file.Name) {
+				IPtype = 4
+			} else if GeoLegacyv6Regex.MatchString(file.Name) {
+				IPtype = 6
+			} else {
 				continue
 			}
 		}
@@ -149,27 +171,42 @@ func UpdateArchivedFilenames() error {
 			continue
 		}
 
-		dir.Insert(fileDate, file.Name)
+		// Build 2 dir here. One for IPv4 and one for IPv6
+		if IPtype == 4 {
+			dirV4.Insert(fileDate, file.Name)
+		} else if IPtype == 6 {
+			dirV6.Insert(fileDate, file.Name)
+		} else {
+			dirV4.Insert(fileDate, file.Name)
+			dirV6.Insert(fileDate, file.Name)
+		}
 		DatasetFilenames = append(DatasetFilenames, file.Name)
 	}
 	if err != nil {
 		log.Println(err)
 	}
 
-	setDirectory(&dir)
-
+	setDirectoryV4(&dirV4)
+	setDirectoryV6(&dirV6)
 	return nil
 }
 
 // Latest returns the date of the latest dataset.
 // May return time.Time{} if no dates have been loaded.
 func LatestDatasetDate() time.Time {
-	dd := getDirectory()
+	dd := getDirectoryV4()
 	return dd.latestDate()
 }
 
-// BestAnnotatorName returns the dataset filename for annotating the requested date.
-func BestAnnotatorName(date time.Time) string {
-	dd := getDirectory()
-	return dd.LastFilenameEarlierThan(date)
+// BestAnnotatorFilename return legacy IPv4 or IPv6 or Geolite2 filename based on request date and IP type
+func BestAnnotatorFilename(request *api.RequestData) string {
+	if request.IPFormat == 4 {
+		dd := getDirectoryV4()
+		return dd.LastFilenameEarlierThan(request.Timestamp)
+	} else if request.IPFormat == 6 {
+		dd := getDirectoryV6()
+		return dd.LastFilenameEarlierThan(request.Timestamp)
+	} else {
+		return ""
+	}
 }

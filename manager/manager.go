@@ -30,7 +30,6 @@ import (
 	"errors"
 	"log"
 	"sync"
-	"time"
 
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/geoloader"
@@ -246,9 +245,9 @@ func (am *AnnotatorMap) NumDatasetInMemory() int {
 }
 
 // GetAnnotator returns the correct annotator to use for a given timestamp.
-// TODO: Update to properly handle legacy datasets.
-func GetAnnotator(date time.Time) (api.Annotator, error) {
+func GetAnnotator(request *api.RequestData) (api.Annotator, error) {
 	// key := strconv.FormatInt(date.Unix(), encodingBase)
+	date := request.Timestamp
 	if date.After(geoloader.LatestDatasetDate()) {
 		currentDataMutex.RLock()
 		ann := CurrentAnnotator
@@ -256,9 +255,7 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 		return ann, nil
 	}
 
-	// TODO: for legacy dataset, we need to know whether it is IPv4 or IPv6 to
-	// return a correct filename.
-	filename := geoloader.BestAnnotatorName(date)
+	filename := geoloader.BestAnnotatorFilename(request)
 
 	if filename == "" {
 		metrics.ErrorTotal.WithLabelValues("No Appropriate Dataset").Inc()
