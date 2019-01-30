@@ -31,7 +31,20 @@ var datasetDirV4 = &directory{}
 var datasetDirV6 = &directory{}
 var datasetDirLock sync.RWMutex // lock to be held when accessing or updating datasetDir pointer.
 
-var DatasetFilenames []string
+var datasetFilenames []string
+var datasetFilenamesLock sync.RWMutex // lock to be held when accessing or updating datasetFilenames.
+
+func getDatasetFilenames() []string {
+	datasetFilenamesLock.RLock()
+	defer datasetFilenamesLock.RUnLock()
+	return datasetFilenames
+}
+
+func setDatasetFilenames(filename []string) {
+	datasetFilenamesLock.Lock()
+	defer datasetFilenamesLock.UnLock()
+	datasetFilenames = filename
+}
 
 func getDirectoryV4() *directory {
 	datasetDirLock.RLock()
@@ -132,7 +145,7 @@ func UpdateArchivedFilenames() error {
 	if err != nil {
 		return err
 	}
-	DatasetFilenames = []string{}
+	filenames = []string{}
 	prospectiveFiles := client.Bucket(api.MaxmindBucketName).Objects(ctx, &storage.Query{Prefix: api.MaxmindPrefix})
 	for file, err := prospectiveFiles.Next(); err != iterator.Done; file, err = prospectiveFiles.Next() {
 		if err != nil {
@@ -171,13 +184,14 @@ func UpdateArchivedFilenames() error {
 			dirV4.Insert(fileDate, file.Name)
 			dirV6.Insert(fileDate, file.Name)
 		}
-		DatasetFilenames = append(DatasetFilenames, file.Name)
+		filenames = append(filenames, file.Name)
 	}
 	if err != nil {
 		log.Println(err)
 	}
 
 	setDirectory(&dirV4, &dirV6)
+	setDatasetFilenames(filenames)
 	return nil
 }
 
