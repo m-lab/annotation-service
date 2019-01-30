@@ -148,7 +148,7 @@ func UpdateArchivedFilenames() error {
 		}
 		IPtype := 0
 		if fileDate.Before(GeoLite2StartDate) {
-			// Check whether thhis legacy dataset is IPv4 or IPv6
+			// Check whether this legacy dataset is IPv4 or IPv6
 			if GeoLegacyRegex.MatchString(file.Name) {
 				IPtype = 4
 			} else if GeoLegacyv6Regex.MatchString(file.Name) {
