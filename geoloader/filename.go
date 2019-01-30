@@ -36,13 +36,13 @@ var datasetFilenamesLock sync.RWMutex // lock to be held when accessing or updat
 
 func getDatasetFilenames() []string {
 	datasetFilenamesLock.RLock()
-	defer datasetFilenamesLock.RUnLock()
+	defer datasetFilenamesLock.RUnlock()
 	return datasetFilenames
 }
 
 func setDatasetFilenames(filename []string) {
 	datasetFilenamesLock.Lock()
-	defer datasetFilenamesLock.UnLock()
+	defer datasetFilenamesLock.Unlock()
 	datasetFilenames = filename
 }
 
@@ -145,7 +145,7 @@ func UpdateArchivedFilenames() error {
 	if err != nil {
 		return err
 	}
-	filenames = []string{}
+	filenames := []string{}
 	prospectiveFiles := client.Bucket(api.MaxmindBucketName).Objects(ctx, &storage.Query{Prefix: api.MaxmindPrefix})
 	for file, err := prospectiveFiles.Next(); err != iterator.Done; file, err = prospectiveFiles.Next() {
 		if err != nil {
