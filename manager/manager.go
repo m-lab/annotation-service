@@ -207,7 +207,7 @@ func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 // LoadAllDatasets load all available datasets into memory
 // Must be called after geoloader.UpdateArchivedFilenames()
 func (am *AnnotatorMap) LoadAllDatasets() error {
-	df := geoloader.getDatasetFilenames()
+	df := geoloader.GetDatasetFilenames()
 	for _, filename := range df {
 		ann, err := am.loader(filename)
 		if err != nil {
