@@ -27,8 +27,12 @@ import (
 )
 
 var (
+	// These errors should never happen, unless there is a bug in our implementation.
+
+	// ErrEmptyDirectory is returned by GetAnnotator if a Directory has no entries.
 	ErrEmptyDirectory = errors.New("Directory is empty")
-	ErrNilAnnotator   = errors.New("Annotator is nil")
+	// ErrNilAnnotator is returned if GetAnnotator encounters a nil Directory entry.
+	ErrNilAnnotator = errors.New("Annotator is nil")
 )
 
 // Directory maintains a list of Annotators, indexed by date.
