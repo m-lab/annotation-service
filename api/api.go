@@ -82,13 +82,15 @@ type RequestWrapper struct {
 
 // Annotator defines the methods required annotating
 type Annotator interface {
-	// Annotate replaces GetAnnotation.  It is used to populate one or more annotation fields
-	// in the GeoData object.
+	// Annotate populates one or more annotation fields in the GeoData object.
 	// If it fails, it will return a non-nil error and will leave the target unmodified.
 	Annotate(ip string, ann *GeoData) error
 
 	// The date associated with the dataset.
 	AnnotatorDate() time.Time
+
+	// AnnotatorType returns a string indicating what kind of annotator this is.
+	// AnnotatorType() string
 
 	// Free any unsafe memory associated with the annotator.
 	Close()
@@ -137,12 +139,27 @@ func (ca CompositeAnnotator) AnnotatorDate() time.Time {
 	return t
 }
 
+// String creates a string representation of the CA.
+// Base annotators will appear as [YYYYMMDD], and composite annotators as (A1A2), e.g.,
+// ([20100102]([20110304][20120506]))
+func (ca CompositeAnnotator) String() string {
+	result := ""
+	for _, c := range ca.annotators {
+		if t, ok := c.(CompositeAnnotator); ok {
+			result = result + "(" + t.String() + ")"
+		} else {
+			result = result + c.AnnotatorDate().Format("[20060102]")
+		}
+	}
+	return result
+}
+
 // Close is included only to complete the current API.  We are removing Close from the API
 // in upcoming PRs.
 // DEPRECATED
 func (ca CompositeAnnotator) Close() {}
 
-// Creates a new CompositeAnnotator wrapping the provided slice. Returns nil if the slice is nil.
+// NewCompositeAnnotator creates a new instance wrapping the provided slice. Returns nil if the slice is nil.
 func NewCompositeAnnotator(annotators []Annotator) Annotator {
 	if annotators == nil {
 		return nil

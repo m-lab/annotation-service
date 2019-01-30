@@ -60,3 +60,41 @@ func TestRequestWrapper(t *testing.T) {
 		t.Fatal("Should have produced json unmarshal error")
 	}
 }
+
+type fakeAnn struct {
+	api.Annotator
+	startDate time.Time
+}
+
+func (f *fakeAnn) AnnotatorDate() time.Time {
+	return f.startDate
+}
+
+func newFake(date string) *fakeAnn {
+	d, err := time.Parse("20060102", date)
+	if err != nil {
+		log.Println(err)
+	}
+	return &fakeAnn{startDate: d}
+}
+
+func TestCompositeAnnotator_String(t *testing.T) {
+	tests := []struct {
+		name       string
+		annotators []api.Annotator
+		want       string
+	}{
+		{"simple", []api.Annotator{newFake("20100203"), newFake("20110304")}, "[20100203][20110304]"},
+		// TODO: Add test cases.
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ca := api.NewCompositeAnnotator(tt.annotators)
+
+			if got := ca.(api.CompositeAnnotator).String(); got != tt.want {
+				t.Errorf("CompositeAnnotator.String() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
