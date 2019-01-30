@@ -34,7 +34,7 @@ var datasetDirLock sync.RWMutex // lock to be held when accessing or updating da
 var datasetFilenames []string
 var datasetFilenamesLock sync.RWMutex // lock to be held when accessing or updating datasetFilenames.
 
-func getDatasetFilenames() []string {
+func GetDatasetFilenames() []string {
 	datasetFilenamesLock.RLock()
 	defer datasetFilenamesLock.RUnlock()
 	return datasetFilenames
