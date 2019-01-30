@@ -16,7 +16,7 @@ func TestPrometheusMetrics(t *testing.T) {
 	defer server.Shutdown(nil)
 	log.Println(server.Addr)
 
-	metricReader, err := http.Get("http://localhost" + server.Addr + "/metrics")
+	metricReader, err := http.Get("http://" + server.Addr + "/metrics")
 	if err != nil || metricReader == nil {
 		t.Fatalf("Could not GET metrics: %v", err)
 	}
