@@ -19,6 +19,16 @@ package directory
 // Then, we merge the Geo annotation list with the ASN annotator list.
 // Finally, we use BuildDirectory to create a Directory based on this list.
 
+// Example use (simplified, with some functions that don't exist yet):
+// v4, _ = geoloader.LoadLegacyV4(nil)
+// v6, _ = geoloader.LoadLegacyV6(nil)
+// legacy := directory.MergeAnnotators(v4, v6)  // Creates annotators that will handle v4 or v6
+// g2, _ = geoloader.LoadGeolite2(nil)
+// combo := make([]api.Annotator, len(g2)+len(legacy))
+// combo = append(combo, g2...)
+// combo = append(combo, legacy...)
+// annotatorDirectory = directory.BuildDirectory(combo)
+
 import (
 	"errors"
 	"time"
