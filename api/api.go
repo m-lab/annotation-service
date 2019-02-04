@@ -82,8 +82,7 @@ type RequestWrapper struct {
 
 // Annotator defines the methods required annotating
 type Annotator interface {
-	// Annotate replaces GetAnnotation.  It is used to populate one or more annotation fields
-	// in the GeoData object.
+	// Annotate populates one or more annotation fields in the GeoData object.
 	// If it fails, it will return a non-nil error and will leave the target unmodified.
 	Annotate(ip string, ann *GeoData) error
 
@@ -109,6 +108,7 @@ func ExtractDateFromFilename(filename string) (time.Time, error) {
 
 // CompositeAnnotator wraps several annotators, and calls to Annotate() are forwarded to all of them.
 type CompositeAnnotator struct {
+	latestDate time.Time
 	annotators []Annotator
 }
 
@@ -117,7 +117,7 @@ func (ca CompositeAnnotator) Annotate(ip string, ann *GeoData) error {
 	for i := range ca.annotators {
 		err := ca.annotators[i].Annotate(ip, ann)
 		if err != nil {
-			return err
+			// TODO - don't want to return error if there is another annotator that can do the job.
 		}
 	}
 	return nil
@@ -127,9 +127,13 @@ func (ca CompositeAnnotator) Annotate(ip string, ann *GeoData) error {
 // as we try to apply the most recent annotators that predate the test we are annotating.  So the
 // most recent of all the annotators is the date that should be compared to the test date.
 func (ca CompositeAnnotator) AnnotatorDate() time.Time {
+	return ca.latestDate
+}
+
+func latestDate(annotators []Annotator) time.Time {
 	t := time.Time{}
-	for i := range ca.annotators {
-		at := ca.annotators[i].AnnotatorDate()
+	for i := range annotators {
+		at := annotators[i].AnnotatorDate()
 		if at.After(t) {
 			t = at
 		}
@@ -137,15 +141,31 @@ func (ca CompositeAnnotator) AnnotatorDate() time.Time {
 	return t
 }
 
+// String creates a string representation of the CA.
+// Base annotators will appear as [YYYYMMDD], and composite annotators as (A1A2), e.g.,
+// ([20100102]([20110304][20120506]))
+func (ca CompositeAnnotator) String() string {
+	result := ""
+	for _, c := range ca.annotators {
+		if t, ok := c.(CompositeAnnotator); ok {
+			result = result + "(" + t.String() + ")"
+		} else {
+			result = result + c.AnnotatorDate().Format("[20060102]")
+		}
+	}
+	return result
+}
+
 // Close is included only to complete the current API.  We are removing Close from the API
 // in upcoming PRs.
 // DEPRECATED
 func (ca CompositeAnnotator) Close() {}
 
-// Creates a new CompositeAnnotator wrapping the provided slice. Returns nil if the slice is nil.
+// NewCompositeAnnotator creates a new instance wrapping the provided slice. Returns nil if the slice is nil.
 func NewCompositeAnnotator(annotators []Annotator) Annotator {
 	if annotators == nil {
 		return nil
 	}
-	return CompositeAnnotator{annotators: annotators}
+	ca := CompositeAnnotator{latestDate: latestDate(annotators), annotators: annotators}
+	return ca
 }
