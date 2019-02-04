@@ -28,10 +28,14 @@ package manager
 
 import (
 	"errors"
+	"fmt"
 	"log"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/m-lab/annotation-service/api"
+	"github.com/m-lab/annotation-service/directory"
 	"github.com/m-lab/annotation-service/geoloader"
 	"github.com/m-lab/annotation-service/metrics"
 )
@@ -52,6 +56,9 @@ var (
 
 	// These are UNEXPECTED errors!!
 
+	// ErrDirectoryIsNil is returned if annotatorDirectory has not been initialized.
+	ErrDirectoryIsNil = errors.New("annotatorDirectory has not been initialized")
+
 	// ErrNoAppropriateDataset is returned when directory is empty.
 	ErrNoAppropriateDataset = errors.New("No Appropriate Dataset")
 	// ErrGoroutineNotOwner indicates multithreaded code problem with reservation.
@@ -59,19 +66,22 @@ var (
 	// ErrMapEntryAlreadySet indicates multithreaded code problem setting map entry.
 	ErrMapEntryAlreadySet = errors.New("Map entry already set")
 
-	// TODO remove these and keep current in the map.
-	// A mutex to make sure that we are not reading from the CurrentAnnotator
-	// pointer while trying to update it
-	currentDataMutex = &sync.RWMutex{}
-
-	// CurrentAnnotator points to a GeoDataset struct containing the absolute
-	// latest data for the annotator to search and reply with
-	CurrentAnnotator api.Annotator
-
-	// ArchivedLoader points to a AnnotatorMap struct containing the archived
-	// Geolite2 and legacy dataset in memory.
-	archivedAnnotator = NewAnnotatorMap(geoloader.ArchivedLoader)
+	// This replaces archivedAnnotator
+	// dirLock must be held when accessing or replacing annotatorDirectory.
+	dirLock sync.RWMutex
+	// annotatorDirectory points to a Directory containing CompositeAnnotators.
+	annotatorDirectory *directory.Directory
 )
+
+func SetDirectory(annotators []api.Annotator) {
+	dirLock.Lock()
+	defer dirLock.Unlock()
+	log.Println("Directory has", len(annotators), "entries")
+	annotatorDirectory = directory.Build(annotators)
+	if annotatorDirectory == nil {
+		log.Println("ERROR LOADING DIRECTORY")
+	}
+}
 
 // AnnotatorMap manages all loading and fetching of Annotators.
 // TODO - should we call this AnnotatorCache?
@@ -191,71 +201,80 @@ func (am *AnnotatorMap) checkAndLoadAnnotator(key string) {
 	}
 }
 
-// GetAnnotator returns the annoator in memory based on filename.
-func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
-	am.mutex.RLock()
-	ann, _ := am.annotators[key]
-	am.mutex.RUnlock()
-
-	if ann == nil {
-		metrics.RejectionCount.WithLabelValues("Dataset not loaded").Inc()
-		return nil, ErrPendingAnnotatorLoad
-	}
-	return ann, nil
-}
-
-// LoadAllDatasets load all available datasets into memory
-// Must be called after geoloader.UpdateArchivedFilenames()
-func (am *AnnotatorMap) LoadAllDatasets() error {
-	df := geoloader.GetDatasetFilenames()
-	for _, filename := range df {
-		ann, err := am.loader(filename)
-		if err != nil {
-			continue
-		}
-		am.mutex.Lock()
-		am.annotators[filename] = ann
-		am.mutex.Unlock()
-	}
-	return nil
-}
-
-func (am *AnnotatorMap) NumDatasetInMemory() int {
-	return len(am.annotators)
-}
-
 // GetAnnotator returns the correct annotator to use for a given timestamp.
-func GetAnnotator(request *api.RequestData) (api.Annotator, error) {
-	// key := strconv.FormatInt(date.Unix(), encodingBase)
-	date := request.Timestamp
-	if date.After(geoloader.LatestDatasetDate()) {
-		currentDataMutex.RLock()
-		ann := CurrentAnnotator
-		currentDataMutex.RUnlock()
-		return ann, nil
+func GetAnnotator(date time.Time) (api.Annotator, error) {
+	dirLock.RLock()
+	defer dirLock.RUnlock()
+	if annotatorDirectory == nil {
+		return nil, ErrDirectoryIsNil
 	}
-
-	filename := geoloader.BestAnnotatorFilename(request)
-
-	if filename == "" {
-		metrics.ErrorTotal.WithLabelValues("No Appropriate Dataset").Inc()
-		return nil, errors.New("No Appropriate Dataset")
-	}
-
-	// Since all datasets have been loaded into memory during initialization,
-	// We can fetch any annotator by filename.
-	return archivedAnnotator.GetAnnotator(filename)
+	return annotatorDirectory.GetAnnotator(date)
 }
 
-// InitDataset will update the filename list of archived dataset in memory
-// and load ALL legacy and Geolite2 dataset in memory.
+func listAnnotators(label string, an []api.Annotator) {
+	b := strings.Builder{}
+	b.WriteString(label + "\n")
+	for i := range an {
+		fmt.Fprintf(&b, "%s\n", an[i].AnnotatorDate().Format("20060102"))
+	}
+	log.Println(b.String())
+}
+
+// InitDataset loads ALL datasets into memory.
+// TODO - this will probably OOM when called a second time, since it will load all
+// the annotators again.
+// TODO - refactor this into parts in geoloader and directory.
 func InitDataset() {
-	geoloader.UpdateArchivedFilenames()
+	wg := sync.WaitGroup{}
+	wg.Add(3)
+	var v4 []api.Annotator
+	var v6 []api.Annotator
+	var g2 []api.Annotator
 
-	ann := geoloader.GetLatestData()
-	currentDataMutex.Lock()
-	CurrentAnnotator = ann
-	currentDataMutex.Unlock()
+	go func() {
+		var err error
+		v4, err = geoloader.LoadAllLegacyV4(nil) // HACK
+		if err != nil {
+			// PANIC?
+		}
+		v4 = directory.SortSlice(v4)
+		wg.Done()
+	}()
+	go func() {
+		var err error
+		v6, err = geoloader.LoadAllLegacyV6(nil) // HACK
+		if err != nil {
+			// PANIC
+		}
+		v6 = directory.SortSlice(v6)
+		wg.Done()
+	}()
+	go func() {
+		var err error
+		g2, err = geoloader.LoadAllGeolite2(nil) // HACK
+		if err != nil {
+			// PANIC
+		}
+		g2 = directory.SortSlice(g2)
+		wg.Done()
+	}()
 
-	archivedAnnotator.LoadAllDatasets()
+	wg.Wait()
+	listAnnotators("v4", v4)
+	listAnnotators("v6", v6)
+	if len(v4)*len(v6)*len(g2) < 1 {
+		log.Fatal("empty annotator list")
+	}
+	legacy := directory.MergeAnnotators(v4, v6)
+	listAnnotators("legacy", legacy)
+	combo := make([]api.Annotator, 0, len(g2)+len(legacy))
+	combo = append(combo, legacy...)
+	combo = append(combo, g2...)
+	combo = directory.SortSlice(combo)
+	listAnnotators("combo", combo)
+
+	dir := directory.Build(combo)
+	dirLock.Lock()
+	defer dirLock.Unlock()
+	annotatorDirectory = dir
 }

@@ -45,7 +45,7 @@ type LocationNode struct {
 // find data into one common structure
 // It implements the api.Annotator interface.
 type GeoDataset struct {
-	start         time.Time      // Date from which to start using this dataset
+	Start         time.Time      // Date from which to start using this dataset
 	IP4Nodes      []IPNode       // The IPNode list containing IP4Nodes
 	IP6Nodes      []IPNode       // The IPNode list containing IP6Nodes
 	LocationNodes []LocationNode // The location nodes corresponding to the IPNodes
@@ -134,7 +134,7 @@ func (ds *GeoDataset) Annotate(ip string, data *api.GeoData) error {
 // AnnotatorDate returns the date that the dataset was published.
 // TODO implement actual dataset time!!
 func (ds *GeoDataset) AnnotatorDate() time.Time {
-	return ds.start
+	return ds.Start
 }
 
 // Verify column length

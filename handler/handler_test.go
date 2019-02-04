@@ -39,7 +39,8 @@ func TestAnnotate(t *testing.T) {
 		{"This will be an error.", "1000", "invalid IP address"},
 	}
 	// TODO - make and use an annotator generator
-	manager.CurrentAnnotator = &geolite2.GeoDataset{
+	ann := &geolite2.GeoDataset{
+		Start: time.Now().Truncate(24 * time.Hour),
 		IP4Nodes: []geolite2.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),
@@ -66,6 +67,8 @@ func TestAnnotate(t *testing.T) {
 			},
 		},
 	}
+	manager.SetDirectory([]api.Annotator{ann})
+
 	for _, test := range tests {
 		w := httptest.NewRecorder()
 		r := &http.Request{}
@@ -210,7 +213,8 @@ func TestBatchAnnotate(t *testing.T) {
 		},
 	}
 	// TODO - make a test utility in geolite2 package.
-	manager.CurrentAnnotator = &geolite2.GeoDataset{
+	ann := &geolite2.GeoDataset{
+		Start: time.Now().Truncate(24 * time.Hour),
 		IP4Nodes: []geolite2.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),
@@ -233,6 +237,7 @@ func TestBatchAnnotate(t *testing.T) {
 			},
 		},
 	}
+	manager.SetDirectory([]api.Annotator{ann})
 	for _, test := range tests {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("POST", "/batch_annotate", strings.NewReader(test.body))
@@ -258,7 +263,8 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 				ASN: nil},
 		},
 	}
-	manager.CurrentAnnotator = &geolite2.GeoDataset{
+	ann := &geolite2.GeoDataset{
+		Start: time.Now().Truncate(24 * time.Hour),
 		IP4Nodes: []geolite2.IPNode{
 			{
 				IPAddressLow:  net.IPv4(0, 0, 0, 0),
@@ -281,6 +287,7 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 			},
 		},
 	}
+	manager.SetDirectory([]api.Annotator{ann})
 	for _, test := range tests {
 		res, _ := handler.GetMetadataForSingleIP(test.req)
 		if diff := deep.Equal(res, test.res); diff != nil {

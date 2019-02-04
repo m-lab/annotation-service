@@ -312,7 +312,7 @@ func LoadGeoLite2Dataset(filename string, bucketname string) (*GeoDataset, error
 	if err != nil {
 		log.Println("Error extracting date:", filename)
 	} else {
-		dataset.start = date
+		dataset.Start = date
 	}
 	return dataset, nil
 }
