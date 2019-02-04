@@ -111,6 +111,7 @@ func ExtractDateFromFilename(filename string) (time.Time, error) {
 
 // CompositeAnnotator wraps several annotators, and calls to Annotate() are forwarded to all of them.
 type CompositeAnnotator struct {
+	latestDate time.Time
 	annotators []Annotator
 }
 
@@ -119,7 +120,7 @@ func (ca CompositeAnnotator) Annotate(ip string, ann *GeoData) error {
 	for i := range ca.annotators {
 		err := ca.annotators[i].Annotate(ip, ann)
 		if err != nil {
-			return err
+			// TODO - don't want to return error if there is another annotator that can do the job.
 		}
 	}
 	return nil
@@ -129,9 +130,13 @@ func (ca CompositeAnnotator) Annotate(ip string, ann *GeoData) error {
 // as we try to apply the most recent annotators that predate the test we are annotating.  So the
 // most recent of all the annotators is the date that should be compared to the test date.
 func (ca CompositeAnnotator) AnnotatorDate() time.Time {
+	return ca.latestDate
+}
+
+func latestDate(annotators []Annotator) time.Time {
 	t := time.Time{}
-	for i := range ca.annotators {
-		at := ca.annotators[i].AnnotatorDate()
+	for i := range annotators {
+		at := annotators[i].AnnotatorDate()
 		if at.After(t) {
 			t = at
 		}
@@ -164,5 +169,6 @@ func NewCompositeAnnotator(annotators []Annotator) Annotator {
 	if annotators == nil {
 		return nil
 	}
-	return CompositeAnnotator{annotators: annotators}
+	ca := CompositeAnnotator{latestDate: latestDate(annotators), annotators: annotators}
+	return ca
 }
