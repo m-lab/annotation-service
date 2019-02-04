@@ -17,7 +17,7 @@ package directory
 // We first merge the v4 and v6 annotators into a list of CompositeAnnotators, using MergeAnnotators.
 // We then append all the GeoLite2 annotators to this list.
 // Then, we merge the Geo annotation list with the ASN annotator list.
-// Finally, we use BuildDirectory to create a Directory based on this list.
+// Finally, we use Build to create a Directory based on this list.
 
 // Example use (simplified, with some functions that don't exist yet):
 // v4, _ = geoloader.LoadLegacyV4(nil)
@@ -27,10 +27,14 @@ package directory
 // combo := make([]api.Annotator, len(g2)+len(legacy))
 // combo = append(combo, g2...)
 // combo = append(combo, legacy...)
-// annotatorDirectory = directory.BuildDirectory(combo)
+// annotatorDirectory = directory.Build(combo)
 
 import (
 	"errors"
+	"fmt"
+	"log"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
@@ -45,15 +49,13 @@ var (
 	ErrNilAnnotator = errors.New("Annotator is nil")
 )
 
-// Directory maintains a list of Annotators, indexed by date.
+// Directory allows searching a list of annotators
 type Directory struct {
-	// fields are immutable after construction using BuildDirectory()
-	startDate  time.Time
 	annotators []api.Annotator
 }
 
 func daysSince(ref time.Time, date time.Time) int {
-	i := int(date.Unix()-ref.Unix()) / (24 * 3600)
+	i := int((date.Unix() - ref.Unix()) / (24 * 3600))
 	if i < 0 {
 		return 0
 	}
@@ -66,56 +68,25 @@ func (d *Directory) GetAnnotator(date time.Time) (api.Annotator, error) {
 		return nil, ErrEmptyDirectory
 	}
 
-	index := daysSince(d.startDate, date)
-	if index >= len(d.annotators) {
-		index = len(d.annotators) - 1
-	}
-	if d.annotators[index] == nil {
-		return nil, ErrNilAnnotator
-	}
-	return d.annotators[index], nil
+	ann := d.lastEarlierThan(date)
+	log.Printf("Using (%s) for %s\n", ann.AnnotatorDate().Format("20060102"), date.Format("20060102"))
+	return ann, nil
 }
 
-func (d *Directory) replace(ann api.Annotator) {
-	date := ann.AnnotatorDate()
-
-	// Use this for any date strictly after the AnnotatorDate...
-	replaceAfter := daysSince(d.startDate, date)
-	for i := replaceAfter; i < len(d.annotators); i++ {
-		old := d.annotators[i]
-		if old == nil {
-			d.annotators[i] = ann
-		} else {
-			oldDate := old.AnnotatorDate()
-			if oldDate.Before(date) {
-				d.annotators[i] = ann
-			}
-		}
-
+// Dump prints a summary of the directory to the log.
+func (d *Directory) Dump() {
+	b := strings.Builder{}
+	b.WriteString("Directory:\n")
+	for i := range d.annotators {
+		fmt.Fprintf(&b, "%s\n", d.annotators[i].AnnotatorDate().Format("20060102"))
 	}
+	log.Println(b.String())
 }
 
-// BuildDirectory builds a Directory object from a list of Annotators.
+// Build builds a Directory object from a list of Annotators.
 // TODO - how do we handle multiple lists of Annotators that should be merged?
-func BuildDirectory(all []api.Annotator) *Directory {
-	start := time.Now()
-
-	for i := range all {
-		if all[i] != nil && all[i].AnnotatorDate().Before(start) {
-			start = all[i].AnnotatorDate()
-		}
-	}
-
-	annotators := make([]api.Annotator, daysSince(start, time.Now()))
-
-	dir := Directory{startDate: start, annotators: annotators}
-	// NOTE: this would be slightly more efficient if done in reverse order.
-	for i := range all {
-		if all[i] != nil {
-			dir.replace(all[i])
-		}
-	}
-
+func Build(all []api.Annotator) *Directory {
+	dir := Directory{annotators: SortSlice(all)}
 	return &dir
 }
 
@@ -148,7 +119,7 @@ func advance(lists [][]api.Annotator) ([][]api.Annotator, bool) {
 
 // MergeAnnotators merges multiple lists of annotators, and returns a list of CompositeAnnotators, each
 // containing an appropriate annotator from each list.
-func MergeAnnotators(lists [][]api.Annotator) []api.Annotator {
+func MergeAnnotators(lists ...[]api.Annotator) []api.Annotator {
 	listCount := len(lists)
 	if listCount == 0 {
 		return nil
@@ -164,6 +135,9 @@ func MergeAnnotators(lists [][]api.Annotator) []api.Annotator {
 		// Create and add group with first annotator from each list
 		group := make([]api.Annotator, len(lists))
 		for l, list := range lists {
+			if len(list) == 0 {
+				return nil
+			}
 			group[l] = list[0]
 		}
 		groups = append(groups, group)
@@ -176,4 +150,42 @@ func MergeAnnotators(lists [][]api.Annotator) []api.Annotator {
 		result[i] = api.NewCompositeAnnotator(group)
 	}
 	return result
+}
+
+// TODO move all of this to geoloader.
+func lessFunc(s []api.Annotator) func(i, j int) bool {
+	return func(i, j int) bool {
+		ti := s[i].AnnotatorDate()
+		tj := s[j].AnnotatorDate()
+		return ti.Before(tj)
+	}
+}
+
+// SortSlice sorts a slice of annotators in date order.
+func SortSlice(annotators []api.Annotator) []api.Annotator {
+	sort.Slice(annotators, lessFunc(annotators))
+	return annotators
+}
+
+// Satisfies sort.Search.  Returns index of first annotator that has
+// AnnotatorDate() >= date.
+func searchFunc(s []api.Annotator, date time.Time) func(i int) bool {
+	return func(i int) bool {
+		ti := s[i].AnnotatorDate()
+		return !ti.Before(date)
+	}
+}
+
+// Returns the last annotator that has AnnotatorDate < date.  If there is none, then
+// it returns the first annotator.  If there are no annotators, it returns nil
+func (d *Directory) lastEarlierThan(date time.Time) api.Annotator {
+	if len(d.annotators) == 0 {
+		return nil
+	}
+
+	index := sort.Search(len(d.annotators), searchFunc(d.annotators, date))
+	if index == 0 {
+		return d.annotators[index]
+	}
+	return d.annotators[index-1]
 }

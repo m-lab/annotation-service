@@ -34,7 +34,7 @@ func newFake(date string) *fakeAnn {
 }
 
 // TODO - this is a pretty ugly test implementation.  Make it better?
-func TestBuildDirectory(t *testing.T) {
+func TestBuild(t *testing.T) {
 	day := 24 * time.Hour
 	week := 7 * day
 
@@ -47,7 +47,7 @@ func TestBuildDirectory(t *testing.T) {
 	input = append(input, &fakeAnn{startDate: start.Add(200 * week)})
 	input = append(input, &fakeAnn{startDate: start.Add(278 * week)})
 	input = append(input, &fakeAnn{startDate: start.Add(478 * week)})
-	dir := directory.BuildDirectory(input)
+	dir := directory.Build(input)
 
 	tests := []struct {
 		testDate string // date
@@ -90,7 +90,7 @@ func TestMergeAnnotators(t *testing.T) {
 	log.Println(fake.AnnotatorDate())
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := directory.MergeAnnotators(tt.lists)
+			got := directory.MergeAnnotators(tt.lists[0], tt.lists[1])
 			// This is just a hack to allow us to create a useful signature.
 			gotString := api.NewCompositeAnnotator(got).(api.CompositeAnnotator).String()
 			if gotString != tt.want {
