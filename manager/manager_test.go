@@ -1,18 +1,19 @@
 package manager_test
 
 import (
-	"errors"
+	//"errors"
 	"log"
-	"net/http"
-	"net/http/httptest"
-	"net/url"
-	"sync"
+	//"net/http"
+	//"net/http/httptest"
+	//"net/url"
+	//"sync"
 	"testing"
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/geolite2"
-	"github.com/m-lab/annotation-service/handler"
+	"github.com/m-lab/annotation-service/geoloader"
+	//"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/manager"
 )
 
@@ -26,6 +27,7 @@ func fakeLoader(date string) (api.Annotator, error) {
 	return &geolite2.GeoDataset{}, nil
 }
 
+/*
 func TestAnnotatorMap(t *testing.T) {
 	manager.MaxPending = 2
 	manager.MaxDatasetInMemory = 3
@@ -182,5 +184,18 @@ func TestE2ELoadMultipleDataset(t *testing.T) {
 		if string(body) != test.res {
 			t.Errorf("\nGot\n__%s__\nexpected\n__%s__\n", body, test.res)
 		}
+	}
+}
+*/
+func TestLoadAllDatasets(t *testing.T) {
+	am := manager.NewAnnotatorMap(fakeLoader)
+	if am.NumDatasetInMemory() != 0 {
+		t.Fatal("Should be 0")
+	}
+
+	geoloader.UpdateArchivedFilenames()
+	am.LoadAllDatasets()
+	if am.NumDatasetInMemory() != 136 {
+		t.Fatal("Should be 136")
 	}
 }

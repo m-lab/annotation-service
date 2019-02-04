@@ -130,8 +130,10 @@ var errNoAnnotator = errors.New("no Annotator found")
 // DEPRECATED: This will soon be replaced with AnnotateV2()
 func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoData, time.Time, error) {
 	responseMap := make(map[string]*api.GeoData)
-
-	ann, err := manager.GetAnnotator(date)
+	if len(ips) == 0 {
+		return responseMap, time.Time{}, nil
+	}
+	ann, err := manager.GetAnnotator(&ips[0])
 	if err != nil {
 		return nil, time.Time{}, err
 	}
@@ -162,8 +164,20 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 // response with annotations for all parseable IPs.
 func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 	responseMap := make(map[string]*api.GeoData, len(ips))
+	if len(ips) == 0 {
+		return v2.Response{}, nil
+	}
 
-	ann, err := manager.GetAnnotator(date)
+	//
+	newIP := net.ParseIP(ips[0])
+	if newIP == nil {
+		return v2.Response{}, errors.New("invalid IP address")
+	}
+	ipformat := 4
+	if newIP.To4() == nil {
+		ipformat = 6
+	}
+	ann, err := manager.GetAnnotator(&api.RequestData{IP: ips[0], IPFormat: ipformat, Timestamp: date})
 	if err != nil {
 		return v2.Response{}, err
 	}
@@ -358,7 +372,7 @@ func BatchValidateAndParse(jsonBuffer []byte) ([]api.RequestData, error) {
 // pointer, even if it cannot find the appropriate metadata.
 func GetMetadataForSingleIP(request *api.RequestData) (result api.GeoData, err error) {
 	metrics.TotalLookups.Inc()
-	ann, err := manager.GetAnnotator(request.Timestamp)
+	ann, err := manager.GetAnnotator(request)
 	if err != nil {
 		return
 	}

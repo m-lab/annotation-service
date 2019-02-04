@@ -289,7 +289,7 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 	}
 }
 
-func TestE2ELoadMultipleDataset(t *testing.T) {
+func xTestE2ELoadMultipleDataset(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping test that uses GCS")
 	}

@@ -30,7 +30,6 @@ import (
 	"errors"
 	"log"
 	"sync"
-	"time"
 
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/geoloader"
@@ -192,31 +191,43 @@ func (am *AnnotatorMap) checkAndLoadAnnotator(key string) {
 	}
 }
 
-// GetAnnotator gets the named annotator, if already in the map.
-// If not already loaded, this will trigger loading, and return ErrPendingAnnotatorLoad
+// GetAnnotator returns the annoator in memory based on filename.
 func (am *AnnotatorMap) GetAnnotator(key string) (api.Annotator, error) {
 	am.mutex.RLock()
-	ann, ok := am.annotators[key]
+	ann, _ := am.annotators[key]
 	am.mutex.RUnlock()
 
-	if !ok {
-		am.checkAndLoadAnnotator(key)
-		metrics.RejectionCount.WithLabelValues("New Dataset").Inc()
-		return nil, ErrPendingAnnotatorLoad
-	}
-
 	if ann == nil {
-		// Another goroutine is already loading this entry.  Return error.
-		metrics.RejectionCount.WithLabelValues("Dataset Pending").Inc()
+		metrics.RejectionCount.WithLabelValues("Dataset not loaded").Inc()
 		return nil, ErrPendingAnnotatorLoad
 	}
 	return ann, nil
 }
 
+// LoadAllDatasets load all available datasets into memory
+// Must be called after geoloader.UpdateArchivedFilenames()
+func (am *AnnotatorMap) LoadAllDatasets() error {
+	df := geoloader.GetDatasetFilenames()
+	for _, filename := range df {
+		ann, err := am.loader(filename)
+		if err != nil {
+			continue
+		}
+		am.mutex.Lock()
+		am.annotators[filename] = ann
+		am.mutex.Unlock()
+	}
+	return nil
+}
+
+func (am *AnnotatorMap) NumDatasetInMemory() int {
+	return len(am.annotators)
+}
+
 // GetAnnotator returns the correct annotator to use for a given timestamp.
-// TODO: Update to properly handle legacy datasets.
-func GetAnnotator(date time.Time) (api.Annotator, error) {
+func GetAnnotator(request *api.RequestData) (api.Annotator, error) {
 	// key := strconv.FormatInt(date.Unix(), encodingBase)
+	date := request.Timestamp
 	if date.After(geoloader.LatestDatasetDate()) {
 		currentDataMutex.RLock()
 		ann := CurrentAnnotator
@@ -224,18 +235,20 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 		return ann, nil
 	}
 
-	filename := geoloader.BestAnnotatorName(date)
+	filename := geoloader.BestAnnotatorFilename(request)
 
 	if filename == "" {
 		metrics.ErrorTotal.WithLabelValues("No Appropriate Dataset").Inc()
 		return nil, errors.New("No Appropriate Dataset")
 	}
 
+	// Since all datasets have been loaded into memory during initialization,
+	// We can fetch any annotator by filename.
 	return archivedAnnotator.GetAnnotator(filename)
 }
 
 // InitDataset will update the filename list of archived dataset in memory
-// and load the latest Geolite2 dataset in memory.
+// and load ALL legacy and Geolite2 dataset in memory.
 func InitDataset() {
 	geoloader.UpdateArchivedFilenames()
 
@@ -243,4 +256,6 @@ func InitDataset() {
 	currentDataMutex.Lock()
 	CurrentAnnotator = ann
 	currentDataMutex.Unlock()
+
+	archivedAnnotator.LoadAllDatasets()
 }
