@@ -67,6 +67,7 @@ func FindFile(fn string, zrdr *zip.Reader) (io.ReadCloser, error) {
 }
 
 // UncompressGzFile reads a .gz file from GCS and write it to a local file.
+// Consumer should delete the file when finished.
 func UncompressGzFile(ctx context.Context, bucketName string, fileName string, outputFile string) error {
 	ctx = context.Background()
 	client, err := storage.NewClient(ctx)
@@ -90,6 +91,7 @@ func UncompressGzFile(ctx context.Context, bucketName string, fileName string, o
 		log.Println(err)
 		return err
 	}
+	// TODO - this could be done incrementally, to use less memory.
 	data, err := ioutil.ReadAll(gzr)
 	if err != nil {
 		return err
