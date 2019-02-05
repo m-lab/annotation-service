@@ -4,11 +4,25 @@
 package geoloader
 
 import (
+	"context"
+	"errors"
 	"log"
+	"regexp"
+	"runtime"
+	"sync"
+	"time"
 
+	"cloud.google.com/go/storage"
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/legacy"
+	"github.com/m-lab/annotation-service/metrics"
+	"google.golang.org/api/iterator"
+)
+
+var (
+	// ErrNoLoader is returned if nil is passed for loader parameter.
+	ErrNoLoader = errors.New("No loader provided")
 )
 
 // PopulateLatestData will search to the latest Geolite2 files
@@ -30,4 +44,140 @@ func ArchivedLoader(filename string) (api.Annotator, error) {
 	} else {
 		return legacy.LoadLegacyDataset(filename, api.MaxmindBucketName)
 	}
+}
+
+/*****************************************************************************
+*                          LoadAll... functions                              *
+*****************************************************************************/
+
+// Returns the normal iterator for objects in the appropriate GCS bucket.
+func bucketIterator() (*storage.ObjectIterator, error) {
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+	prospectiveFiles := client.Bucket(api.MaxmindBucketName).Objects(ctx, &storage.Query{Prefix: api.MaxmindPrefix})
+	return prospectiveFiles, nil
+}
+
+// LoadAll loads all datasets from the source that match the filter.
+func LoadAll(
+	source *storage.ObjectIterator,
+	filter func(file *storage.ObjectAttrs) error,
+	loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
+
+	result := make([]api.Annotator, 0, 100)
+	resultLock := sync.Mutex{}
+	wg := sync.WaitGroup{}
+
+	for file, err := source.Next(); err != iterator.Done; file, err = source.Next() {
+		// TODO - should we retry here?
+		if err != nil {
+			return nil, err
+		}
+		if file == nil {
+			log.Println("file is nil", err)
+			continue
+		}
+		if filter != nil && filter(file) != nil {
+			continue
+		}
+		_, _, callerLine, _ := runtime.Caller(1)
+		log.Println("Loading", file.Name, "from line", callerLine)
+		wg.Add(1)
+		go func(file *storage.ObjectAttrs) {
+			defer wg.Done()
+			ann, err := loader(file)
+			if err != nil {
+				log.Println("Retrying", file.Name, "after", err)
+				ann, err = loader(file)
+				if err != nil {
+					log.Println("Failed trying to load", file.Name, "with", err)
+					return
+				}
+			}
+			resultLock.Lock()
+			result = append(result, ann)
+			resultLock.Unlock()
+			metrics.DatasetCount.Inc()
+			log.Println("Loaded", file.Name)
+		}(file)
+	}
+	wg.Wait()
+	return result, nil
+}
+
+func filter(file *storage.ObjectAttrs, r *regexp.Regexp, before time.Time) error {
+	if !before.Equal(time.Time{}) {
+		fileDate, err := api.ExtractDateFromFilename(file.Name)
+		if err != nil {
+			return err
+		}
+		if !fileDate.Before(GeoLite2StartDate) {
+			return errors.New("After cutoff date") // TODO
+		}
+	}
+
+	if !r.MatchString(file.Name) {
+		return errors.New("Doesn't match") // TODO
+	}
+
+	return nil
+}
+
+// LoadAllLegacyV4 loads all v4 legacy datasets from the appropriate GCS bucket.
+// The loader is injected, to allow for efficient unit testing.
+func LoadAllLegacyV4(loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
+	if loader == nil {
+		return nil, ErrNoLoader
+	}
+	it, err := bucketIterator()
+	if err != nil {
+		return nil, err
+	}
+	return LoadAll(it,
+		func(file *storage.ObjectAttrs) error {
+			return filter(file, GeoLegacyRegex, GeoLite2StartDate)
+		},
+		loader)
+}
+
+// LoadAllLegacyV6 loads all v6 legacy datasets from the appropriate GCS bucket.
+// The loader is injected, to allow for efficient unit testing.
+func LoadAllLegacyV6(loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
+	if loader == nil {
+		return nil, ErrNoLoader
+	}
+	it, err := bucketIterator()
+	if err != nil {
+		return nil, err
+	}
+	return LoadAll(it,
+		func(file *storage.ObjectAttrs) error {
+			return filter(file, GeoLegacyv6Regex, GeoLite2StartDate)
+		},
+		loader)
+}
+
+// LoadGeolite2 loads a dataset from a GCS object.
+func LoadGeolite2(file *storage.ObjectAttrs) (api.Annotator, error) {
+	return geolite2.LoadGeoLite2Dataset(file.Name, file.Bucket)
+}
+
+// LoadAllGeolite2 loads all geolite2 datasets from the appropriate GCS bucket.
+// The loader is injected, to allow for efficient unit testing.
+func LoadAllGeolite2(loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
+	if loader == nil {
+		return nil, ErrNoLoader
+	}
+	it, err := bucketIterator()
+	if err != nil {
+		return nil, err
+	}
+	return LoadAll(it,
+		func(file *storage.ObjectAttrs) error {
+			return filter(file, GeoLite2Regex, time.Time{})
+		},
+		loader)
 }

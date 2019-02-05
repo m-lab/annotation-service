@@ -1,11 +1,17 @@
 package geoloader_test
 
 import (
+	"log"
 	"testing"
 	"time"
 
 	"github.com/m-lab/annotation-service/geoloader"
 )
+
+func init() {
+	// Always prepend the filename and line number.
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+}
 
 func date(date string, t *testing.T) time.Time {
 	d, err := time.Parse("20060102", date)
