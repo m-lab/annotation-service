@@ -23,6 +23,11 @@ import (
 var (
 	// ErrNoLoader is returned if nil is passed for loader parameter.
 	ErrNoLoader = errors.New("No loader provided")
+
+	// ErrAfterLegacyCutoff is returned for legacy files beyond the cutoff date.
+	errAfterLegacyCutoff = errors.New("After cutoff date")
+	// ErrNoMatch is returned (internally) when filename does not match regexp.
+	errNoMatch = errors.New("Doesn't match") // TODO
 )
 
 // PopulateLatestData will search to the latest Geolite2 files
@@ -108,6 +113,7 @@ func LoadAll(
 	return result, nil
 }
 
+// filter is used to create filter functions for the loaders.
 func filter(file *storage.ObjectAttrs, r *regexp.Regexp, before time.Time) error {
 	if !before.Equal(time.Time{}) {
 		fileDate, err := api.ExtractDateFromFilename(file.Name)
@@ -115,12 +121,12 @@ func filter(file *storage.ObjectAttrs, r *regexp.Regexp, before time.Time) error
 			return err
 		}
 		if !fileDate.Before(GeoLite2StartDate) {
-			return errors.New("After cutoff date") // TODO
+			return errAfterLegacyCutoff
 		}
 	}
 
 	if !r.MatchString(file.Name) {
-		return errors.New("Doesn't match") // TODO
+		return errNoMatch
 	}
 
 	return nil
