@@ -194,9 +194,9 @@ func LoadLegacyDataset(filename string, bucketname string) (*Annotator, error) {
 	return &Annotator{Data: ann, startDate: date}, nil
 }
 
-// getFilenameString extracts filename, such as "20140307T160000Z-GeoLiteCity.dat"
+// getGzBase extracts basename, such as "20140307T160000Z-GeoLiteCity.dat"
 // from "Maxmind/2014/03/07/20140307T160000Z-GeoLiteCity.dat.gz"
-func getFilenameString(filename string) string {
+func getGzBase(filename string) string {
 	base := filepath.Base(filename)
 	return base[0 : len(base)-3]
 }
@@ -206,8 +206,7 @@ func getFilenameString(filename string) string {
 // searched, then it will return a pointer to that GeoDataset or an error.
 func LoadGeoliteDataset(filename string, bucketname string) (*GeoIP, error) {
 	// load the legacy binary dataset
-	dataFileName := getFilenameString(filename)
-	log.Println(dataFileName)
+	dataFileName := getGzBase(filename)
 	err := loader.UncompressGzFile(context.Background(), bucketname, filename, dataFileName)
 	if err != nil {
 		return nil, err
