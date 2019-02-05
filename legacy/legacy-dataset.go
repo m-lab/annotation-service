@@ -89,6 +89,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"sync"
@@ -193,12 +194,20 @@ func LoadLegacyDataset(filename string, bucketname string) (*Annotator, error) {
 	return &Annotator{Data: ann, startDate: date}, nil
 }
 
+// getFilenameString extracts filename, such as "20140307T160000Z-GeoLiteCity.dat"
+// from "Maxmind/2014/03/07/20140307T160000Z-GeoLiteCity.dat.gz"
+func getFilenameString(filename string) string {
+	base := filepath.Base(filename)
+	return base[0 : len(base)-3]
+}
+
 // LoadGeoliteDataset will check GCS for the matching dataset, download
 // it, process it, and load it into memory so that it can be easily
 // searched, then it will return a pointer to that GeoDataset or an error.
 func LoadGeoliteDataset(filename string, bucketname string) (*GeoIP, error) {
 	// load the legacy binary dataset
-	dataFileName := "GeoLiteCity.dat"
+	dataFileName := getFilenameString(filename)
+	log.Println(dataFileName)
 	err := loader.UncompressGzFile(context.Background(), bucketname, filename, dataFileName)
 	if err != nil {
 		return nil, err
