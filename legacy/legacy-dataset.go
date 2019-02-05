@@ -211,6 +211,7 @@ func LoadGeoliteDataset(filename string, bucketname string) (*GeoIP, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer os.Remove(dataFileName)
 	gi, err := Open(dataFileName, filename)
 	if err != nil {
 		return nil, errors.New("could not open GeoIP database")
