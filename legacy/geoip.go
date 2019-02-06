@@ -36,7 +36,8 @@ const (
 type GeoIP struct {
 	db *C.GeoIP
 
-	name string
+	isIPv4 bool
+	name   string
 
 	// We don't use GeoIP's thread-safe API calls, which means there is a
 	// single global netmask variable that gets clobbered in the main
@@ -104,6 +105,8 @@ func OpenDB(file string, flag int, datasetName string) (*GeoIP, error) {
 	C.GeoIP_set_charset(g.db, C.GEOIP_CHARSET_UTF8)
 	g.name = datasetName
 	g.freeCalled = 0
+	g.isIPv4 = !geoLegacyv6Regex.MatchString(datasetName)
+
 	return g, nil
 }
 
@@ -148,14 +151,15 @@ func OpenType(dbType int) (*GeoIP, error) {
 
 // GetOrg takes an IPv4 address string and returns the organization name for that IP.
 // Requires the GeoIP organization database.
+// TODO remove this code.
 func (gi *GeoIP) GetOrg(ip string) string {
 	name, _ := gi.GetName(ip)
 	return name
 }
 
 // GetName works on the ASN, Netspeed, Organization and probably other
-// databases, takes and IP string and returns a "name" and the
-// netmask.
+// databases, takes an IP string and returns a "name" and the netmask.
+// TODO remove this code.
 func (gi *GeoIP) GetName(ip string) (name string, netmask int) {
 	if gi.db == nil {
 		return
@@ -195,20 +199,25 @@ type GeoIPRecord struct {
 
 // GetRecord returns the "City Record" for an IP address. Requires the GeoCity(Lite)
 // database - http://www.maxmind.com/en/city
+// Returns nil if IP is invalid, wrong type (v4/v6), or record is not found.
+// TODO - consider returning different error codes.
 func (gi *GeoIP) GetRecord(ip string, isIP4 bool) *GeoIPRecord {
 	if gi.db == nil {
 		return nil
 	}
 
-	if len(ip) == 0 {
+	if len(ip) == 0 || isIP4 != gi.isIPv4 {
 		return nil
 	}
+
 	cip := C.CString(ip)
 	defer C.free(unsafe.Pointer(cip))
 
 	var record *C.GeoIPRecord
+	// We are using a non-thread-safe API, so we grab the lock.
+	// TODO - can we use the thread-safe API insteaad?
 	gi.mu.Lock()
-	if isIP4 {
+	if gi.isIPv4 {
 		record = C.GeoIP_record_by_addr(gi.db, cip)
 	} else {
 		record = C.GeoIP_record_by_addr_v6(gi.db, cip)
@@ -291,6 +300,7 @@ func GetRegionName(countryCode, regionCode string) string {
 }
 
 // GetNameV6 is same as GetName() but for IPv6 addresses.
+// TODO remove this code.
 func (gi *GeoIP) GetNameV6(ip string) (name string, netmask int) {
 	if gi.db == nil {
 		return

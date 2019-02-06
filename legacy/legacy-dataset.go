@@ -96,6 +96,7 @@ import (
 	"sync"
 	"time"
 
+	"cloud.google.com/go/storage"
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/loader"
 	"github.com/m-lab/annotation-service/metrics"
@@ -125,15 +126,17 @@ var (
 // Annotator contains pointer to the dataset used to hold and lookup IP data.
 // There is only one IPv4 OR IPv6 dataset per Annotator structure.
 type Annotator struct {
-	lock      sync.RWMutex // Protect valid and GeoIP fields.
-	Data      *GeoIP
-	startDate time.Time
+	lock    sync.RWMutex // Protects the dataset field.
+	dataset *GeoIP
+
+	startDate time.Time // This is static after construction.  Lock not required.
 }
 
+// Annotate adds GeoLocation annotations.
 func (gi *Annotator) Annotate(IP string, data *api.GeoData) error {
 	gi.lock.RLock()
 	defer gi.lock.RUnlock()
-	if gi.Data == nil {
+	if gi.dataset == nil {
 		return ErrDatasetNotLoaded
 	}
 	ip := net.ParseIP(IP)
@@ -143,9 +146,9 @@ func (gi *Annotator) Annotate(IP string, data *api.GeoData) error {
 	}
 	var record *GeoIPRecord
 	if ip.To4() != nil {
-		record = gi.Data.GetRecord(IP, true)
+		record = gi.dataset.GetRecord(IP, true)
 	} else {
-		record = gi.Data.GetRecord(IP, false)
+		record = gi.dataset.GetRecord(IP, false)
 	}
 
 	// It is very possible that the record missed some fields in legacy dataset.
@@ -177,8 +180,8 @@ func (gi *Annotator) AnnotatorDate() time.Time {
 func (gi *Annotator) Close() {
 	gi.lock.Lock()
 	defer gi.lock.Unlock()
-	gi.Data.Free()
-	gi.Data = nil
+	gi.dataset.Free()
+	gi.dataset = nil
 }
 
 // LoadLegacyDataset loads the requested dataset into memory.
@@ -192,7 +195,7 @@ func LoadLegacyDataset(filename string, bucketname string) (*Annotator, error) {
 	if err != nil {
 		return nil, ErrLoadLegacyFailed
 	}
-	return &Annotator{Data: ann, startDate: date}, nil
+	return &Annotator{dataset: ann, startDate: date}, nil
 }
 
 // getGzBase extracts basename, such as "20140307T160000Z-GeoLiteCity.dat"
@@ -213,17 +216,28 @@ func LoadGeoliteDataset(filename string, bucketname string) (*GeoIP, error) {
 		return nil, err
 	}
 	defer os.Remove(dataFileName)
-	gi, err := Open(dataFileName, filename)
-	if err != nil {
-		return nil, errors.New("could not open GeoIP database")
-	}
-	return gi, nil
+
+	return Open(dataFileName, filename)
 }
 
+// TODO - remove this and use Math.Round()
 func round(x float32) float64 {
 	i, err := strconv.ParseFloat(fmt.Sprintf("%.3f", x), 64)
 	if err != nil {
 		return float64(0)
 	}
 	return i
+}
+
+// LoadAnnotator loads a legacy Annotator from a GCS object.
+func LoadAnnotator(file *storage.ObjectAttrs) (api.Annotator, error) {
+	dataset, err := LoadGeoliteDataset(file.Name, file.Bucket)
+	if err != nil {
+		return nil, err
+	}
+	date, err := api.ExtractDateFromFilename(file.Name)
+	if err != nil {
+		return nil, err
+	}
+	return &Annotator{startDate: date, dataset: dataset}, nil
 }
