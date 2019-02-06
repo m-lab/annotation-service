@@ -217,16 +217,7 @@ func LoadGeoliteDataset(filename string, bucketname string) (*GeoIP, error) {
 	}
 	defer os.Remove(dataFileName)
 
-	gi, err := Open(dataFileName, filename)
-	if err != nil {
-		log.Println("Could not open GeoIP database.  Retrying.")
-		// TODO - looks like this retry ALWAYS fails.  Look into why.
-		gi, err = Open(dataFileName, filename)
-		if err != nil {
-			return nil, errors.New("could not open GeoIP database")
-		}
-	}
-	return gi, nil
+	return Open(dataFileName, filename)
 }
 
 // TODO - remove this and use Math.Round()

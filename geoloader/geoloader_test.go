@@ -39,6 +39,10 @@ func fakeLoader(obj *storage.ObjectAttrs) (api.Annotator, error) {
 }
 
 func TestLoad(t *testing.T) {
+	// The downloader-mlab-testing bucket has a snapshot of the datasets
+	// as of Sept 22, 2018.  If we ever update it, the numbers here may
+	// need to be adjusted.
+
 	v4, err := geoloader.LoadAllLegacyV4(fakeLoader)
 	if err != nil {
 		t.Fatal(err)
@@ -58,9 +62,7 @@ func TestLoad(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	// As more datasets are downloaded, the number of datasets here will increase.
-	// As of Feb 2019, there are currently 36.
-	if len(g2) < 36 {
+	if len(g2) != 36 {
 		t.Error(len(g2))
 	}
 }

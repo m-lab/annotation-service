@@ -121,6 +121,7 @@ func LoadAll(
 }
 
 // filter is used to create filter functions for the loaders.
+// The file date is checked against `before` and file name is matched against `r`
 func filter(file *storage.ObjectAttrs, r *regexp.Regexp, before time.Time) error {
 	if !before.Equal(time.Time{}) {
 		fileDate, err := api.ExtractDateFromFilename(file.Name)
@@ -144,6 +145,7 @@ func filter(file *storage.ObjectAttrs, r *regexp.Regexp, before time.Time) error
 func LoadAllLegacyV4(loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
 	return LoadAll(
 		func(file *storage.ObjectAttrs) error {
+			// We archived but do not use legacy datasets after GeoLite2StartDate.
 			return filter(file, GeoLegacyRegex, GeoLite2StartDate)
 		},
 		loader)
@@ -154,6 +156,7 @@ func LoadAllLegacyV4(loader func(*storage.ObjectAttrs) (api.Annotator, error)) (
 func LoadAllLegacyV6(loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
 	return LoadAll(
 		func(file *storage.ObjectAttrs) error {
+			// We archived but do not use legacy datasets after GeoLite2StartDate.
 			return filter(file, GeoLegacyv6Regex, GeoLite2StartDate)
 		},
 		loader)
