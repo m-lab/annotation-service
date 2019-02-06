@@ -127,7 +127,7 @@ func filter(file *storage.ObjectAttrs, r *regexp.Regexp, before time.Time) error
 		if err != nil {
 			return err
 		}
-		if !fileDate.Before(GeoLite2StartDate) {
+		if !fileDate.Before(before) {
 			return errAfterLegacyCutoff
 		}
 	}
