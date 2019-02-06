@@ -68,10 +68,17 @@ func bucketIterator() (*storage.ObjectIterator, error) {
 
 // LoadAll loads all datasets from the source that match the filter.
 func LoadAll(
-	source *storage.ObjectIterator,
 	filter func(file *storage.ObjectAttrs) error,
 	loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
+	if loader == nil {
+		return nil, ErrNoLoader
+	}
+	source, err := bucketIterator()
+	if err != nil {
+		return nil, err
+	}
 
+	// TODO - maybe use a channel and single threaded append instead.
 	result := make([]api.Annotator, 0, 100)
 	resultLock := sync.Mutex{}
 	wg := sync.WaitGroup{}
@@ -135,14 +142,7 @@ func filter(file *storage.ObjectAttrs, r *regexp.Regexp, before time.Time) error
 // LoadAllLegacyV4 loads all v4 legacy datasets from the appropriate GCS bucket.
 // The loader is injected, to allow for efficient unit testing.
 func LoadAllLegacyV4(loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
-	if loader == nil {
-		return nil, ErrNoLoader
-	}
-	it, err := bucketIterator()
-	if err != nil {
-		return nil, err
-	}
-	return LoadAll(it,
+	return LoadAll(
 		func(file *storage.ObjectAttrs) error {
 			return filter(file, GeoLegacyRegex, GeoLite2StartDate)
 		},
@@ -152,14 +152,7 @@ func LoadAllLegacyV4(loader func(*storage.ObjectAttrs) (api.Annotator, error)) (
 // LoadAllLegacyV6 loads all v6 legacy datasets from the appropriate GCS bucket.
 // The loader is injected, to allow for efficient unit testing.
 func LoadAllLegacyV6(loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
-	if loader == nil {
-		return nil, ErrNoLoader
-	}
-	it, err := bucketIterator()
-	if err != nil {
-		return nil, err
-	}
-	return LoadAll(it,
+	return LoadAll(
 		func(file *storage.ObjectAttrs) error {
 			return filter(file, GeoLegacyv6Regex, GeoLite2StartDate)
 		},
@@ -174,14 +167,7 @@ func LoadGeolite2(file *storage.ObjectAttrs) (api.Annotator, error) {
 // LoadAllGeolite2 loads all geolite2 datasets from the appropriate GCS bucket.
 // The loader is injected, to allow for efficient unit testing.
 func LoadAllGeolite2(loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
-	if loader == nil {
-		return nil, ErrNoLoader
-	}
-	it, err := bucketIterator()
-	if err != nil {
-		return nil, err
-	}
-	return LoadAll(it,
+	return LoadAll(
 		func(file *storage.ObjectAttrs) error {
 			return filter(file, GeoLite2Regex, time.Time{})
 		},

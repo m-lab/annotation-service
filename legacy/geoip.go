@@ -158,8 +158,7 @@ func (gi *GeoIP) GetOrg(ip string) string {
 }
 
 // GetName works on the ASN, Netspeed, Organization and probably other
-// databases, takes and IP string and returns a "name" and the
-// netmask.
+// databases, takes an IP string and returns a "name" and the netmask.
 // TODO remove this code.
 func (gi *GeoIP) GetName(ip string) (name string, netmask int) {
 	if gi.db == nil {
@@ -301,6 +300,7 @@ func GetRegionName(countryCode, regionCode string) string {
 }
 
 // GetNameV6 is same as GetName() but for IPv6 addresses.
+// TODO remove this code.
 func (gi *GeoIP) GetNameV6(ip string) (name string, netmask int) {
 	if gi.db == nil {
 		return
