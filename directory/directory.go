@@ -130,6 +130,7 @@ func MergeAnnotators(lists ...[]api.Annotator) []api.Annotator {
 		return lists[0]
 	}
 
+	// This is an arbitrary size, sufficient to reduce number of reallocations.
 	groups := make([][]api.Annotator, 0, 100)
 
 	// For each step, add a group, then advance the list(s) with earliest dates at second index.

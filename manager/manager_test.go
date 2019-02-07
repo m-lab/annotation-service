@@ -142,7 +142,7 @@ func hackFilters() {
 	geoloader.GeoLegacyv6Regex = regexp.MustCompile(`Maxmind/\d{4}/\d3/\d{2}/\d{8}T.*-GeoLiteCityv6.dat.*`)
 
 }
-func TestE2ELoadMultipleDataset(t *testing.T) {
+func TestInitDataset(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping test that uses GCS")
 	}
@@ -172,16 +172,9 @@ func TestE2ELoadMultipleDataset(t *testing.T) {
 		r.URL, _ = url.Parse("/annotate?ip_addr=" + url.QueryEscape(test.ip) + "&since_epoch=" + url.QueryEscape(test.time))
 		log.Println("Calling handler")
 		handler.Annotate(w, r)
-		i := 30
-		for w.Result().StatusCode != http.StatusOK {
-			log.Println("Try again", w.Result().Status, w.Body.String())
-			i--
-			if i == 0 {
-				break
-			}
-			time.Sleep(1 * time.Second)
-			w = httptest.NewRecorder()
-			handler.Annotate(w, r)
+		if w.Result().StatusCode != http.StatusOK {
+			t.Error("Failed annotation for", test.ip)
+			continue
 		}
 
 		body := w.Body.String()

@@ -68,7 +68,6 @@ var (
 	// ErrMapEntryAlreadySet indicates multithreaded code problem setting map entry.
 	ErrMapEntryAlreadySet = errors.New("Map entry already set")
 
-	// This replaces archivedAnnotator
 	// dirLock must be held when accessing or replacing annotatorDirectory.
 	dirLock sync.RWMutex
 	// annotatorDirectory points to a Directory containing CompositeAnnotators.
@@ -213,9 +212,9 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 	return annotatorDirectory.GetAnnotator(date)
 }
 
-func listAnnotators(label string, an []api.Annotator) {
+func logAnnotatorDates(header string, an []api.Annotator) {
 	b := strings.Builder{}
-	b.WriteString(label + "\n")
+	b.WriteString(header + "\n")
 	for i := range an {
 		fmt.Fprintf(&b, "%s\n", an[i].AnnotatorDate().Format("20060102"))
 	}
@@ -237,8 +236,8 @@ func InitDataset() {
 		var err error
 		v4, err = geoloader.LoadAllLegacyV4(legacy.LoadAnnotator)
 		if err != nil {
+			// This is pretty severe, but we work around most of these failures down below.
 			log.Println(err)
-			// TODO PANIC?
 		}
 		v4 = directory.SortSlice(v4)
 		wg.Done()
@@ -248,7 +247,6 @@ func InitDataset() {
 		v6, err = geoloader.LoadAllLegacyV6(legacy.LoadAnnotator)
 		if err != nil {
 			log.Println(err)
-			// TODO PANIC?
 		}
 		v6 = directory.SortSlice(v6)
 		wg.Done()
@@ -258,25 +256,37 @@ func InitDataset() {
 		g2, err = geoloader.LoadAllGeolite2(geolite2.LoadGeolite2)
 		if err != nil {
 			log.Println(err)
-			// TODO PANIC?
 		}
 		g2 = directory.SortSlice(g2)
 		wg.Done()
 	}()
 
 	wg.Wait()
-	listAnnotators("v4", v4)
-	listAnnotators("v6", v6)
+
+	// Construct the CompositeAnnotators to handle legacy v4/v6
+	logAnnotatorDates("v4", v4)
+	logAnnotatorDates("v6", v6)
+	var legacy []api.Annotator
 	if len(v4)*len(v6)*len(g2) < 1 {
-		log.Fatal("empty annotator list")
+		log.Println("empty legacy v4 or v6 annotator list - skipping legacy")
+		legacy = make([]api.Annotator, 0)
+	} else {
+		legacy = directory.MergeAnnotators(v4, v6)
+		logAnnotatorDates("legacy", legacy)
 	}
-	legacy := directory.MergeAnnotators(v4, v6)
-	listAnnotators("legacy", legacy)
+
+	// Now append the Geolite2 annotators
 	combo := make([]api.Annotator, 0, len(g2)+len(legacy))
 	combo = append(combo, legacy...)
 	combo = append(combo, g2...)
+
+	// Sort them just in case there are some out of order.
 	combo = directory.SortSlice(combo)
-	listAnnotators("combo", combo)
+	logAnnotatorDates("combo", combo)
+
+	if len(combo) < 1 {
+		log.Fatal("No annotators.  Terminating!!")
+	}
 
 	dir := directory.Build(combo)
 	dirLock.Lock()
