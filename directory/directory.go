@@ -29,6 +29,8 @@ package directory
 // combo = append(combo, legacy...)
 // annotatorDirectory = directory.Build(combo)
 
+// TODO delete this line.  Just here to allow comments in #198
+
 import (
 	"errors"
 	"fmt"
