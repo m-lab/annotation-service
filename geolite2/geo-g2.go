@@ -327,3 +327,8 @@ func LoadLatestGeolite2File() (*GeoDataset, error) {
 	}
 	return LoadGeoLite2Dataset(filename, api.MaxmindBucketName)
 }
+
+// LoadGeolite2 loads a dataset from a GCS object.
+func LoadGeolite2(file *storage.ObjectAttrs) (api.Annotator, error) {
+	return LoadGeoLite2Dataset(file.Name, file.Bucket)
+}

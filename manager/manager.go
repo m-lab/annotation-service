@@ -36,7 +36,9 @@ import (
 
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/directory"
+	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/geoloader"
+	"github.com/m-lab/annotation-service/legacy"
 	"github.com/m-lab/annotation-service/metrics"
 )
 
@@ -233,27 +235,30 @@ func InitDataset() {
 
 	go func() {
 		var err error
-		v4, err = geoloader.LoadAllLegacyV4(nil) // HACK
+		v4, err = geoloader.LoadAllLegacyV4(legacy.LoadAnnotator)
 		if err != nil {
-			// PANIC?
+			log.Println(err)
+			// TODO PANIC?
 		}
 		v4 = directory.SortSlice(v4)
 		wg.Done()
 	}()
 	go func() {
 		var err error
-		v6, err = geoloader.LoadAllLegacyV6(nil) // HACK
+		v6, err = geoloader.LoadAllLegacyV6(legacy.LoadAnnotator)
 		if err != nil {
-			// PANIC
+			log.Println(err)
+			// TODO PANIC?
 		}
 		v6 = directory.SortSlice(v6)
 		wg.Done()
 	}()
 	go func() {
 		var err error
-		g2, err = geoloader.LoadAllGeolite2(nil) // HACK
+		g2, err = geoloader.LoadAllGeolite2(geolite2.LoadGeolite2)
 		if err != nil {
-			// PANIC
+			log.Println(err)
+			// TODO PANIC?
 		}
 		g2 = directory.SortSlice(g2)
 		wg.Done()

@@ -162,11 +162,6 @@ func LoadAllLegacyV6(loader func(*storage.ObjectAttrs) (api.Annotator, error)) (
 		loader)
 }
 
-// LoadGeolite2 loads a dataset from a GCS object.
-func LoadGeolite2(file *storage.ObjectAttrs) (api.Annotator, error) {
-	return geolite2.LoadGeoLite2Dataset(file.Name, file.Bucket)
-}
-
 // LoadAllGeolite2 loads all geolite2 datasets from the appropriate GCS bucket.
 // The loader is injected, to allow for efficient unit testing.
 func LoadAllGeolite2(loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
