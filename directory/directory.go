@@ -119,8 +119,9 @@ func advance(lists [][]api.Annotator) ([][]api.Annotator, bool) {
 	return lists, true
 }
 
-// MergeAnnotators merges multiple lists of annotators, and returns a list of CompositeAnnotators, each
-// containing an appropriate annotator from each list.
+// MergeAnnotators merges multiple lists of annotators, and returns a list of CompositeAnnotators.
+// Result will include a separate CompositeAnnotator for each unique date in any list, and each
+// CA will include the most recent annotator from each list, prior to or equal to the CA date.
 func MergeAnnotators(lists ...[]api.Annotator) []api.Annotator {
 	listCount := len(lists)
 	if listCount == 0 {

@@ -212,6 +212,7 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 	return annotatorDirectory.GetAnnotator(date)
 }
 
+// Writes list of annotator dates to log, preceeded by header string.
 func logAnnotatorDates(header string, an []api.Annotator) {
 	b := strings.Builder{}
 	b.WriteString(header + "\n")
