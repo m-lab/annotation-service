@@ -142,6 +142,7 @@ func hackFilters() {
 	geoloader.GeoLegacyv6Regex = regexp.MustCompile(`Maxmind/\d{4}/\d3/\d{2}/\d{8}T.*-GeoLiteCityv6.dat.*`)
 
 }
+
 func TestInitDataset(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping test that uses GCS")
