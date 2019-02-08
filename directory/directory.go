@@ -29,6 +29,8 @@ package directory
 // combo = append(combo, legacy...)
 // annotatorDirectory = directory.Build(combo)
 
+// TODO delete this line.  Just here to allow comments in #198
+
 import (
 	"errors"
 	"fmt"
@@ -117,8 +119,9 @@ func advance(lists [][]api.Annotator) ([][]api.Annotator, bool) {
 	return lists, true
 }
 
-// MergeAnnotators merges multiple lists of annotators, and returns a list of CompositeAnnotators, each
-// containing an appropriate annotator from each list.
+// MergeAnnotators merges multiple lists of annotators, and returns a list of CompositeAnnotators.
+// Result will include a separate CompositeAnnotator for each unique date in any list, and each
+// CA will include the most recent annotator from each list, prior to or equal to the CA date.
 func MergeAnnotators(lists ...[]api.Annotator) []api.Annotator {
 	listCount := len(lists)
 	if listCount == 0 {
@@ -128,6 +131,7 @@ func MergeAnnotators(lists ...[]api.Annotator) []api.Annotator {
 		return lists[0]
 	}
 
+	// This is an arbitrary size, sufficient to reduce number of reallocations.
 	groups := make([][]api.Annotator, 0, 100)
 
 	// For each step, add a group, then advance the list(s) with earliest dates at second index.

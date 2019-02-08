@@ -86,7 +86,6 @@ deploy:
 - provider: script
   script:
     $TRAVIS_BUILD_DIR/travis/deploy_app_legacy_keyfile.sh mlab-sandbox /tmp/mlab-sandbox.json $TRAVIS_BUILD_DIR annotator.yaml
-    && $TRAVIS_BUILD_DIR/travis/deploy_app_legacy_keyfile.sh mlab-sandbox /tmp/mlab-sandbox.json $TRAVIS_BUILD_DIR annotator-ss.yaml
     && $TRAVIS_BUILD_DIR/cron.sh mlab-sandbox
   skip_cleanup: true
   on:

@@ -1,19 +1,18 @@
 package manager_test
 
 import (
-	//"errors"
 	"log"
-	//"net/http"
-	//"net/http/httptest"
-	//"net/url"
-	//"sync"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"regexp"
 	"testing"
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/geoloader"
-	//"github.com/m-lab/annotation-service/handler"
+	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/manager"
 )
 
@@ -29,8 +28,6 @@ func fakeLoader(date string) (api.Annotator, error) {
 
 /*
 func TestAnnotatorMap(t *testing.T) {
-	manager.MaxPending = 2
-	manager.MaxDatasetInMemory = 3
 
 	am := manager.NewAnnotatorMap(fakeLoader)
 	names := []string{"Maxmind/2018/01/01/20180101T054119Z-GeoLite2-City-CSV.zip",
@@ -137,65 +134,54 @@ func TestAnnotatorMap(t *testing.T) {
 		t.Error("Should have had exactly one ErrPending...", err0, err1)
 	}
 }
+*/
 
-func TestE2ELoadMultipleDataset(t *testing.T) {
+func hackFilters() {
+	geoloader.GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d3/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
+	geoloader.GeoLegacyRegex = regexp.MustCompile(`Maxmind/\d{4}/\d3/\d{2}/\d{8}T.*-GeoLiteCity.dat.*`)
+	geoloader.GeoLegacyv6Regex = regexp.MustCompile(`Maxmind/\d{4}/\d3/\d{2}/\d{8}T.*-GeoLiteCityv6.dat.*`)
+
+}
+func TestInitDataset(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping test that uses GCS")
 	}
+	// Make the dataset filters much more restrictive to prevent OOM and make test faster.
+	hackFilters()
 	manager.InitDataset()
-	manager.MaxDatasetInMemory = 2
 	tests := []struct {
 		ip   string
 		time string
 		res  string
 	}{
 		// This request needs a legacy binary dataset
-		//		{"1.4.128.0", "1199145600", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"ASN":null}`},
+		{"1.4.128.0", "1199145600", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"ASN":null}`},
 		// This request needs another legacy binary dataset
-		//		{"1.4.128.0", "1399145600", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"ASN":null}`},
+		// `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"77","city":"Bung","postal_code":"37000","latitude":15.695,"longitude":104.648},"ASN":null}`
+		{"1.4.128.0", "1399145600", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"ASN":null}`},
 		// This request needs a geolite2 dataset
-		{"1.9.128.0", "1512086400", `{"Geo":{"continent_code":"AS","country_code":"MY","country_name":"Malaysia","region":"14","city":"Kuala Lumpur","postal_code":"50400","latitude":3.149,"longitude":101.697},"ASN":null}`},
+		{"1.9.128.0", "1512086400", `{"Geo":{"continent_code":"AS","country_code":"MY","country_code3":"MYS","country_name":"Malaysia","region":"14","city":"Kuala Lumpur","postal_code":"50586","latitude":3.167,"longitude":101.7},"ASN":null}`},
 		// This request needs the latest dataset in the memory.
-		{"1.22.128.0", "1544400000", `{"Geo":{"continent_code":"AS","country_code":"IN","country_name":"India","region":"HR","city":"Gurgaon","postal_code":"122017","latitude":28.4667,"longitude":77.0333},"ASN":null}`},
+		{"1.22.128.0", "1544400000", `{"Geo":{"continent_code":"AS","country_code":"IN","country_name":"India","region":"HR","city":"Faridabad","latitude":28.4333,"longitude":77.3167},"ASN":null}`},
 		// This request used a loaded & removed legacy dataset.
 		//{"1.4.128.0", "1199145600", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"ASN":null}`},
 	}
-	for _, test := range tests {
+	for n, test := range tests {
 		w := httptest.NewRecorder()
 		r := &http.Request{}
 		r.URL, _ = url.Parse("/annotate?ip_addr=" + url.QueryEscape(test.ip) + "&since_epoch=" + url.QueryEscape(test.time))
 		log.Println("Calling handler")
 		handler.Annotate(w, r)
-		i := 30
-		for w.Result().StatusCode != http.StatusOK {
-			log.Println("Try again", w.Result().Status, w.Body.String())
-			i--
-			if i == 0 {
-				break
-			}
-			time.Sleep(1 * time.Second)
-			w = httptest.NewRecorder()
-			handler.Annotate(w, r)
+		if w.Result().StatusCode != http.StatusOK {
+			t.Error("Failed annotation for", test.ip)
+			continue
 		}
 
 		body := w.Body.String()
 		log.Println(body)
 
 		if string(body) != test.res {
-			t.Errorf("\nGot\n__%s__\nexpected\n__%s__\n", body, test.res)
+			t.Errorf("%d:\nGot\n__%s__\nexpected\n__%s__\n", n, body, test.res)
 		}
-	}
-}
-*/
-func TestLoadAllDatasets(t *testing.T) {
-	am := manager.NewAnnotatorMap(fakeLoader)
-	if am.NumDatasetInMemory() != 0 {
-		t.Fatal("Should be 0")
-	}
-
-	geoloader.UpdateArchivedFilenames()
-	am.LoadAllDatasets()
-	if am.NumDatasetInMemory() != 136 {
-		t.Fatal("Should be 136")
 	}
 }

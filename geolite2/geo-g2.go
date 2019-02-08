@@ -312,7 +312,7 @@ func LoadGeoLite2Dataset(filename string, bucketname string) (*GeoDataset, error
 	if err != nil {
 		log.Println("Error extracting date:", filename)
 	} else {
-		dataset.start = date
+		dataset.Start = date
 	}
 	return dataset, nil
 }
@@ -326,4 +326,9 @@ func LoadLatestGeolite2File() (*GeoDataset, error) {
 		return nil, err
 	}
 	return LoadGeoLite2Dataset(filename, api.MaxmindBucketName)
+}
+
+// LoadGeolite2 loads a dataset from a GCS object.
+func LoadGeolite2(file *storage.ObjectAttrs) (api.Annotator, error) {
+	return LoadGeoLite2Dataset(file.Name, file.Bucket)
 }
