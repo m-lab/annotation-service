@@ -6,6 +6,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"runtime"
 
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/manager"
@@ -47,6 +48,9 @@ func init() {
 }
 
 func main() {
+	runtime.SetBlockProfileRate(1000000) // 1 sample/msec
+	runtime.SetMutexProfileFraction(1000)
+
 	log.Print("Beginning Setup\n")
 	http.HandleFunc("/cron/update_maxmind_datasets", updateMaxmindDatasets)
 	http.HandleFunc("/status", Status)

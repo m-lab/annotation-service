@@ -109,6 +109,8 @@ func populateLocationData(ipNode IPNode, locationNodes []LocationNode, data *api
 	}
 }
 
+var lastLogTime = time.Time{}
+
 func (ds *GeoDataset) Annotate(ip string, data *api.GeoData) error {
 	if data == nil {
 		return errors.New("ErrNilGeoData") // TODO
@@ -121,7 +123,11 @@ func (ds *GeoDataset) Annotate(ip string, data *api.GeoData) error {
 	if err != nil {
 		// ErrNodeNotFound is super spammy - 10% of requests, so suppress those.
 		if err != ErrNodeNotFound {
-			log.Println(err, ip)
+			// Horribly noisy now.
+			if time.Since(lastLogTime) > time.Minute {
+				log.Println(err, ip)
+				lastLogTime = time.Now()
+			}
 		}
 		//TODO metric here
 		return err

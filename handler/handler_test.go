@@ -296,18 +296,27 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 	}
 }
 
-func xTestE2ELoadMultipleDataset(t *testing.T) {
+// This modifies the geoloader dataset regular expressions to vastly reduce the number of datasets loaded for testing.
+func hackFilters() {
+	geoloader.GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d3/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
+	geoloader.GeoLegacyRegex = regexp.MustCompile(`Maxmind/\d{4}/\d3/\d{2}/\d{8}T.*-GeoLiteCity.dat.*`)
+	geoloader.GeoLegacyv6Regex = regexp.MustCompile(`Maxmind/\d{4}/\d3/\d{2}/\d{8}T.*-GeoLiteCityv6.dat.*`)
+}
+
+func TestE2ELoadMultipleDataset(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping test that uses GCS")
 	}
+	// Make the dataset filters much more restrictive to prevent OOM and make test faster.
+	hackFilters()
 	manager.InitDataset()
 	tests := []struct {
 		ip   string
 		time string
 		res  string
 	}{
-		//		{"1.4.128.0", "1199145600", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"ASN":null}`},
-		//		{"1.5.190.1", "1420070400", `{"Geo":{"continent_code":"AS","country_code":"JP","country_code3":"JPN","country_name":"Japan","region":"40","city":"Tokyo","latitude":35.685,"longitude":139.751},"ASN":null}`},
+		{"1.4.128.0", "1199145600", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"ASN":null}`},
+		{"1.5.190.1", "1420070400", `{"Geo":{"continent_code":"AS","country_code":"JP","country_code3":"JPN","country_name":"Japan","region":"40","city":"Tokyo","latitude":35.685,"longitude":139.751},"ASN":null}`},
 		{"1.9.128.0", "1512086400", `{"Geo":{"continent_code":"AS","country_code":"MY","country_name":"Malaysia","region":"14","city":"Kuala Lumpur","postal_code":"50400","latitude":3.149,"longitude":101.697},"ASN":null}`},
 		{"1.22.128.0", "1512086400", `{"Geo":{"continent_code":"AS","country_code":"IN","country_name":"India","region":"DL","city":"Delhi","postal_code":"110062","latitude":28.6667,"longitude":77.2167},"ASN":null}`},
 	}

@@ -64,6 +64,8 @@ func daysSince(ref time.Time, date time.Time) int {
 	return i
 }
 
+var lastLogTime = time.Now()
+
 // GetAnnotator returns an appropriate api.Annotator for a given date.
 func (d *Directory) GetAnnotator(date time.Time) (api.Annotator, error) {
 	if len(d.annotators) < 1 {
@@ -71,7 +73,10 @@ func (d *Directory) GetAnnotator(date time.Time) (api.Annotator, error) {
 	}
 
 	ann := d.lastEarlierThan(date)
-	log.Printf("Using (%s) for %s\n", ann.AnnotatorDate().Format("20060102"), date.Format("20060102"))
+	if time.Since(lastLogTime) > 5*time.Minute {
+		log.Printf("Using (%s) for %s\n", ann.AnnotatorDate().Format("20060102"), date.Format("20060102"))
+		lastLogTime = time.Now()
+	}
 	return ann, nil
 }
 
