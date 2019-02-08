@@ -15,12 +15,24 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/geolite2"
-	"github.com/m-lab/annotation-service/legacy"
 	"github.com/m-lab/annotation-service/metrics"
 	"google.golang.org/api/iterator"
 )
 
 var (
+	// geoLite2StartDate is the date we have the first GeoLite2 dataset.
+	// Any request earlier than this date using legacy binary datasets
+	// later than this date using GeoLite2 datasets
+	// TODO make this local
+	geoLite2StartDate = time.Unix(1502755200, 0) //"August 15, 2017"
+
+	// This is the regex used to filter which geolite2 dataset files we consider acceptable.
+	GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
+
+	// These are the regex used to filter which legacy dataset files we consider acceptable.
+	GeoLegacyRegex   = regexp.MustCompile(`.*-GeoLiteCity.dat.*`)
+	GeoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
+
 	// ErrNoLoader is returned if nil is passed for loader parameter.
 	ErrNoLoader = errors.New("No loader provided")
 
@@ -41,14 +53,6 @@ func GetLatestData() api.Annotator {
 		log.Fatal(err)
 	}
 	return data
-}
-
-func ArchivedLoader(filename string) (api.Annotator, error) {
-	if GeoLite2Regex.MatchString(filename) {
-		return geolite2.LoadGeoLite2Dataset(filename, api.MaxmindBucketName)
-	} else {
-		return legacy.LoadLegacyDataset(filename, api.MaxmindBucketName)
-	}
 }
 
 /*****************************************************************************
@@ -146,7 +150,7 @@ func LoadAllLegacyV4(loader func(*storage.ObjectAttrs) (api.Annotator, error)) (
 	return LoadAll(
 		func(file *storage.ObjectAttrs) error {
 			// We archived but do not use legacy datasets after GeoLite2StartDate.
-			return filter(file, GeoLegacyRegex, GeoLite2StartDate)
+			return filter(file, GeoLegacyRegex, geoLite2StartDate)
 		},
 		loader)
 }
@@ -157,7 +161,7 @@ func LoadAllLegacyV6(loader func(*storage.ObjectAttrs) (api.Annotator, error)) (
 	return LoadAll(
 		func(file *storage.ObjectAttrs) error {
 			// We archived but do not use legacy datasets after GeoLite2StartDate.
-			return filter(file, GeoLegacyv6Regex, GeoLite2StartDate)
+			return filter(file, GeoLegacyv6Regex, geoLite2StartDate)
 		},
 		loader)
 }

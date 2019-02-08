@@ -1,8 +1,5 @@
 package handler_test
 
-// TODO 201901 - TestStatusServiceUnavailable()
-// TODO 201901 - TestStatusInternalError()
-
 import (
 	"bytes"
 	"errors"
@@ -206,7 +203,7 @@ func TestBatchAnnotate(t *testing.T) {
 		},
 		{
 			body: `[{"ip": "127.0.0.1", "timestamp": "2017-08-25T13:31:12.149678161-04:00"},
-                               {"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "timestamp": "2017-08-25T14:32:13.149678161-04:00"}]`,
+                    {"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "timestamp": "2017-08-25T14:32:13.149678161-04:00"}]`,
 			res: `{"127.0.0.1ov94o0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583"},"ASN":null},"2620:0:1003:1008:5179:57e3:3c75:1886ov97hp":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583"},"ASN":null}}`,
 			// TODO - remove alt after updating json annotations to omitempty.
 			alt: `{"127.0.0.1ov94o0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":null},"2620:0:1003:1008:5179:57e3:3c75:1886ov97hp":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"ASN":null}}`,
