@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -358,10 +357,6 @@ func GetMetadataForSingleIP(request *api.RequestData) (result api.GeoData, err e
 	ann, err := manager.GetAnnotator(request.Timestamp)
 	if err != nil {
 		return
-	}
-	if ann == nil {
-		log.Println("This shouldn't happen")
-		return result, manager.ErrNilDataset
 	}
 
 	err = ann.Annotate(request.IP, &result)
