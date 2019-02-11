@@ -33,10 +33,8 @@ package directory
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
@@ -51,18 +49,80 @@ var (
 	ErrNilAnnotator = errors.New("Annotator is nil")
 )
 
+// CompositeAnnotator wraps several annotators, and calls to Annotate() are forwarded to all of them.
+type CompositeAnnotator struct {
+	// latest date of the component annotators.  This is precomputed, and returned by AnnotatorDate()
+	latestDate time.Time
+	annotators []api.Annotator
+}
+
+// Annotate calls each of the wrapped annotators to annotate the ann object.
+// See Annotator.Annotate().
+// Error handling is currently under development.
+func (ca CompositeAnnotator) Annotate(ip string, ann *api.GeoData) error {
+	for i := range ca.annotators {
+		err := ca.annotators[i].Annotate(ip, ann)
+		if err != nil {
+			// TODO - don't want to return error if there is another annotator that can do the job.
+		}
+	}
+	return nil
+}
+
+// AnnotatorDate returns the date of the most recent wrapped annotator.  Most recent is returned
+// as we try to apply the most recent annotators that predate the test we are annotating.  So the
+// most recent of all the annotators is the date that should be compared to the test date.
+func (ca CompositeAnnotator) AnnotatorDate() time.Time {
+	return ca.latestDate
+}
+
+// Compute the latest AnnotatorDate() value from a slice of annotators.
+func computeLatestDate(annotators []api.Annotator) time.Time {
+	t := time.Time{}
+	for i := range annotators {
+		at := annotators[i].AnnotatorDate()
+		if at.After(t) {
+			t = at
+		}
+	}
+	return t
+}
+
+// String creates a string representation of the CA.
+// Base annotators will appear as [YYYYMMDD], and composite annotators as (A1A2), e.g.,
+// ([20100102]([20110304][20120506]))
+func (ca CompositeAnnotator) String() string {
+	result := ""
+	for _, c := range ca.annotators {
+		if t, ok := c.(CompositeAnnotator); ok {
+			result = result + "(" + t.String() + ")"
+		} else {
+			result = result + c.AnnotatorDate().Format("[20060102]")
+		}
+	}
+	return result
+}
+
+// Close is included only to complete the current API.  We are removing Close from the API
+// in upcoming PRs.
+// DEPRECATED
+func (ca CompositeAnnotator) Close() {}
+
+// NewCompositeAnnotator creates a new instance wrapping the provided slice. Returns nil if the slice is nil.
+func NewCompositeAnnotator(annotators []api.Annotator) api.Annotator {
+	if annotators == nil {
+		return nil
+	}
+	ca := CompositeAnnotator{latestDate: computeLatestDate(annotators), annotators: annotators}
+	return ca
+}
+
 // Directory allows searching a list of annotators
 type Directory struct {
 	annotators []api.Annotator
 }
 
-func daysSince(ref time.Time, date time.Time) int {
-	i := int((date.Unix() - ref.Unix()) / (24 * 3600))
-	if i < 0 {
-		return 0
-	}
-	return i
-}
+var lastLogTime = time.Now()
 
 // GetAnnotator returns an appropriate api.Annotator for a given date.
 func (d *Directory) GetAnnotator(date time.Time) (api.Annotator, error) {
@@ -71,18 +131,11 @@ func (d *Directory) GetAnnotator(date time.Time) (api.Annotator, error) {
 	}
 
 	ann := d.lastEarlierThan(date)
-	log.Printf("Using (%s) for %s\n", ann.AnnotatorDate().Format("20060102"), date.Format("20060102"))
-	return ann, nil
-}
-
-// Dump prints a summary of the directory to the log.
-func (d *Directory) Dump() {
-	b := strings.Builder{}
-	b.WriteString("Directory:\n")
-	for i := range d.annotators {
-		fmt.Fprintf(&b, "%s\n", d.annotators[i].AnnotatorDate().Format("20060102"))
+	if time.Since(lastLogTime) > 5*time.Minute {
+		log.Printf("Using (%s) for %s\n", ann.AnnotatorDate().Format("20060102"), date.Format("20060102"))
+		lastLogTime = time.Now()
 	}
-	log.Println(b.String())
+	return ann, nil
 }
 
 // Build builds a Directory object from a list of Annotators.
@@ -151,7 +204,7 @@ func MergeAnnotators(lists ...[]api.Annotator) []api.Annotator {
 
 	result := make([]api.Annotator, len(groups))
 	for i, group := range groups {
-		result[i] = api.NewCompositeAnnotator(group)
+		result[i] = NewCompositeAnnotator(group)
 	}
 	return result
 }

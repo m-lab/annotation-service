@@ -66,11 +66,19 @@ Annotatation service will respond with the following data:
 - Metro Code
 - City Name
 
-## CompositeAnnotator
+## The directory package
 
-## Directory
-
-The directory package provides tools to create a list of CompositeAnnotator (CA) wrappers.  When complete, it
-will be used to create a complete directory of CAs, one for each date in the archive history.
-
+The directory package provides tools to create a list of CompositeAnnotator (CA) wrappers.
 directory.GetAnnotator(date time.Time) returns an appropriate CA for the given date.
+
+### CompositeAnnotator
+
+CompositeAnnotator encapsulates multiple component api.Annotator objects, and satisfies the
+api.Annotator interface.
+
+MergeAnnotators takes two or more []api.Annotator, and merges them, creating CompositeAnnotators for
+each distinct date, using the most recent Annotator from each list prior to that date.
+
+### Directory
+
+Directory wraps a []api.Annotator, and provides the GetAnnotator(date time.Time) function.

@@ -70,6 +70,27 @@ func TestBuild(t *testing.T) {
 	}
 }
 
+func TestCompositeAnnotator_String(t *testing.T) {
+	tests := []struct {
+		name       string
+		annotators []api.Annotator
+		want       string
+	}{
+		{"simple", []api.Annotator{newFake("20100203"), newFake("20110304")}, "[20100203][20110304]"},
+		// TODO: Add test cases.
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ca := directory.NewCompositeAnnotator(tt.annotators)
+
+			if got := ca.(directory.CompositeAnnotator).String(); got != tt.want {
+				t.Errorf("CompositeAnnotator.String() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestMergeAnnotators(t *testing.T) {
 	type args struct {
 	}
@@ -94,7 +115,7 @@ func TestMergeAnnotators(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := directory.MergeAnnotators(tt.lists[0], tt.lists[1])
 			// This is just a hack to allow us to create a useful signature.
-			gotString := api.NewCompositeAnnotator(got).(api.CompositeAnnotator).String()
+			gotString := directory.NewCompositeAnnotator(got).(directory.CompositeAnnotator).String()
 			if gotString != tt.want {
 				t.Errorf("MergeAnnotators() =\n %v want:\n %v", gotString, tt.want)
 			}
