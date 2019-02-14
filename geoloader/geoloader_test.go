@@ -38,6 +38,9 @@ func fakeLoader(obj *storage.ObjectAttrs) (api.Annotator, error) {
 }
 
 func TestLoad(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping test that depends on GCS")
+	}
 	// The downloader-mlab-testing bucket has a snapshot of the datasets
 	// as of Sept 22, 2018.  If we ever update it, the numbers here may
 	// need to be adjusted.
