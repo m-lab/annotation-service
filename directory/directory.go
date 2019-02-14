@@ -1,5 +1,6 @@
 // Package directory provides the GetAnnotator function, which returns an appropriate annotator for
 // requests with a particular target date.
+// TODO - rename this cache?  Or is there a better name?
 package directory
 
 // A directory entry points to an appropriate CompositeAnnotator.
@@ -35,6 +36,7 @@ import (
 	"errors"
 	"log"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
@@ -245,4 +247,61 @@ func (d *Directory) lastEarlierThan(date time.Time) api.Annotator {
 		return d.annotators[index]
 	}
 	return d.annotators[index-1]
+}
+
+/*************************************************************************
+*                          Directory Builder                             *
+*************************************************************************/
+
+type Generator struct {
+	loaders map[string]api.Loader
+}
+
+func (gen *Generator) AddLoader(name string, loader api.Loader) {
+	gen.loaders[name] = loader
+}
+
+func (gen *Generator) Update() {
+	wg := sync.WaitGroup{}
+	for _, loader := range gen.loaders {
+		wg.Add(1)
+		go func(loader api.Loader) {
+			loader.Update()
+			wg.Done()
+		}(loader)
+	}
+	wg.Wait()
+}
+
+// Return a Cache?  or AnnotatorCache?
+func (gen *Generator) Generate() []api.Annotator {
+	v4 := gen.loaders["v4"].Fetch()
+	v6 := gen.loaders["v6"].Fetch()
+
+	var legacy []api.Annotator
+	if len(v4)*len(v6) < 1 {
+		log.Println("empty legacy v4 or v6 annotator list - skipping legacy")
+		legacy = make([]api.Annotator, 0)
+	} else {
+		legacy = MergeAnnotators(v4, v6)
+		//logAnnotatorDates("legacy", legacy)
+	}
+
+	// Now append the Geolite2 annotators
+	g2 := gen.loaders["g2"].Fetch()
+
+	combo := make([]api.Annotator, 0, len(g2)+len(legacy))
+	combo = append(combo, legacy...)
+	combo = append(combo, g2...)
+
+	// Sort them just in case there are some out of order.
+	combo = SortSlice(combo)
+	//logAnnotatorDates("combo", combo)
+
+	if len(combo) < 1 {
+		log.Println("No annotators available")
+		return nil
+	}
+
+	return combo
 }

@@ -108,3 +108,16 @@ func ExtractDateFromFilename(filename string) (time.Time, error) {
 	}
 	return time.Parse(time.RFC3339, filedate[0][0:4]+"-"+filedate[0][4:6]+"-"+filedate[0][6:8]+"T00:00:00Z")
 }
+
+/*************************************************************************
+*                            Annotator Loader                            *
+*************************************************************************/
+
+type Loader interface {
+	// Update takes a map of annotators, and updates it to add any new annotators that have become
+	// available.
+	Update() error
+
+	// Fetch returns the current list of annotators.
+	Fetch() []Annotator
+}
