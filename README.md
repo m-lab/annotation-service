@@ -83,27 +83,27 @@ each distinct date, using the most recent Annotator from each list prior to that
 
 Directory wraps a []api.Annotator, and provides the GetAnnotator(date time.Time) function.
 
-## Loading datasets
+### CachingLoader
 
-We will modify the LoadAll function to instead be a Loader class that:
+CachingLoader specifies the interface provided by loaders that load and cache a list of annotators.
 
-1. Holds a source, filter, and loader
 1. Maintains list of loaded Annotator objects.
 1. Refreshes the list of loaded objects on demand.
 
-The cache package will then contain a Generator class that maintain a list of these objects that in turn
-maintain the complete collection of base Annotators, an Update method that will trigger updating all the
-annotator lists, and a Generate method that creates a new AnnotatorCache
+```
+type CachingLoader interface {
+  UpdateCache() error
+  Fetch() []Annotator
+}
+```
 
-### Loader
-
-Loader should be an interface, so that we can allow annotator providers to provide their own Loaders.  The geoloader package may also provide a generic NewLoader.
-
-* func NewLoader(source, filter, loader) *Loader
-* func (ld *Loader) Update()  // Updates the list of Annotators.
+TODO: Need to implement the CachingLoaders.
 
 ### Generator
+```
+func NewGenerator(v4, v6, g2 *CachingLoader)
 
-* func (gen *Generator) AddLoader(loader *Loader)
-* func (gen *Generator) Update()  // Reloads all lists
-* func (gen *Generator) Generate() *AnnotatorCache // Creates a new cache.
+func (gen *Generator) Update() error         // Reloads all lists
+func (gen *Generator) Generate() []Annotator // constructs list of CompositeAnnotators
+
+```
