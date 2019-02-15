@@ -108,3 +108,18 @@ func ExtractDateFromFilename(filename string) (time.Time, error) {
 	}
 	return time.Parse(time.RFC3339, filedate[0][0:4]+"-"+filedate[0][4:6]+"-"+filedate[0][6:8]+"T00:00:00Z")
 }
+
+/*************************************************************************
+*                            Annotator Loader                            *
+*************************************************************************/
+
+// CachingLoader keeps a cache of loaded annotators, updates the cache on request, and returns a copy
+// of the cache on request.
+type CachingLoader interface {
+	// UpdateCache causes the loader to load any new annotators and add them to the cached list.
+	UpdateCache() error
+
+	// Fetch returns a copy of the current list of annotators.
+	// May return an empty slice, but must not return nil.
+	Fetch() []Annotator
+}

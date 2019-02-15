@@ -82,3 +82,28 @@ each distinct date, using the most recent Annotator from each list prior to that
 ### Directory
 
 Directory wraps a []api.Annotator, and provides the GetAnnotator(date time.Time) function.
+
+### CachingLoader
+
+CachingLoader specifies the interface provided by loaders that load and cache a list of annotators.
+
+1. Maintains list of loaded Annotator objects.
+1. Refreshes the list of loaded objects on demand.
+
+```
+type CachingLoader interface {
+  UpdateCache() error
+  Fetch() []Annotator
+}
+```
+
+TODO: Need to implement the CachingLoaders.
+
+### Generator
+```
+func NewGenerator(v4, v6, g2 *CachingLoader)
+
+func (gen *Generator) Update() error         // Reloads all lists
+func (gen *Generator) Generate() []Annotator // constructs list of CompositeAnnotators
+
+```
