@@ -40,7 +40,7 @@ func TestInitDataset(t *testing.T) {
 	// Make the dataset filters much more restrictive to prevent OOM and make test faster.
 	hackFilters()
 	// Load the small directory.
-	manager.InitDataset()
+	manager.UpdateDirectory()
 
 	tests := []struct {
 		ip   string

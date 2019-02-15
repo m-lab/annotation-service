@@ -250,11 +250,13 @@ type Generator struct {
 }
 
 // NewGenerator initializes a Generator object, and preloads the CachingLoaders
+// TODO New shouldn't do loading.
 func NewGenerator(v4, v6, g2 api.CachingLoader) *Generator {
 	if v4 == nil || v6 == nil || g2 == nil {
 		return nil
 	}
 	wg := sync.WaitGroup{}
+	wg.Add(3)
 	go func() {
 		v4.UpdateCache()
 		wg.Done()
@@ -280,8 +282,8 @@ func (gen *Generator) Update() error {
 // Generate creates a complete list of CompositeAnnotators from the cached annotators
 // from the CachingLoaders.
 func (gen *Generator) Generate() []api.Annotator {
-	v4 := gen.legacyV4.Fetch()
-	v6 := gen.legacyV6.Fetch()
+	v4 := SortSlice(gen.legacyV4.Fetch())
+	v6 := SortSlice(gen.legacyV6.Fetch())
 
 	var legacy []api.Annotator
 	if len(v4)*len(v6) < 1 {
@@ -293,15 +295,13 @@ func (gen *Generator) Generate() []api.Annotator {
 	}
 
 	// Now append the Geolite2 annotators
-	g2 := gen.geolite2.Fetch()
+	g2 := SortSlice(gen.geolite2.Fetch())
 
 	combo := make([]api.Annotator, 0, len(g2)+len(legacy))
 	combo = append(combo, legacy...)
 	combo = append(combo, g2...)
 
-	// Sort them just in case there are some out of order.
-	combo = SortSlice(combo)
-	// TODO logAnnotatorDates("combo", combo)
+	// logAnnotatorDates("combo", combo)
 
 	if len(combo) < 1 {
 		log.Println("No annotators available")

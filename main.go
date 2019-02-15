@@ -37,7 +37,7 @@ func Status(w http.ResponseWriter, r *http.Request) {
 
 // Update the list of maxmind datasets daily
 func updateMaxmindDatasets(w http.ResponseWriter, r *http.Request) {
-	manager.InitDataset()
+	manager.UpdateDirectory()
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
 }
