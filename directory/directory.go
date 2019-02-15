@@ -14,23 +14,11 @@ package directory
 // until then, we only have a different CA for each date where a new v4 or v6, or a new GL2
 // annotator is available.
 //
-// To construct the directory, we begin with lists of Annotator objects for each type of annotation.
-// We first merge the v4 and v6 annotators into a list of CompositeAnnotators, using MergeAnnotators.
-// We then append all the GeoLite2 annotators to this list.
-// Then, we merge the Geo annotation list with the ASN annotator list.
-// Finally, we use Build to create a Directory based on this list.
-
-// Example use (simplified, with some functions that don't exist yet):
-// v4, _ = geoloader.LoadLegacyV4(nil)
-// v6, _ = geoloader.LoadLegacyV6(nil)
-// legacy := directory.MergeAnnotators(v4, v6)  // Creates annotators that will handle v4 or v6
-// g2, _ = geoloader.LoadGeolite2(nil)
-// combo := make([]api.Annotator, len(g2)+len(legacy))
-// combo = append(combo, g2...)
-// combo = append(combo, legacy...)
-// annotatorDirectory = directory.Build(combo)
-
-// TODO delete this line.  Just here to allow comments in #198
+// Generator is used to construct directories. It collects lists of Annotator objects for each type of
+// annotator from CachingLoader objects.
+// It then merges the v4 and v6 annotators into a list of CompositeAnnotators, using MergeAnnotators.
+// It then appends all the GeoLite2 annotators to this list.
+// Then, we merge the Geo annotation list with the ASN annotator list (when available).
 
 import (
 	"errors"
@@ -47,8 +35,6 @@ var (
 
 	// ErrEmptyDirectory is returned by GetAnnotator if a Directory has no entries.
 	ErrEmptyDirectory = errors.New("Directory is empty")
-	// ErrNilAnnotator is returned if GetAnnotator encounters a nil Directory entry.
-	ErrNilAnnotator = errors.New("Annotator is nil")
 )
 
 // CompositeAnnotator wraps several annotators, and calls to Annotate() are forwarded to all of them.
@@ -120,6 +106,7 @@ func NewCompositeAnnotator(annotators []api.Annotator) api.Annotator {
 }
 
 // Directory allows searching a list of annotators
+// TODO not crazy about this name.
 type Directory struct {
 	annotators []api.Annotator
 }
@@ -253,30 +240,48 @@ func (d *Directory) lastEarlierThan(date time.Time) api.Annotator {
 *                          Directory Builder                             *
 *************************************************************************/
 
+// Generator wraps a set of CachingLoaders, and creates a set of merged Annotators on request.
+// TODO - not crazy about this name.
 type Generator struct {
-	loaders map[string]api.Loader
+	legacyV4 api.CachingLoader // loader for legacy v4 annotators
+	legacyV6 api.CachingLoader // loader for legacy v6 annotators
+	geolite2 api.CachingLoader // loader for geolite2 annotators
+	asn      api.CachingLoader // loader for asn annotators (currently nil)
 }
 
-func (gen *Generator) AddLoader(name string, loader api.Loader) {
-	gen.loaders[name] = loader
-}
-
-func (gen *Generator) Update() {
-	wg := sync.WaitGroup{}
-	for _, loader := range gen.loaders {
-		wg.Add(1)
-		go func(loader api.Loader) {
-			loader.Update()
-			wg.Done()
-		}(loader)
+// NewGenerator initializes a Generator object, and preloads the CachingLoaders
+func NewGenerator(v4, v6, g2 api.CachingLoader) *Generator {
+	if v4 == nil || v6 == nil || g2 == nil {
+		return nil
 	}
+	wg := sync.WaitGroup{}
+	go func() {
+		v4.UpdateCache()
+		wg.Done()
+	}()
+	go func() {
+		v6.UpdateCache()
+		wg.Done()
+	}()
+	go func() {
+		g2.UpdateCache()
+		wg.Done()
+	}()
 	wg.Wait()
+	return &Generator{v4, v6, g2, nil}
 }
 
-// Return a Cache?  or AnnotatorCache?
+// Update updates the (dynamic) CachingLoaders
+func (gen *Generator) Update() error {
+	// v4 and v6 are static, so we  don't have to reload them.
+	return gen.geolite2.UpdateCache()
+}
+
+// Generate creates a complete list of CompositeAnnotators from the cached annotators
+// from the CachingLoaders.
 func (gen *Generator) Generate() []api.Annotator {
-	v4 := gen.loaders["v4"].Fetch()
-	v6 := gen.loaders["v6"].Fetch()
+	v4 := gen.legacyV4.Fetch()
+	v6 := gen.legacyV6.Fetch()
 
 	var legacy []api.Annotator
 	if len(v4)*len(v6) < 1 {
@@ -284,11 +289,11 @@ func (gen *Generator) Generate() []api.Annotator {
 		legacy = make([]api.Annotator, 0)
 	} else {
 		legacy = MergeAnnotators(v4, v6)
-		//logAnnotatorDates("legacy", legacy)
+		// TODO logAnnotatorDates("legacy", legacy)
 	}
 
 	// Now append the Geolite2 annotators
-	g2 := gen.loaders["g2"].Fetch()
+	g2 := gen.geolite2.Fetch()
 
 	combo := make([]api.Annotator, 0, len(g2)+len(legacy))
 	combo = append(combo, legacy...)
@@ -296,7 +301,7 @@ func (gen *Generator) Generate() []api.Annotator {
 
 	// Sort them just in case there are some out of order.
 	combo = SortSlice(combo)
-	//logAnnotatorDates("combo", combo)
+	// TODO logAnnotatorDates("combo", combo)
 
 	if len(combo) < 1 {
 		log.Println("No annotators available")
