@@ -45,14 +45,14 @@ func TestLoad(t *testing.T) {
 	// as of Sept 22, 2018.  If we ever update it, the numbers here may
 	// need to be adjusted.
 
-	v4, err := geoloader.LoadAllLegacyV4(fakeLoader)
+	v4, err := geoloader.LoadAllLegacyV4(nil, fakeLoader)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(v4) != 50 {
 		t.Error(len(v4))
 	}
-	v6, err := geoloader.LoadAllLegacyV6(fakeLoader)
+	v6, err := geoloader.LoadAllLegacyV6(nil, fakeLoader)
 	if err != nil {
 		t.Error(err)
 	}
@@ -60,7 +60,7 @@ func TestLoad(t *testing.T) {
 		t.Error(len(v6))
 	}
 
-	g2, err := geoloader.LoadAllGeolite2(fakeLoader)
+	g2, err := geoloader.LoadAllGeolite2(nil, fakeLoader)
 	if err != nil {
 		t.Error(err)
 	}

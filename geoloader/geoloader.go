@@ -15,6 +15,7 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/geolite2"
+	"github.com/m-lab/annotation-service/legacy"
 	"github.com/m-lab/annotation-service/metrics"
 	"google.golang.org/api/iterator"
 )
@@ -72,6 +73,7 @@ func bucketIterator() (*storage.ObjectIterator, error) {
 
 // LoadAll loads all datasets from the source that match the filter.
 func LoadAll(
+	cache []api.Annotator,
 	filter func(file *storage.ObjectAttrs) error,
 	loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
 	if loader == nil {
@@ -146,8 +148,8 @@ func filter(file *storage.ObjectAttrs, r *regexp.Regexp, before time.Time) error
 
 // LoadAllLegacyV4 loads all v4 legacy datasets from the appropriate GCS bucket.
 // The loader is injected, to allow for efficient unit testing.
-func LoadAllLegacyV4(loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
-	return LoadAll(
+func LoadAllLegacyV4(list []api.Annotator, loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
+	return LoadAll(list,
 		func(file *storage.ObjectAttrs) error {
 			// We archived but do not use legacy datasets after GeoLite2StartDate.
 			return filter(file, GeoLegacyRegex, geoLite2StartDate)
@@ -157,8 +159,8 @@ func LoadAllLegacyV4(loader func(*storage.ObjectAttrs) (api.Annotator, error)) (
 
 // LoadAllLegacyV6 loads all v6 legacy datasets from the appropriate GCS bucket.
 // The loader is injected, to allow for efficient unit testing.
-func LoadAllLegacyV6(loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
-	return LoadAll(
+func LoadAllLegacyV6(list []api.Annotator, loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
+	return LoadAll(list,
 		func(file *storage.ObjectAttrs) error {
 			// We archived but do not use legacy datasets after GeoLite2StartDate.
 			return filter(file, GeoLegacyv6Regex, geoLite2StartDate)
@@ -168,10 +170,45 @@ func LoadAllLegacyV6(loader func(*storage.ObjectAttrs) (api.Annotator, error)) (
 
 // LoadAllGeolite2 loads all geolite2 datasets from the appropriate GCS bucket.
 // The loader is injected, to allow for efficient unit testing.
-func LoadAllGeolite2(loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
-	return LoadAll(
+func LoadAllGeolite2(list []api.Annotator, loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
+	return LoadAll(list,
 		func(file *storage.ObjectAttrs) error {
 			return filter(file, GeoLite2Regex, time.Time{})
 		},
 		loader)
+}
+
+// CachingLoader implements api.CachingLoader for legacy and geolite2 geolocation.
+type CachingLoader struct {
+	lock       sync.Mutex
+	annotators []api.Annotator
+	filter     func(*storage.ObjectAttrs) error
+	loader     func(*storage.ObjectAttrs) (api.Annotator, error)
+}
+
+// UpdateCache causes the loader to load any new annotators and add them to the cached list.
+func (cl *CachingLoader) UpdateCache() error {
+	ann, err := LoadAllLegacyV4(cl.annotators, legacy.LoadAnnotator)
+	if err != nil {
+		return err
+	}
+	cl.lock.Lock()
+	defer cl.lock.Unlock()
+
+	cl.annotators = ann
+	return nil
+}
+
+// Fetch returns a copy of the current list of annotators.
+func (cl *CachingLoader) Fetch() []api.Annotator {
+	cl.lock.Lock()
+	defer cl.lock.Unlock()
+	return cl.annotators
+}
+
+// NewCachingLoader creates a CachingLoader with the provided filter and loader.
+func NewCachingLoader(
+	filter func(*storage.ObjectAttrs) error,
+	loader func(*storage.ObjectAttrs) (api.Annotator, error)) api.CachingLoader {
+	return &CachingLoader{filter: filter, loader: loader, annotators: make([]api.Annotator, 100)}
 }

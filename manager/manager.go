@@ -71,7 +71,7 @@ func InitDataset() {
 
 	go func() {
 		var err error
-		v4, err = geoloader.LoadAllLegacyV4(legacy.LoadAnnotator)
+		v4, err = geoloader.LoadAllLegacyV4(nil, legacy.LoadAnnotator)
 		if err != nil {
 			// This is pretty severe, but we work around most of these failures down below.
 			log.Println(err)
@@ -81,7 +81,7 @@ func InitDataset() {
 	}()
 	go func() {
 		var err error
-		v6, err = geoloader.LoadAllLegacyV6(legacy.LoadAnnotator)
+		v6, err = geoloader.LoadAllLegacyV6(nil, legacy.LoadAnnotator)
 		if err != nil {
 			log.Println(err)
 		}
@@ -90,7 +90,7 @@ func InitDataset() {
 	}()
 	go func() {
 		var err error
-		g2, err = geoloader.LoadAllGeolite2(geolite2.LoadGeolite2)
+		g2, err = geoloader.LoadAllGeolite2(nil, geolite2.LoadGeolite2)
 		if err != nil {
 			log.Println(err)
 		}
