@@ -113,11 +113,13 @@ func ExtractDateFromFilename(filename string) (time.Time, error) {
 *                            Annotator Loader                            *
 *************************************************************************/
 
-type Loader interface {
-	// Update takes a map of annotators, and updates it to add any new annotators that have become
-	// available.
-	Update() error
+// CachingLoader keeps a cache of loaded annotators, updates the cache on request, and returns a copy
+// of the cache on request.
+type CachingLoader interface {
+	// UpdateCache causes the loader to load any new annotators and add them to the cached list.
+	UpdateCache() error
 
-	// Fetch returns the current list of annotators.
+	// Fetch returns a copy of the current list of annotators.
+	// May return an empty slice, but must not return nil.
 	Fetch() []Annotator
 }
