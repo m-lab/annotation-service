@@ -68,33 +68,6 @@ script:
 # Run all tests and gather and submit coverage information.
 - GCLOUD_PROJECT=mlab-testing go test -coverprofile=cover.cov ./...
 - $HOME/gopath/bin/goveralls -coverprofile=cover.cov -service=travis-ci
-# Run the flaky test many many times.
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
-- go test ./metrics/... -count=1
 # Run benchmarks
 - go test -bench . ./geolite2/...
 
