@@ -68,10 +68,13 @@ func bucketIterator() (*storage.ObjectIterator, error) {
 	return prospectiveFiles, nil
 }
 
+type Filename string
+
 // loadAll loads all datasets from the source that match the filter.
 func loadAll(
+	cache map[Filename]api.Annotator,
 	filter func(file *storage.ObjectAttrs) error,
-	loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
+	loader func(*storage.ObjectAttrs) (api.Annotator, error)) (map[Filename]api.Annotator, error) {
 	if loader == nil {
 		return nil, ErrNoLoader
 	}
@@ -81,7 +84,7 @@ func loadAll(
 	}
 
 	// TODO - maybe use a channel and single threaded append instead.
-	result := make([]api.Annotator, 0, 100)
+	result := make(map[Filename]api.Annotator, len(cache)+2)
 	resultLock := sync.Mutex{}
 	wg := sync.WaitGroup{}
 
@@ -97,25 +100,31 @@ func loadAll(
 		if filter != nil && filter(file) != nil {
 			continue
 		}
+		filename := Filename(file.Name)
+		ann, ok := cache[filename]
+		if ok {
+			result[filename] = ann
+			continue
+		}
 		_, _, callerLine, _ := runtime.Caller(1)
-		log.Println("Loading", file.Name, "from line", callerLine)
+		log.Println("Loading", filename, "from line", callerLine)
 		wg.Add(1)
 		go func(file *storage.ObjectAttrs) {
 			defer wg.Done()
 			ann, err := loader(file)
 			if err != nil {
-				log.Println("Retrying", file.Name, "after", err)
+				log.Println("Retrying", filename, "after", err)
 				ann, err = loader(file)
 				if err != nil {
-					log.Println("Failed trying to load", file.Name, "with", err)
+					log.Println("Failed trying to load", filename, "with", err)
 					return
 				}
 			}
 			resultLock.Lock()
-			result = append(result, ann)
+			result[filename] = ann
 			resultLock.Unlock()
 			metrics.DatasetCount.Inc()
-			log.Println("Loaded", file.Name)
+			log.Println("Loaded", filename)
 		}(file)
 	}
 	wg.Wait()
@@ -142,10 +151,56 @@ func filter(file *storage.ObjectAttrs, r *regexp.Regexp, before time.Time) error
 	return nil
 }
 
-// LoadAllLegacyV4 loads all v4 legacy datasets from the appropriate GCS bucket.
+// cachingLoader implements api.CachingLoader for legacy and geolite2 geolocation.
+type cachingLoader struct {
+	lock       sync.Mutex
+	annotators map[Filename]api.Annotator
+	filter     func(*storage.ObjectAttrs) error
+	loader     func(*storage.ObjectAttrs) (api.Annotator, error)
+}
+
+// UpdateCache causes the loader to load any new annotators and add them to the cached list.
+func (cl *cachingLoader) UpdateCache() error {
+	newMap, err :=
+		loadAll(cl.annotators,
+			func(file *storage.ObjectAttrs) error {
+				return cl.filter(file)
+			},
+			cl.loader)
+	if err != nil {
+		return err
+	}
+	cl.lock.Lock()
+	defer cl.lock.Unlock()
+
+	cl.annotators = newMap
+	return nil
+}
+
+// Fetch returns a copy of the current list of annotators.
+// The returned slice of Annotators is NOT sorted.
+func (cl *cachingLoader) Fetch() []api.Annotator {
+	cl.lock.Lock()
+	defer cl.lock.Unlock()
+	result := make([]api.Annotator, 0, len(cl.annotators))
+	for _, v := range cl.annotators {
+		result = append(result, v)
+	}
+	return result
+}
+
+// NewCachingLoader creates a CachingLoader with the provided filter and loader.
+func newCachingLoader(
+	filter func(*storage.ObjectAttrs) error,
+	loader func(*storage.ObjectAttrs) (api.Annotator, error)) api.CachingLoader {
+	return &cachingLoader{filter: filter, loader: loader, annotators: make(map[Filename]api.Annotator, 100)}
+}
+
+// LegacyV4Loader returns a CachingLoader that loads all v4 legacy datasets.
 // The loader is injected, to allow for efficient unit testing.
-func LoadAllLegacyV4(loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
-	return loadAll(
+func LegacyV4Loader(
+	loader func(*storage.ObjectAttrs) (api.Annotator, error)) api.CachingLoader {
+	return newCachingLoader(
 		func(file *storage.ObjectAttrs) error {
 			// We archived but do not use legacy datasets after GeoLite2StartDate.
 			return filter(file, geoLegacyRegex, geoLite2StartDate)
@@ -153,10 +208,11 @@ func LoadAllLegacyV4(loader func(*storage.ObjectAttrs) (api.Annotator, error)) (
 		loader)
 }
 
-// LoadAllLegacyV6 loads all v6 legacy datasets from the appropriate GCS bucket.
+// LegacyV6Loader returns a CachingLoader that loads all v6 legacy datasets.
 // The loader is injected, to allow for efficient unit testing.
-func LoadAllLegacyV6(loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
-	return loadAll(
+func LegacyV6Loader(
+	loader func(*storage.ObjectAttrs) (api.Annotator, error)) api.CachingLoader {
+	return newCachingLoader(
 		func(file *storage.ObjectAttrs) error {
 			// We archived but do not use legacy datasets after GeoLite2StartDate.
 			return filter(file, geoLegacyv6Regex, geoLite2StartDate)
@@ -164,10 +220,11 @@ func LoadAllLegacyV6(loader func(*storage.ObjectAttrs) (api.Annotator, error)) (
 		loader)
 }
 
-// LoadAllGeolite2 loads all geolite2 datasets from the appropriate GCS bucket.
+// Geolite2Loader returns a CachingLoader that loads all geolite2 datasets.
 // The loader is injected, to allow for efficient unit testing.
-func LoadAllGeolite2(loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
-	return loadAll(
+func Geolite2Loader(
+	loader func(*storage.ObjectAttrs) (api.Annotator, error)) api.CachingLoader {
+	return newCachingLoader(
 		func(file *storage.ObjectAttrs) error {
 			return filter(file, geoLite2Regex, time.Time{})
 		},
