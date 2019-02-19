@@ -90,11 +90,6 @@ func (ca CompositeAnnotator) String() string {
 	return result
 }
 
-// Close is included only to complete the current API.  We are removing Close from the API
-// in upcoming PRs.
-// DEPRECATED
-func (ca CompositeAnnotator) Close() {}
-
 // NewCompositeAnnotator creates a new instance wrapping the provided slice. Returns nil if the slice is nil.
 func NewCompositeAnnotator(annotators []api.Annotator) api.Annotator {
 	if annotators == nil {
