@@ -26,7 +26,7 @@ const (
 )
 
 func InitHandler() {
-	manager.InitDataset()
+	manager.UpdateDirectory()
 
 	// sets up any handlers that are needed, including url
 	// handlers and pubsub handlers
