@@ -42,8 +42,8 @@ var (
 	errNoMatch = errors.New("Doesn't match") // TODO
 )
 
-// TestingUseOnlyMarch hacks the regular expressions to reduce the number of datasets for testing.
-func TestingUseOnlyMarch() {
+// UseOnlyMarchForTest hacks the regular expressions to reduce the number of datasets for testing.
+func UseOnlyMarchForTest() {
 	if flag.Lookup("test.v") == nil {
 		log.Println("This should only be called in unit tests.")
 		return
