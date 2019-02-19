@@ -7,6 +7,7 @@ package geoloader
 import (
 	"context"
 	"errors"
+	"flag"
 	"log"
 	"regexp"
 	"runtime"
@@ -26,12 +27,12 @@ var (
 	// TODO make this local
 	geoLite2StartDate = time.Unix(1502755200, 0) //"August 15, 2017"
 
-	// This is the regex used to filter which geolite2 dataset files we consider acceptable.
-	GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
+	// geoLite2Regex is used to filter which geolite2 dataset files we consider acceptable.
+	geoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
 
-	// These are the regex used to filter which legacy dataset files we consider acceptable.
-	GeoLegacyRegex   = regexp.MustCompile(`.*-GeoLiteCity.dat.*`)
-	GeoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
+	// GeoLegacy??Regex are used to filter which legacy dataset files we consider acceptable.
+	geoLegacyRegex   = regexp.MustCompile(`.*-GeoLiteCity.dat.*`)
+	geoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
 
 	// ErrNoLoader is returned if nil is passed for loader parameter.
 	ErrNoLoader = errors.New("No loader provided")
@@ -41,6 +42,17 @@ var (
 	// ErrNoMatch is returned (internally) when filename does not match regexp.
 	errNoMatch = errors.New("Doesn't match") // TODO
 )
+
+// TestingUseOnlyMarch hacks the regular expressions to reduce the number of datasets for testing.
+func TestingUseOnlyMarch() {
+	if flag.Lookup("test.v") == nil {
+		log.Println("This should only be called in unit tests.")
+		return
+	}
+	geoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/03/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
+	geoLegacyRegex = regexp.MustCompile(`Maxmind/\d{4}/03/\d{2}/\d{8}T.*-GeoLiteCity.dat.*`)
+	geoLegacyv6Regex = regexp.MustCompile(`Maxmind/\d{4}/03/\d{2}/\d{8}T.*-GeoLiteCityv6.dat.*`)
+}
 
 /*****************************************************************************
 *                          LoadAll... functions                              *
@@ -192,7 +204,7 @@ func LegacyV4Loader(
 	return newCachingLoader(
 		func(file *storage.ObjectAttrs) error {
 			// We archived but do not use legacy datasets after GeoLite2StartDate.
-			return filter(file, GeoLegacyRegex, geoLite2StartDate)
+			return filter(file, geoLegacyRegex, geoLite2StartDate)
 		},
 		loader)
 }
@@ -204,7 +216,7 @@ func LegacyV6Loader(
 	return newCachingLoader(
 		func(file *storage.ObjectAttrs) error {
 			// We archived but do not use legacy datasets after GeoLite2StartDate.
-			return filter(file, GeoLegacyv6Regex, geoLite2StartDate)
+			return filter(file, geoLegacyv6Regex, geoLite2StartDate)
 		},
 		loader)
 }
@@ -215,7 +227,7 @@ func Geolite2Loader(
 	loader func(*storage.ObjectAttrs) (api.Annotator, error)) api.CachingLoader {
 	return newCachingLoader(
 		func(file *storage.ObjectAttrs) error {
-			return filter(file, GeoLite2Regex, time.Time{})
+			return filter(file, geoLite2Regex, time.Time{})
 		},
 		loader)
 }
