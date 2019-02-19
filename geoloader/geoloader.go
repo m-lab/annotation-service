@@ -68,8 +68,8 @@ func bucketIterator() (*storage.ObjectIterator, error) {
 	return prospectiveFiles, nil
 }
 
-// LoadAll loads all datasets from the source that match the filter.
-func LoadAll(
+// loadAll loads all datasets from the source that match the filter.
+func loadAll(
 	filter func(file *storage.ObjectAttrs) error,
 	loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
 	if loader == nil {
@@ -145,7 +145,7 @@ func filter(file *storage.ObjectAttrs, r *regexp.Regexp, before time.Time) error
 // LoadAllLegacyV4 loads all v4 legacy datasets from the appropriate GCS bucket.
 // The loader is injected, to allow for efficient unit testing.
 func LoadAllLegacyV4(loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
-	return LoadAll(
+	return loadAll(
 		func(file *storage.ObjectAttrs) error {
 			// We archived but do not use legacy datasets after GeoLite2StartDate.
 			return filter(file, geoLegacyRegex, geoLite2StartDate)
@@ -156,7 +156,7 @@ func LoadAllLegacyV4(loader func(*storage.ObjectAttrs) (api.Annotator, error)) (
 // LoadAllLegacyV6 loads all v6 legacy datasets from the appropriate GCS bucket.
 // The loader is injected, to allow for efficient unit testing.
 func LoadAllLegacyV6(loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
-	return LoadAll(
+	return loadAll(
 		func(file *storage.ObjectAttrs) error {
 			// We archived but do not use legacy datasets after GeoLite2StartDate.
 			return filter(file, geoLegacyv6Regex, geoLite2StartDate)
@@ -167,7 +167,7 @@ func LoadAllLegacyV6(loader func(*storage.ObjectAttrs) (api.Annotator, error)) (
 // LoadAllGeolite2 loads all geolite2 datasets from the appropriate GCS bucket.
 // The loader is injected, to allow for efficient unit testing.
 func LoadAllGeolite2(loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
-	return LoadAll(
+	return loadAll(
 		func(file *storage.ObjectAttrs) error {
 			return filter(file, geoLite2Regex, time.Time{})
 		},
