@@ -2,6 +2,7 @@ package metrics_test
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -13,7 +14,7 @@ import (
 
 func TestPrometheusMetrics(t *testing.T) {
 	server := metrics.SetupPrometheus(0)
-	defer server.Shutdown(nil)
+	defer server.Shutdown(context.Background())
 	log.Println(server.Addr)
 
 	metricReader, err := http.Get("http://" + server.Addr + "/metrics")
