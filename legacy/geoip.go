@@ -19,9 +19,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"sync"
 	"unsafe"
 )
+
+// This is the regex used to filter for which files we want to consider acceptable for using with legacy dataset
+var geoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
 
 // GeoIPOptions enum in GeoIP.h
 const (

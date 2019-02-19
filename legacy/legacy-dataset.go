@@ -91,7 +91,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"sync"
 	"time"
@@ -101,10 +100,6 @@ import (
 	"github.com/m-lab/annotation-service/loader"
 	"github.com/m-lab/annotation-service/metrics"
 )
-
-// This is the regex used to filter for which files we want to consider acceptable for using with legacy dataset
-var geoLegacyRegex = regexp.MustCompile(`.*-GeoLiteCity.dat.*`)
-var geoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
 
 var (
 	// ErrDateExtractionFailed is returned when no valid date can be extracted from filename.
@@ -174,14 +169,6 @@ func (gi *Annotator) Annotate(IP string, data *api.GeoData) error {
 // AnnotatorDate returns the date that the dataset was published.
 func (gi *Annotator) AnnotatorDate() time.Time {
 	return gi.startDate
-}
-
-// Close unloads the datasets from the C library code.
-func (gi *Annotator) Close() {
-	gi.lock.Lock()
-	defer gi.lock.Unlock()
-	gi.dataset.Free()
-	gi.dataset = nil
 }
 
 // LoadLegacyDataset loads the requested dataset into memory.
