@@ -88,12 +88,6 @@ type Annotator interface {
 
 	// The date associated with the dataset.
 	AnnotatorDate() time.Time
-
-	// AnnotatorType returns a string indicating what kind of annotator this is.
-	// AnnotatorType() string
-
-	// Free any unsafe memory associated with the annotator.
-	Close()
 }
 
 var dateRE = regexp.MustCompile(`[0-9]{8}T`)

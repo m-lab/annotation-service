@@ -51,9 +51,6 @@ type GeoDataset struct {
 	LocationNodes []LocationNode // The location nodes corresponding to the IPNodes
 }
 
-// Close does nothing for geolite2 datasets.  Normal garbage collection is sufficient.
-func (ds *GeoDataset) Close() {}
-
 // ErrNodeNotFound is returned when we can't find data in our system.
 // TODO SearchBinary and associated code should go in legacy, NOT here.
 // Need to clean up handler code first, though.

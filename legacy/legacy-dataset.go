@@ -176,14 +176,6 @@ func (gi *Annotator) AnnotatorDate() time.Time {
 	return gi.startDate
 }
 
-// Close unloads the datasets from the C library code.
-func (gi *Annotator) Close() {
-	gi.lock.Lock()
-	defer gi.lock.Unlock()
-	gi.dataset.Free()
-	gi.dataset = nil
-}
-
 // LoadLegacyDataset loads the requested dataset into memory.
 func LoadLegacyDataset(filename string, bucketname string) (*Annotator, error) {
 	date, err := api.ExtractDateFromFilename(filename)
