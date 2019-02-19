@@ -24,7 +24,6 @@ import (
 	"errors"
 	"log"
 	"sort"
-	"sync"
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
@@ -234,79 +233,4 @@ func (d *Directory) lastEarlierThan(date time.Time) api.Annotator {
 		return d.annotators[index]
 	}
 	return d.annotators[index-1]
-}
-
-/*************************************************************************
-*                          Directory Builder                             *
-*************************************************************************/
-
-// Generator wraps a set of CachingLoaders, and creates a set of merged Annotators on request.
-// TODO - not crazy about this name.
-type Generator struct {
-	legacyV4 api.CachingLoader // loader for legacy v4 annotators
-	legacyV6 api.CachingLoader // loader for legacy v6 annotators
-	geolite2 api.CachingLoader // loader for geolite2 annotators
-	asn      api.CachingLoader // loader for asn annotators (currently nil)
-}
-
-// NewGenerator initializes a Generator object, and preloads the CachingLoaders
-func NewGenerator(v4, v6, g2 api.CachingLoader) *Generator {
-	if v4 == nil || v6 == nil || g2 == nil {
-		return nil
-	}
-	wg := sync.WaitGroup{}
-	go func() {
-		v4.UpdateCache()
-		wg.Done()
-	}()
-	go func() {
-		v6.UpdateCache()
-		wg.Done()
-	}()
-	go func() {
-		g2.UpdateCache()
-		wg.Done()
-	}()
-	wg.Wait()
-	return &Generator{v4, v6, g2, nil}
-}
-
-// Update updates the (dynamic) CachingLoaders
-func (gen *Generator) Update() error {
-	// v4 and v6 are static, so we  don't have to reload them.
-	return gen.geolite2.UpdateCache()
-}
-
-// Generate creates a complete list of CompositeAnnotators from the cached annotators
-// from the CachingLoaders.
-func (gen *Generator) Generate() []api.Annotator {
-	v4 := gen.legacyV4.Fetch()
-	v6 := gen.legacyV6.Fetch()
-
-	var legacy []api.Annotator
-	if len(v4)*len(v6) < 1 {
-		log.Println("empty legacy v4 or v6 annotator list - skipping legacy")
-		legacy = make([]api.Annotator, 0)
-	} else {
-		legacy = MergeAnnotators(v4, v6)
-		// TODO logAnnotatorDates("legacy", legacy)
-	}
-
-	// Now append the Geolite2 annotators
-	g2 := gen.geolite2.Fetch()
-
-	combo := make([]api.Annotator, 0, len(g2)+len(legacy))
-	combo = append(combo, legacy...)
-	combo = append(combo, g2...)
-
-	// Sort them just in case there are some out of order.
-	combo = SortSlice(combo)
-	// TODO logAnnotatorDates("combo", combo)
-
-	if len(combo) < 1 {
-		log.Println("No annotators available")
-		return nil
-	}
-
-	return combo
 }

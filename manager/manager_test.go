@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"regexp"
 	"testing"
 	"time"
 
@@ -26,19 +25,12 @@ func fakeLoader(date string) (api.Annotator, error) {
 	return &geolite2.GeoDataset{}, nil
 }
 
-func hackFilters() {
-	geoloader.GeoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d3/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
-	geoloader.GeoLegacyRegex = regexp.MustCompile(`Maxmind/\d{4}/\d3/\d{2}/\d{8}T.*-GeoLiteCity.dat.*`)
-	geoloader.GeoLegacyv6Regex = regexp.MustCompile(`Maxmind/\d{4}/\d3/\d{2}/\d{8}T.*-GeoLiteCityv6.dat.*`)
-
-}
-
 func TestInitDataset(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping test that uses GCS")
 	}
 	// Make the dataset filters much more restrictive to prevent OOM and make test faster.
-	hackFilters()
+	geoloader.TestingUseOnlyMarch()
 	// Load the small directory.
 	manager.InitDataset()
 

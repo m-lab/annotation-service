@@ -14,7 +14,6 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/loader"
-	"google.golang.org/api/iterator"
 )
 
 const (
@@ -27,9 +26,7 @@ const (
 )
 
 var (
-	// This is the regex used to filter for which files we want to consider acceptable for using with Geolite2
-	geoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
-	countryRE     = regexp.MustCompile(`^[^0-9]*$`)
+	countryRE = regexp.MustCompile(`^[^0-9]*$`)
 )
 
 func loadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
@@ -274,29 +271,6 @@ func LoadIPListGLite2(reader io.Reader, idMap map[int]int) ([]IPNode, error) {
 	return list, nil
 }
 
-// determineFilenameOfLatestGeolite2File will get a list of filenames
-// from GCS and search through them, eventually returing either the
-// latest filename or an error.
-func determineFilenameOfLatestGeolite2File() (string, error) {
-	ctx := context.Background()
-	client, err := storage.NewClient(ctx)
-	if err != nil {
-		return "", err
-	}
-	prospectiveFiles := client.Bucket(api.MaxmindBucketName).Objects(ctx, &storage.Query{Prefix: api.MaxmindPrefix})
-	filename := ""
-	for file, err := prospectiveFiles.Next(); err != iterator.Done; file, err = prospectiveFiles.Next() {
-		if err != nil {
-			return "", err
-		}
-		if file.Name > filename && geoLite2Regex.MatchString(file.Name) {
-			filename = file.Name
-		}
-
-	}
-	return filename, nil
-}
-
 // LoadGeoLite2Dataset load the Geolite2 dataset with filename from bucket.
 func LoadGeoLite2Dataset(filename string, bucketname string) (*GeoDataset, error) {
 	zip, err := loader.CreateZipReader(context.Background(), bucketname, filename)
@@ -315,17 +289,6 @@ func LoadGeoLite2Dataset(filename string, bucketname string) (*GeoDataset, error
 		dataset.Start = date
 	}
 	return dataset, nil
-}
-
-// LoadLatestGeolite2File will check GCS for the latest file, download
-// it, process it, and load it into memory so that it can be easily
-// searched, then it will return a pointer to that GeoDataset or an error.
-func LoadLatestGeolite2File() (*GeoDataset, error) {
-	filename, err := determineFilenameOfLatestGeolite2File()
-	if err != nil {
-		return nil, err
-	}
-	return LoadGeoLite2Dataset(filename, api.MaxmindBucketName)
 }
 
 // LoadGeolite2 loads a dataset from a GCS object.
