@@ -27,6 +27,8 @@ var (
 	annotatorDirectory *directory.Directory
 )
 
+// SetDirectory wraps the list of annotators in a Directory, and safely replaces the global
+// annotatorDirectory.
 func SetDirectory(annotators []api.Annotator) {
 	dirLock.Lock()
 	defer dirLock.Unlock()
@@ -69,32 +71,35 @@ func InitDataset() {
 	var v6 []api.Annotator
 	var g2 []api.Annotator
 
+	// Note that this code uses the caching loaders, but then just gets the list of annotators
+	// and allows the caching loaders to be garbage collected.  Next PR will actually keep them
+	// around and reuse them.
 	go func() {
-		var err error
-		v4, err = geoloader.LoadAllLegacyV4(legacy.LoadAnnotator)
+		v4loader := geoloader.LegacyV4Loader(legacy.LoadAnnotator)
+		err := v4loader.UpdateCache()
 		if err != nil {
-			// This is pretty severe, but we work around most of these failures down below.
 			log.Println(err)
 		}
-		v4 = directory.SortSlice(v4)
+
+		v4 = directory.SortSlice(v4loader.Fetch())
 		wg.Done()
 	}()
 	go func() {
-		var err error
-		v6, err = geoloader.LoadAllLegacyV6(legacy.LoadAnnotator)
+		v6loader := geoloader.LegacyV6Loader(legacy.LoadAnnotator)
+		err := v6loader.UpdateCache()
 		if err != nil {
 			log.Println(err)
 		}
-		v6 = directory.SortSlice(v6)
+		v6 = directory.SortSlice(v6loader.Fetch())
 		wg.Done()
 	}()
 	go func() {
-		var err error
-		g2, err = geoloader.LoadAllGeolite2(geolite2.LoadGeolite2)
+		g2loader := geoloader.Geolite2Loader(geolite2.LoadGeolite2)
+		err := g2loader.UpdateCache()
 		if err != nil {
 			log.Println(err)
 		}
-		g2 = directory.SortSlice(g2)
+		g2 = directory.SortSlice(g2loader.Fetch())
 		wg.Done()
 	}()
 
