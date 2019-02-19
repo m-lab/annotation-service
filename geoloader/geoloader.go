@@ -1,6 +1,7 @@
 // Package geoloader provides the interface between manager and dataset handling
 // packages (geolite2 and legacy). manager only depends on geoloader and api.
 // geoloader only depends on geolite2, legacy and api.
+// TODO:  This package is now used only by the manager package.  Should we consolidate them?
 package geoloader
 
 import (
@@ -14,7 +15,6 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/m-lab/annotation-service/api"
-	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/metrics"
 	"google.golang.org/api/iterator"
 )
@@ -41,19 +41,6 @@ var (
 	// ErrNoMatch is returned (internally) when filename does not match regexp.
 	errNoMatch = errors.New("Doesn't match") // TODO
 )
-
-// PopulateLatestData will search to the latest Geolite2 files
-// available in GCS and will use them to create a new GeoDataset which
-// it will place into the global scope as the latest version. It will
-// do so safely with use of the currentDataMutex RW mutex. It it
-// encounters an error, it will halt the program.
-func GetLatestData() api.Annotator {
-	data, err := geolite2.LoadLatestGeolite2File()
-	if err != nil {
-		log.Fatal(err)
-	}
-	return data
-}
 
 /*****************************************************************************
 *                          LoadAll... functions                              *
