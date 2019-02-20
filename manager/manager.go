@@ -25,6 +25,9 @@ var (
 	dirLock sync.RWMutex
 	// annotatorDirectory points to a Directory containing CompositeAnnotators.
 	annotatorDirectory *directory.Directory
+
+	once    sync.Once // This is used to construct the builder the first time it is used.
+	builder *listBuilder
 )
 
 // SetDirectory wraps the list of annotators in a Directory, and safely replaces the global
@@ -59,68 +62,27 @@ func logAnnotatorDates(header string, an []api.Annotator) {
 	log.Println(b.String())
 }
 
-// InitDataset loads ALL datasets into memory.
-// TODO - this will probably OOM when called a second time, since it will load all
-// the annotators again.
-// TODO - refactor this into parts in geoloader and directory.
-// TODO - rename LoadAnnotatorDirectory
-func InitDataset() {
-	wg := sync.WaitGroup{}
-	wg.Add(3)
-	var v4 []api.Annotator
-	var v6 []api.Annotator
-	var g2 []api.Annotator
-
-	// Note that this code uses the caching loaders, but then just gets the list of annotators
-	// and allows the caching loaders to be garbage collected.  Next PR will actually keep them
-	// around and reuse them.
-	go func() {
+// MustUpdateDirectory loads ALL datasets into memory.
+// NOTE: This may log.Fatal if there is a problem constructing the Directory.
+// TODO rename Directory and this function
+func MustUpdateDirectory() {
+	once.Do(func() {
 		v4loader := geoloader.LegacyV4Loader(legacy.LoadAnnotator)
-		err := v4loader.UpdateCache()
-		if err != nil {
-			log.Println(err)
-		}
-
-		v4 = directory.SortSlice(v4loader.Fetch())
-		wg.Done()
-	}()
-	go func() {
 		v6loader := geoloader.LegacyV6Loader(legacy.LoadAnnotator)
-		err := v6loader.UpdateCache()
-		if err != nil {
-			log.Println(err)
-		}
-		v6 = directory.SortSlice(v6loader.Fetch())
-		wg.Done()
-	}()
-	go func() {
 		g2loader := geoloader.Geolite2Loader(geolite2.LoadGeolite2)
-		err := g2loader.UpdateCache()
-		if err != nil {
-			log.Println(err)
+
+		builder = newListBuilder(v4loader, v6loader, g2loader)
+		if builder == nil {
+			// This only happens if one of the loaders is nil.
+			log.Fatal("Nil list builder")
 		}
-		g2 = directory.SortSlice(g2loader.Fetch())
-		wg.Done()
-	}()
-
-	wg.Wait()
-
-	// Construct the CompositeAnnotators to handle legacy v4/v6
-	logAnnotatorDates("v4", v4)
-	logAnnotatorDates("v6", v6)
-	var legacy []api.Annotator
-	if len(v4)*len(v6)*len(g2) < 1 {
-		log.Println("empty legacy v4 or v6 annotator list - skipping legacy")
-		legacy = make([]api.Annotator, 0)
-	} else {
-		legacy = directory.MergeAnnotators(v4, v6)
-		logAnnotatorDates("legacy", legacy)
+	})
+	err := builder.update()
+	if err != nil {
+		// TODO - add a metric?
+		log.Println(err)
 	}
-
-	// Now append the Geolite2 annotators
-	combo := make([]api.Annotator, 0, len(g2)+len(legacy))
-	combo = append(combo, legacy...)
-	combo = append(combo, g2...)
+	combo := builder.build()
 
 	// Sort them just in case there are some out of order.
 	combo = directory.SortSlice(combo)
@@ -146,34 +108,45 @@ type listBuilder struct {
 	asn      api.CachingLoader // loader for asn annotators (currently nil)
 }
 
-// newListBuilder initializes a listBuilder object, and preloads the CachingLoaders
-// TODO New shouldn't do loading.
+// newListBuilder initializes a listBuilder object, and preloads the CachingLoaders.
+// The arguments must all be non-nil, or the return value will be nil.
 func newListBuilder(v4, v6, g2 api.CachingLoader) *listBuilder {
 	if v4 == nil || v6 == nil || g2 == nil {
 		return nil
 	}
-	wg := sync.WaitGroup{}
-	wg.Add(3)
-	go func() {
-		v4.UpdateCache()
-		wg.Done()
-	}()
-	go func() {
-		v6.UpdateCache()
-		wg.Done()
-	}()
-	go func() {
-		g2.UpdateCache()
-		wg.Done()
-	}()
-	wg.Wait()
-	return &listBuilder{v4, v6, g2, nil}
+	return &listBuilder{legacyV4: v4, legacyV6: v6, geolite2: g2}
 }
 
 // Update updates the (dynamic) CachingLoaders
 func (bldr *listBuilder) update() error {
-	// v4 and v6 are static, so we  don't have to reload them.
-	return bldr.geolite2.UpdateCache()
+	var errV4, errV6, errG2 error
+
+	wg := sync.WaitGroup{}
+	wg.Add(3)
+	go func() {
+		errV4 = bldr.legacyV4.UpdateCache()
+		wg.Done()
+	}()
+	go func() {
+		errV6 = bldr.legacyV6.UpdateCache()
+		wg.Done()
+	}()
+	go func() {
+		errG2 = bldr.geolite2.UpdateCache()
+		wg.Done()
+	}()
+	wg.Wait()
+
+	if errV4 != nil {
+		return errV4
+	}
+	if errV6 != nil {
+		return errV6
+	}
+	if errG2 != nil {
+		return errG2
+	}
+	return nil
 }
 
 // build creates a complete list of CompositeAnnotators from the cached annotators
@@ -188,7 +161,6 @@ func (bldr *listBuilder) build() []api.Annotator {
 		legacy = make([]api.Annotator, 0)
 	} else {
 		legacy = directory.MergeAnnotators(v4, v6)
-		// TODO logAnnotatorDates("legacy", legacy)
 	}
 
 	// Now append the Geolite2 annotators
@@ -197,8 +169,6 @@ func (bldr *listBuilder) build() []api.Annotator {
 	combo := make([]api.Annotator, 0, len(g2)+len(legacy))
 	combo = append(combo, legacy...)
 	combo = append(combo, g2...)
-
-	// logAnnotatorDates("combo", combo)
 
 	if len(combo) < 1 {
 		log.Println("No annotators available")

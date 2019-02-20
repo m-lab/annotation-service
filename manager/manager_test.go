@@ -32,7 +32,7 @@ func TestInitDataset(t *testing.T) {
 	// Make the dataset filters much more restrictive to prevent OOM and make test faster.
 	geoloader.UseOnlyMarchForTest()
 	// Load the small directory.
-	manager.InitDataset()
+	manager.MustUpdateDirectory()
 
 	tests := []struct {
 		ip   string
