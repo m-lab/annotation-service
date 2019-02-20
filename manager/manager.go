@@ -62,9 +62,10 @@ func logAnnotatorDates(header string, an []api.Annotator) {
 	log.Println(b.String())
 }
 
-// UpdateDirectory loads ALL datasets into memory.
+// MustUpdateDirectory loads ALL datasets into memory.
+// NOTE: This may log.Fatal if there is a problem constructing the Directory.
 // TODO rename Directory and this function
-func UpdateDirectory() {
+func MustUpdateDirectory() {
 	once.Do(func() {
 		v4loader := geoloader.LegacyV4Loader(legacy.LoadAnnotator)
 		v6loader := geoloader.LegacyV6Loader(legacy.LoadAnnotator)
@@ -72,10 +73,10 @@ func UpdateDirectory() {
 
 		builder = newListBuilder(v4loader, v6loader, g2loader)
 		if builder == nil {
+			// This only happens if one of the loaders is nil.
 			log.Fatal("Nil list builder")
 		}
 	})
-
 	err := builder.update()
 	if err != nil {
 		// TODO - add a metric?
@@ -105,10 +106,10 @@ type listBuilder struct {
 	legacyV6 api.CachingLoader // loader for legacy v6 annotators
 	geolite2 api.CachingLoader // loader for geolite2 annotators
 	asn      api.CachingLoader // loader for asn annotators (currently nil)
-	once     sync.Once
 }
 
 // newListBuilder initializes a listBuilder object, and preloads the CachingLoaders.
+// The arguments must all be non-nil, or the return value will be nil.
 func newListBuilder(v4, v6, g2 api.CachingLoader) *listBuilder {
 	if v4 == nil || v6 == nil || g2 == nil {
 		return nil
