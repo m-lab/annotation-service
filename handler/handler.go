@@ -15,6 +15,7 @@ import (
 
 	"github.com/m-lab/annotation-service/api"
 	v2 "github.com/m-lab/annotation-service/api/v2"
+	"github.com/m-lab/annotation-service/geoloader"
 	"github.com/m-lab/annotation-service/manager"
 	"github.com/m-lab/annotation-service/metrics"
 )
@@ -273,7 +274,14 @@ func handleOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
-	latencyStats("old", len(dataSlice), tStart)
+
+	if len(dataSlice) == 0 {
+		latencyStats("old", len(dataSlice), tStart)
+	} else if geoloader.IsLegacy(dataSlice[0].Timestamp) {
+		latencyStats("old-legacy", len(dataSlice), tStart)
+	} else {
+		latencyStats("old-geolite2", len(dataSlice), tStart)
+	}
 }
 
 func handleV2(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
@@ -299,7 +307,11 @@ func handleV2(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
-	latencyStats("v2", len(request.IPs), tStart)
+	if geoloader.IsLegacy(request.Date) {
+		latencyStats("v2-legacy", len(request.IPs), tStart)
+	} else {
+		latencyStats("v2-geolite2", len(request.IPs), tStart)
+	}
 }
 
 func handleNewOrOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
