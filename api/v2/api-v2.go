@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/m-lab/annotation-service/api"
 )
@@ -52,7 +53,7 @@ type Response struct {
 *                           Remote Annotator API                          *
 *************************************************************************/
 var (
-	RequestTimeHistogram = prometheus.NewHistogramVec(
+	RequestTimeHistogram = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name: "annotator_external_latency_hist_msec",
 			Help: "annotator latency distributions.",
@@ -65,10 +66,6 @@ var (
 		},
 		[]string{"detail"})
 )
-
-func init() {
-	prometheus.MustRegister(RequestTimeHistogram)
-}
 
 func post(ctx context.Context, url string, encodedData []byte) (*http.Response, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
