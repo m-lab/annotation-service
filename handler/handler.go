@@ -15,6 +15,7 @@ import (
 
 	"github.com/m-lab/annotation-service/api"
 	v2 "github.com/m-lab/annotation-service/api/v2"
+	"github.com/m-lab/annotation-service/geoloader"
 	"github.com/m-lab/annotation-service/manager"
 	"github.com/m-lab/annotation-service/metrics"
 )
@@ -273,7 +274,17 @@ func handleOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
-	latencyStats("old", len(dataSlice), tStart)
+
+	if len(dataSlice) == 0 {
+		// Don't know if this was legacy or geolite2, so just label it "old"
+		latencyStats("old", len(dataSlice), tStart)
+	} else if geoloader.IsLegacy(dataSlice[0].Timestamp) {
+		// Label this old (api) and legacy (dataset)
+		latencyStats("old-legacy", len(dataSlice), tStart)
+	} else {
+		// Label this old (api) and geolite2 (dataset)
+		latencyStats("old-geolite2", len(dataSlice), tStart)
+	}
 }
 
 func handleV2(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
@@ -299,7 +310,13 @@ func handleV2(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
-	latencyStats("v2", len(request.IPs), tStart)
+	if geoloader.IsLegacy(request.Date) {
+		// Label this v2 (api) and legacy (dataset)
+		latencyStats("v2-legacy", len(request.IPs), tStart)
+	} else {
+		// Label this v2 (api) and geolite2 (dataset)
+		latencyStats("v2-geolite2", len(request.IPs), tStart)
+	}
 }
 
 func handleNewOrOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
