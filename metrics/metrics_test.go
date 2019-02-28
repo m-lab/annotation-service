@@ -8,6 +8,9 @@ import (
 	"github.com/m-lab/go/prometheusx"
 )
 
+// TestPrometheusMetrics ensures that all the metrics pass the linter. We apply
+// labels to all metrics which require them in an effort to run all metrics
+// through the linter.
 func TestPrometheusMetrics(t *testing.T) {
 	api.RequestTimeHistogram.WithLabelValues("x")
 	metrics.RequestTimeHistogramUsec.WithLabelValues("x", "x")
