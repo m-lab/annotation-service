@@ -75,7 +75,7 @@ type Filename string
 func loadAll(
 	cache map[Filename]api.Annotator,
 	filter func(file *storage.ObjectAttrs) error,
-	loader func(*storage.ObjectAttrs) (api.Annotator, error)
+	loader func(*storage.ObjectAttrs) (api.Annotator, error),
 	gcsPrefix string) (map[Filename]api.Annotator, error) {
 	if loader == nil {
 		return nil, ErrNoLoader
