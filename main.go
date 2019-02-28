@@ -8,9 +8,10 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/m-lab/go/prometheusx"
+
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/manager"
-	"github.com/m-lab/annotation-service/metrics"
 )
 
 // Status provides a simple status page, to help understand the current running version.
@@ -56,7 +57,7 @@ func main() {
 	http.HandleFunc("/status", Status)
 
 	handler.InitHandler()
-	metrics.SetupPrometheus(9090)
+	prometheusx.MustStartPrometheus(":9090")
 	log.Print("Listening on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

@@ -1,28 +1,22 @@
 package metrics
 
 import (
-	"fmt"
-	"net/http"
-	"net/http/pprof"
-
-	"github.com/m-lab/go/httpx"
-	"github.com/m-lab/go/rtx"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 //These vars are the prometheus metrics
 var (
 	// TODO make this an integer gauge
-	ActiveRequests = prometheus.NewGauge(prometheus.GaugeOpts{
+	ActiveRequests = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "annotator_Running_Annotation_Requests_Count",
 		Help: "The current number of unfulfilled annotation service requests.",
 	})
-	RequestTimes = prometheus.NewSummary(prometheus.SummaryOpts{
+	RequestTimes = promauto.NewSummary(prometheus.SummaryOpts{
 		Name: "annotator_Request_Response_Time_Summary",
 		Help: "The response time of each request, in nanoseconds.",
 	})
-	RequestTimeHistogramUsec = prometheus.NewHistogramVec(
+	RequestTimeHistogramUsec = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name: "annotator_latency_hist_usec",
 			Help: "annotator latency distributions.",
@@ -37,86 +31,46 @@ var (
 			},
 		},
 		[]string{"type", "detail"})
-	TotalRequests = prometheus.NewCounter(prometheus.CounterOpts{
+	TotalRequests = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "annotator_Annotation_Requests_total",
 		Help: "The total number of annotation service requests.",
 	})
-	TotalLookups = prometheus.NewCounter(prometheus.CounterOpts{
+	TotalLookups = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "annotator_Annotation_Lookups_total",
 		Help: "The total number of ip lookups.",
 	})
-	BadIPTotal = prometheus.NewCounter(prometheus.CounterOpts{
+	BadIPTotal = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "annotator_Bad_IP_Addresses_total",
 		Help: "The total number of ip parse failures.",
 	})
-	ErrorTotal = prometheus.NewCounterVec(prometheus.CounterOpts{
+	ErrorTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "annotator_Error_total",
 		Help: "The total number annotation errors.",
 	}, []string{"type"})
 
 	// TODO make this an integer gauge
-	DatasetCount = prometheus.NewGauge(prometheus.GaugeOpts{
+	DatasetCount = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "annotator_num_datasets",
 		Help: "Number of datasets loaded in cache.",
 	})
 
 	// TODO make this an integer gauge
-	PendingLoads = prometheus.NewGauge(prometheus.GaugeOpts{
+	PendingLoads = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "annotator_num_pending_load",
 		Help: "Number of datasets currently being loaded.",
 	})
 
-	EvictionCount = prometheus.NewCounter(prometheus.CounterOpts{
+	EvictionCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "annotator_evictions_total",
 		Help: "The total number datasets evicted.",
 	})
-	LoadCount = prometheus.NewCounter(prometheus.CounterOpts{
+	LoadCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "annotator_loads_total",
 		Help: "The total number of datasets loaded.",
 	})
 
-	RejectionCount = prometheus.NewCounterVec(prometheus.CounterOpts{
+	RejectionCount = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "annotator_rejections_total",
 		Help: "The total number of rejected requests.",
 	}, []string{"type"})
 )
-
-func init() {
-	prometheus.MustRegister(ActiveRequests)
-	prometheus.MustRegister(TotalRequests)
-	prometheus.MustRegister(TotalLookups)
-	prometheus.MustRegister(RequestTimes)
-	prometheus.MustRegister(BadIPTotal)
-	prometheus.MustRegister(ErrorTotal)
-
-	prometheus.MustRegister(DatasetCount)
-	prometheus.MustRegister(PendingLoads)
-	prometheus.MustRegister(EvictionCount)
-	prometheus.MustRegister(LoadCount)
-	prometheus.MustRegister(RejectionCount)
-	prometheus.MustRegister(RequestTimeHistogramUsec)
-}
-
-// SetupPrometheus sets up and runs a webserver to export prometheus metrics.
-func SetupPrometheus(port int) *http.Server {
-	// Define a custom serve mux for prometheus to listen on a separate port.
-	// We listen on a separate port so we can forward this port on the host VM.
-	// We cannot forward port 8080 because it is used by AppEngine.
-	mux := http.NewServeMux()
-	// Assign the default prometheus handler to the standard exporter path.
-	mux.Handle("/metrics", promhttp.Handler())
-	// Assign the pprof handling paths to the external port to access individual
-	// instances.
-	mux.HandleFunc("/debug/pprof/", pprof.Index)
-	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
-	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
-
-	server := &http.Server{
-		Addr:    fmt.Sprintf(":%d", port),
-		Handler: mux,
-	}
-	rtx.Must(httpx.ListenAndServeAsync(server), "Could not start metrics server")
-	return server
-}
