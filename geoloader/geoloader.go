@@ -59,13 +59,13 @@ func UseOnlyMarchForTest() {
 *****************************************************************************/
 
 // Returns the normal iterator for objects in the appropriate GCS bucket.
-func bucketIterator() (*storage.ObjectIterator, error) {
+func bucketIterator(withPrefix string) (*storage.ObjectIterator, error) {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-	prospectiveFiles := client.Bucket(api.MaxmindBucketName).Objects(ctx, &storage.Query{Prefix: api.MaxmindPrefix})
+	prospectiveFiles := client.Bucket(api.MaxmindBucketName).Objects(ctx, &storage.Query{Prefix: withPrefix})
 	return prospectiveFiles, nil
 }
 
@@ -75,11 +75,12 @@ type Filename string
 func loadAll(
 	cache map[Filename]api.Annotator,
 	filter func(file *storage.ObjectAttrs) error,
-	loader func(*storage.ObjectAttrs) (api.Annotator, error)) (map[Filename]api.Annotator, error) {
+	loader func(*storage.ObjectAttrs) (api.Annotator, error)
+	gcsPrefix string) (map[Filename]api.Annotator, error) {
 	if loader == nil {
 		return nil, ErrNoLoader
 	}
-	source, err := bucketIterator()
+	source, err := bucketIterator(gcsPrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -155,6 +156,7 @@ func filter(file *storage.ObjectAttrs, r *regexp.Regexp, before time.Time) error
 // cachingLoader implements api.CachingLoader for legacy and geolite2 geolocation.
 type cachingLoader struct {
 	lock       sync.Mutex
+	gcsPrefix  string
 	annotators map[Filename]api.Annotator
 	filter     func(*storage.ObjectAttrs) error
 	loader     func(*storage.ObjectAttrs) (api.Annotator, error)
@@ -167,7 +169,8 @@ func (cl *cachingLoader) UpdateCache() error {
 			func(file *storage.ObjectAttrs) error {
 				return cl.filter(file)
 			},
-			cl.loader)
+			cl.loader,
+			cl.gcsPrefix)
 	if err != nil {
 		return err
 	}
@@ -193,8 +196,9 @@ func (cl *cachingLoader) Fetch() []api.Annotator {
 // NewCachingLoader creates a CachingLoader with the provided filter and loader.
 func newCachingLoader(
 	filter func(*storage.ObjectAttrs) error,
-	loader func(*storage.ObjectAttrs) (api.Annotator, error)) api.CachingLoader {
-	return &cachingLoader{filter: filter, loader: loader, annotators: make(map[Filename]api.Annotator, 100)}
+	loader func(*storage.ObjectAttrs) (api.Annotator, error),
+	gcsPrefix string) api.CachingLoader {
+	return &cachingLoader{filter: filter, loader: loader, annotators: make(map[Filename]api.Annotator, 100), gcsPrefix: gcsPrefix}
 }
 
 // LegacyV4Loader returns a CachingLoader that loads all v4 legacy datasets.
@@ -206,7 +210,8 @@ func LegacyV4Loader(
 			// We archived but do not use legacy datasets after GeoLite2StartDate.
 			return filter(file, geoLegacyRegex, geoLite2StartDate)
 		},
-		loader)
+		loader,
+		api.MaxmindPrefix)
 }
 
 // LegacyV6Loader returns a CachingLoader that loads all v6 legacy datasets.
@@ -218,7 +223,8 @@ func LegacyV6Loader(
 			// We archived but do not use legacy datasets after GeoLite2StartDate.
 			return filter(file, geoLegacyv6Regex, geoLite2StartDate)
 		},
-		loader)
+		loader,
+		api.MaxmindPrefix)
 }
 
 // Geolite2Loader returns a CachingLoader that loads all geolite2 datasets.
@@ -229,5 +235,6 @@ func Geolite2Loader(
 		func(file *storage.ObjectAttrs) error {
 			return filter(file, geoLite2Regex, time.Time{})
 		},
-		loader)
+		loader,
+		api.MaxmindPrefix)
 }

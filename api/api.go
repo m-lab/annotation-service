@@ -12,7 +12,8 @@ import (
 
 const (
 	// Folder containing the maxmind files
-	MaxmindPrefix = "Maxmind/"
+	MaxmindPrefix   = "Maxmind/"
+	RouteViewPrefix = "RouteView"
 )
 
 var (
