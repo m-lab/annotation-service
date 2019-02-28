@@ -231,3 +231,7 @@ func Geolite2Loader(
 		},
 		loader)
 }
+
+func IsLegacy(date time.Time) bool {
+	return date.Before(geoLite2StartDate)
+}
