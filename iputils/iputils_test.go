@@ -33,8 +33,62 @@ func TestBuildIPNodeList(t *testing.T) {
 
 	got, err := BuildIPNodeList(r, &p)
 	assert.Nil(t, err)
+	assert.Equal(t, len(expectedResult), len(got))
 
 	assertEqual(t, expectedResult, got)
+}
+
+func TestSearchBinary(t *testing.T) {
+	inputCSV := `1.0.0.0/24	custom1
+1.0.0.2/26	custom2
+1.0.10.0/24	custom3
+1.0.10.124/30	custom4
+2.1.0.0/8	cuustom5`
+
+	r := strings.NewReader(inputCSV)
+	p := TestParser{}
+
+	builtNodes, err := BuildIPNodeList(r, &p)
+	assert.Nil(t, err)
+	assert.Equal(t, 7, len(builtNodes))
+
+	queries := []string{
+		"1.0.0.1",
+		"1.0.0.60",
+		"1.0.0.67",
+		"1.0.10.123",
+		"1.0.10.124",
+		"1.0.10.200",
+		"2.2.155.43",
+	}
+
+	expectedResult := []IPNode{
+		toIPNodeWithProp(t, "1.0.0.0", "1.0.0.1", "custom1"),
+		toIPNodeWithProp(t, "1.0.0.2", "1.0.0.63", "custom2"),
+		toIPNodeWithProp(t, "1.0.0.64", "1.0.0.255", "custom1"),
+		toIPNodeWithProp(t, "1.0.10.0", "1.0.10.123", "custom3"),
+		toIPNodeWithProp(t, "1.0.10.124", "1.0.10.127", "custom4"),
+		toIPNodeWithProp(t, "1.0.10.128", "1.0.10.255", "custom3"),
+		toIPNodeWithProp(t, "2.1.0.0", "2.255.255.255", "custom5"),
+	}
+
+	gotResult := []IPNode{}
+	for _, q := range queries {
+		got, err := SearchBinary(q, builtNodes)
+		assert.Nil(t, err)
+		gotResult = append(gotResult, got)
+	}
+
+	assertEqual(t, expectedResult, gotResult)
+
+	// test not found
+	_, err = SearchBinary("192.4.1.123", builtNodes)
+	assert.Equal(t, ErrNodeNotFound, err)
+
+	// test wrong input error
+	_, err = SearchBinary("badip", builtNodes)
+	assert.Equal(t, errors.New("ErrInvalidIP"), err)
+
 }
 
 // TestRangeCIDR tests the rangeCIDR function
@@ -63,7 +117,7 @@ func TestRangeCIDR(t *testing.T) {
 	}
 
 	_, _, err := rangeCIDR("hey/network 'sup?")
-	assert.Error(t, errors.New("Invalid CIDR IP range"), err)
+	assert.Equal(t, errors.New("Invalid CIDR IP range"), err)
 }
 
 // TestHandleStackNoIntersection tests the handleStack function - no intersection

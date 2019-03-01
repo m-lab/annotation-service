@@ -7,10 +7,19 @@ import (
 	"io"
 	"log"
 	"net"
+
+	"github.com/m-lab/annotation-service/metrics"
 )
 
 var (
-	ErrorTooManyErrors = errors.New("Too many errors during loading the dataset IP list.")
+	// the maximum number of wrong records per file during the import
+	maxWrongRecordsPerFile = 50
+
+	// ErrorTooManyErrors raised when the maximum number of errors during the import of a single file is > then maxWrongRecordsPerFile
+	ErrorTooManyErrors = errors.New("Too many errors during loading the dataset IP list")
+
+	// ErrNodeNotFound raised when a node is not found during SearchBinary
+	ErrNodeNotFound = errors.New("node not found")
 )
 
 // BaseIPNode is a basic type for nodes to handle. This struct should be embedded in all the IP range related
@@ -68,6 +77,31 @@ func (n *BaseIPNode) SetHighIP(newHigh net.IP) {
 	n.IPAddressHigh = newHigh
 }
 
+// SearchBinary does a binary search for a list element in the specified list
+func SearchBinary(ipLookUp string, list []IPNode) (p IPNode, e error) {
+	ip := net.ParseIP(ipLookUp)
+	if ip == nil {
+		metrics.BadIPTotal.Inc()
+		return p, errors.New("ErrInvalidIP") // TODO
+	}
+
+	start := 0
+	end := len(list) - 1
+
+	for start <= end {
+		median := (start + end) / 2
+		if bytes.Compare(ip, list[median].GetLowIP()) >= 0 && bytes.Compare(ip, list[median].GetHighIP()) <= 0 {
+			return list[median], nil
+		}
+		if bytes.Compare(ip, list[median].GetLowIP()) > 0 {
+			start = median + 1
+		} else {
+			end = median - 1
+		}
+	}
+	return p, ErrNodeNotFound
+}
+
 // BuildIPNodeList is a modified version of geolite2.LoadIPListGLite2 implementation. Uses exactly the same logic
 // but performs the datasource-specific operations through the parser passed in the parameter
 func BuildIPNodeList(reader io.Reader, parser IPNodeParser) ([]IPNode, error) {
@@ -82,7 +116,7 @@ func BuildIPNodeList(reader io.Reader, parser IPNodeParser) ([]IPNode, error) {
 	stack := []IPNode{}
 
 	errorCount := 0
-	maxErrorCount := 50
+	maxErrorCount := maxWrongRecordsPerFile
 	for {
 		record, err := r.Read()
 		if err == io.EOF {
