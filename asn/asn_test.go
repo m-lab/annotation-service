@@ -13,37 +13,37 @@ import (
 )
 
 func TestAnnotateV4(t *testing.T) {
-	datasetsTime := time.Date(2019, 1, 1, 12, 0, 0, 0, time.UTC)
+	datasetsTime := time.Date(2018, 1, 1, 12, 0, 0, 0, time.UTC)
 	ann := getAnnotatorForDay(t, true, datasetsTime.Year(), int(datasetsTime.Month()), datasetsTime.Day(), datasetsTime)
 
 	// test simple ASN
 	geoData := api.GeoData{}
-	err := ann.Annotate("84.1.28.246", &geoData)
+	err := ann.Annotate("1.0.128.100", &geoData)
 	assert.Nil(t, err)
 	assertASNData(t,
 		[]api.ASNElement{
-			api.ASNElement{[]string{"5483"}, api.ASNSingle},
+			api.ASNElement{[]string{"23969"}, api.ASNSingle},
 		},
 		geoData.ASN)
 
 	// test set ASN
 	geoData.ASN = nil
-	err = ann.Annotate("43.224.118.23", &geoData)
+	err = ann.Annotate("37.203.240.10", &geoData)
 	assert.Nil(t, err)
 	assertASNData(t,
 		[]api.ASNElement{
-			api.ASNElement{[]string{"135001"}, api.ASNSingle},
-			api.ASNElement{[]string{"135527"}, api.ASNSingle},
+			api.ASNElement{[]string{"199430"}, api.ASNSingle},
+			api.ASNElement{[]string{"202079"}, api.ASNSingle},
 		},
 		geoData.ASN)
 
 	// test multi-origin ASN
 	geoData.ASN = nil
-	err = ann.Annotate("43.228.124.11", &geoData)
+	err = ann.Annotate("37.142.80.10", &geoData)
 	assert.Nil(t, err)
 	assertASNData(t,
 		[]api.ASNElement{
-			api.ASNElement{[]string{"133322", "133905"}, api.ASNMultiOrigin},
+			api.ASNElement{[]string{"12849", "65024"}, api.ASNMultiOrigin},
 		},
 		geoData.ASN)
 
@@ -58,21 +58,20 @@ func TestAnnotateV4(t *testing.T) {
 }
 
 func TestAnnotateV6(t *testing.T) {
-	datasetsTime := time.Date(2019, 1, 1, 12, 0, 0, 0, time.UTC)
+	datasetsTime := time.Date(2018, 1, 1, 8, 0, 0, 0, time.UTC)
 	ann := getAnnotatorForDay(t, false, datasetsTime.Year(), int(datasetsTime.Month()), datasetsTime.Day(), datasetsTime)
 
 	// test simple ASN
 	geoData := api.GeoData{}
-	err := ann.Annotate("2001:408:8000:0000:0000:0000:0000:1313", &geoData)
+	err := ann.Annotate("2001:2b8:18:0000:0000:0000:0000:1313", &geoData)
 	assert.Nil(t, err)
 	assertASNData(t,
 		[]api.ASNElement{
-			api.ASNElement{[]string{"14793"}, api.ASNSingle},
+			api.ASNElement{[]string{"17832"}, api.ASNSingle},
 		},
 		geoData.ASN)
 
 	// test set ASN
-	// []string{"271", "7860", "8111"}
 	geoData.ASN = nil
 	err = ann.Annotate("2001:410:0000:0000:0000:0000:0000:1313", &geoData)
 	assert.Nil(t, err)
@@ -81,16 +80,17 @@ func TestAnnotateV6(t *testing.T) {
 			api.ASNElement{[]string{"271"}, api.ASNSingle},
 			api.ASNElement{[]string{"7860"}, api.ASNSingle},
 			api.ASNElement{[]string{"8111"}, api.ASNSingle},
+			api.ASNElement{[]string{"26677"}, api.ASNSingle},
 		},
 		geoData.ASN)
 
 	// test multi-origin ASN
 	geoData.ASN = nil
-	err = ann.Annotate("2001:2b8:90:0000:0000:0000:0000:1313", &geoData)
+	err = ann.Annotate("2001:428:00:0000:0000:0000:0000:1313", &geoData)
 	assert.Nil(t, err)
 	assertASNData(t,
 		[]api.ASNElement{
-			api.ASNElement{[]string{"17832", "1237"}, api.ASNMultiOrigin},
+			api.ASNElement{[]string{"209", "3910", "3908"}, api.ASNMultiOrigin},
 		},
 		geoData.ASN)
 
