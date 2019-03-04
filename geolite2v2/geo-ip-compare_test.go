@@ -1,17 +1,23 @@
 package geolite2v2_test
 
 import (
+	"bytes"
+	"log"
 	_ "net/http/pprof"
 	"sort"
 	"testing"
 
+	"github.com/Pallinder/go-randomdata"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Pallinder/go-randomdata"
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/geolite2v2"
 	"github.com/m-lab/annotation-service/geoloader"
+)
+
+var (
+	newAnnotators []api.Annotator
 )
 
 // TestCompareAnnotations tests if the new implementation annotates the same way as the old
@@ -25,18 +31,17 @@ func TestCompareAnnotations(t *testing.T) {
 	sort.Slice(oldAnnotators, createSorterFor(oldAnnotators))
 	sort.Slice(newAnnotators, createSorterFor(newAnnotators))
 
-	// we need minimum 10 000 IP hits per annotator
-	minimumHitCountPerAnnotator := 10000
+	// we need minimum 1 000 IP hits per annotator
+	minimumHitCountPerAnnotator := 1000
 
 	// get each annotator
 	for idx, oldAnn := range oldAnnotators {
 		newAnn := newAnnotators[idx]
-		notFoundCount := 0
-		hitCount := 0
+		notFoundCount, v4HitCount, v6HitCount := 0, 0, 0
 		ipV4 := true
 
 		// annotate v4 and v6 IP addresses and compare the resuults
-		for hitCount < minimumHitCountPerAnnotator {
+		for (v4HitCount + v6HitCount) < minimumHitCountPerAnnotator {
 			var oldResp, newResp api.GeoData
 			var oldErr, newErr error
 
@@ -46,7 +51,6 @@ func TestCompareAnnotations(t *testing.T) {
 			} else {
 				address = randomdata.IpV6Address()
 			}
-			ipV4 = !ipV4
 
 			// the error should be the same if there's any
 			oldErr = oldAnn.Annotate(address, &oldResp)
@@ -56,12 +60,22 @@ func TestCompareAnnotations(t *testing.T) {
 				assert.EqualError(t, newErr, oldErr.Error())
 				continue
 			}
-			// the content should be the same if there's any
-			hitCount++
 			assertSameGeoData(t, &oldResp, &newResp)
+
+			// the content should be the same if there's any
+			if ipV4 {
+				v4HitCount++
+			} else {
+				v6HitCount++
+			}
+			ipV4 = !ipV4
+
+			if v4HitCount%100 == 0 || v6HitCount%100 == 0 {
+				log.Printf("Not found count: %d, v4 hit count: %d, v6 hit count %d", notFoundCount, v4HitCount, v6HitCount)
+			}
 		}
 
-		t.Logf("Not found count: %d, hit count: %d", notFoundCount, hitCount)
+		log.Printf("annotator[%d] - Not found count: %d, v4 hit count: %d, v6 hit count %d", idx, notFoundCount, v4HitCount, v6HitCount)
 	}
 }
 
@@ -109,9 +123,6 @@ func assertSameDataset(t *testing.T, oldDataset *geolite2.GeoDataset, newDataset
 	assertSameLocations(t, oldDataset.LocationNodes, newDataset.LocationNodes)
 	assertSameIPNodes(t, oldDataset.IP4Nodes, newDataset.IP4Nodes)
 	assertSameIPNodes(t, oldDataset.IP6Nodes, newDataset.IP6Nodes)
-
-	assert.Equal(t, len(oldDataset.IP4Nodes), len(newDataset.IP4Nodes))
-	assert.Equal(t, len(oldDataset.IP6Nodes), len(newDataset.IP6Nodes))
 }
 
 // assertSameLocations asserts if LocationNodes are the same
@@ -130,17 +141,36 @@ func assertSameLocations(t *testing.T, oldLocationNodes []geolite2.LocationNode,
 	}
 }
 
-// assertSameIPNodes asserts if IPNodes are the same
+// assertSameIPNodes asserts if IPNodes are the same (note that the new version merges nodes if possible, so the comparison is a bit complex)
 func assertSameIPNodes(t *testing.T, oldIPNodes []geolite2.IPNode, newIPNodes []geolite2v2.GeoIPNode) {
-	assert.Equal(t, len(oldIPNodes), len(newIPNodes))
-	for idx, oldVal := range oldIPNodes {
-		newVal := newIPNodes[idx]
-		assert.True(t, oldVal.IPAddressLow.Equal(newVal.IPAddressLow))
-		assert.True(t, oldVal.IPAddressHigh.Equal(newVal.IPAddressHigh))
-		assert.Equal(t, oldVal.Latitude, newVal.Latitude)
-		assert.Equal(t, oldVal.Longitude, newVal.Longitude)
-		assert.Equal(t, oldVal.PostalCode, newVal.PostalCode)
-		assert.Equal(t, oldVal.LocationIndex, newVal.LocationIndex)
+	oldIdx := 0
+	// iterate over the new nodes
+	for newIdx, newNode := range newIPNodes {
+		oldNode := oldIPNodes[oldIdx]
+
+		// in the beginning of every iteration the actual oldNode should be in the beginning of the newNode
+		assert.True(t, newNode.IPAddressLow.Equal(oldNode.IPAddressLow))
+
+		// we keep getting the next nodes until an oldNode reaches the end of the actual new node
+		for ; bytes.Compare(oldNode.IPAddressHigh, newNode.IPAddressHigh) <= 0; oldNode = oldIPNodes[oldIdx] {
+			// oldNode should be within the neNode
+			assert.True(t, bytes.Compare(oldNode.IPAddressLow, newNode.IPAddressLow) >= 0)
+
+			// all data should match
+			assert.Equal(t, oldNode.Latitude, newNode.Latitude, "latitude at oldIdx=%d, newIdx=%d, oldNode=%v, newNode=%v", oldIdx, newIdx, oldNode, newNode)
+			assert.Equal(t, oldNode.Longitude, newNode.Longitude, "longitude at oldIdx=%d, newIdx=%d, oldNode=%v, newNode=%v", oldIdx, newIdx, oldNode, newNode)
+			assert.Equal(t, oldNode.PostalCode, newNode.PostalCode, "postal code at oldIdx=%d, newIdx=%d, oldNode=%v, newNode=%v", oldIdx, newIdx, oldNode, newNode)
+			assert.Equal(t, oldNode.LocationIndex, newNode.LocationIndex, "locationindex at oldIdx=%d, newIdx=%d, oldNode=%v, newNode=%v", oldIdx, newIdx, oldNode, newNode)
+
+			oldIdx++
+
+			// if we reach the end of the old nodes double check that we!re in the end of the new nodes as well and exit
+			if oldIdx == len(oldIPNodes) {
+				assert.Equal(t, len(newIPNodes)-1, newIdx)
+				assert.True(t, oldNode.IPAddressHigh.Equal(newNode.IPAddressHigh))
+				break
+			}
+		}
 	}
 }
 

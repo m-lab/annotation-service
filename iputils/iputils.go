@@ -39,6 +39,7 @@ type IPNode interface {
 	GetHighIP() net.IP                // getter for the upper bound
 	SetHighIP(newHigh net.IP)         // setter for the upper bound
 	Clone() IPNode                    // should create a copy from the node
+	DataEquals(other IPNode) bool     // should return true if the data EXCEPT the IP adresses match
 }
 
 // IPNodeParser interface enables the abstraction of processing the source data with the common logic.
@@ -148,8 +149,26 @@ func (c *ipNodeCSVConsumer) Consume(record []string) error {
 	if err != nil {
 		return err
 	}
+
+	// merge if it's possible
+	if c.parser.NodeListLen() > 0 {
+		lastNode := c.parser.GetNode(c.parser.NodeListLen() - 1)
+		if lastNode != nil && canBeMergedByIP(lastNode, newNode) && lastNode.DataEquals(newNode) {
+			// we can merge, so if the new node's IP is greater, that will be the new high IP of the last node
+			if lessThan(lastNode.GetHighIP(), newNode.GetHighIP()) {
+				lastNode.SetHighIP(newNode.GetHighIP())
+			}
+			return nil
+		}
+	}
+
 	c.stack = handleStack(c.stack, c.parser, newNode)
 	return nil
+}
+
+func canBeMergedByIP(prev, next IPNode) bool {
+	nextLowIP := minusOne(next.GetLowIP())
+	return bytes.Compare(prev.GetHighIP(), nextLowIP) >= 0 // equals or the next low is lower than the prev high
 }
 
 // BuildIPNodeList is a modified version of geolite2.LoadIPListGLite2 implementation. Uses the same logic

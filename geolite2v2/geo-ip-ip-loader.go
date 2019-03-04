@@ -35,6 +35,11 @@ func (n *GeoIPNode) Clone() iputils.IPNode {
 	}
 }
 
+func (n *GeoIPNode) DataEquals(other iputils.IPNode) bool {
+	otherNode := other.(*GeoIPNode)
+	return n.LocationIndex == otherNode.LocationIndex && n.PostalCode == otherNode.PostalCode && n.Latitude == otherNode.Latitude && n.Longitude == otherNode.Longitude
+}
+
 // asnNodeParser the parser object
 type geoNodeParser struct {
 	idMap map[int]int

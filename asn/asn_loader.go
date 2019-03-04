@@ -41,6 +41,12 @@ func (n *ASNIPNode) Clone() iputils.IPNode {
 	return &ASNIPNode{BaseIPNode: iputils.BaseIPNode{IPAddressLow: n.IPAddressLow, IPAddressHigh: n.IPAddressHigh}, ASNString: n.ASNString}
 }
 
+// DataEquals checks if the ASNIPNode struct's other data than IP range equals to an other node.
+func (n *ASNIPNode) DataEquals(other iputils.IPNode) bool {
+	otherNode := other.(*ASNIPNode)
+	return n.ASNString == otherNode.ASNString
+}
+
 //-----------------------------------------------------------------
 // CUSTOM ASN PARSER IMPLEMENTATION
 //-----------------------------------------------------------------

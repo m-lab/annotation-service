@@ -34,9 +34,31 @@ func TestBuildIPNodeList(t *testing.T) {
 	err := BuildIPNodeList(r, &p)
 	assert.Nil(t, err)
 	assert.Equal(t, len(expectedResult), len(p.list))
+	assertEqualTestIPNodes(t, expectedResult, p.list)
+}
 
-	dumpStackAndList(t, p.list, p.list)
+// TestBuildIPNodeListWithMerge
+func TestBuildIPNodeListWithMerge(t *testing.T) {
+	inputCSV := `1.0.0.0/24	custom1
+1.0.0.2/26	custom1
+1.0.10.0/24	custom3
+1.0.10.124/30	custom4
+2.1.0.0/8	cuustom5`
 
+	expectedResult := []IPNode{
+		toIPNodeWithProp(t, "1.0.0.0", "1.0.0.255", "custom1"),
+		toIPNodeWithProp(t, "1.0.10.0", "1.0.10.123", "custom3"),
+		toIPNodeWithProp(t, "1.0.10.124", "1.0.10.127", "custom4"),
+		toIPNodeWithProp(t, "1.0.10.128", "1.0.10.255", "custom3"),
+		toIPNodeWithProp(t, "2.1.0.0", "2.255.255.255", "custom5"),
+	}
+
+	r := strings.NewReader(inputCSV)
+	p := TestParser{list: []TestIPNode{}}
+
+	err := BuildIPNodeList(r, &p)
+	assert.Nil(t, err)
+	assert.Equal(t, len(expectedResult), len(p.list))
 	assertEqualTestIPNodes(t, expectedResult, p.list)
 }
 
@@ -291,6 +313,12 @@ type TestIPNode struct {
 // Clone implementation for the basic type
 func (n *TestIPNode) Clone() IPNode {
 	return &TestIPNode{BaseIPNode: BaseIPNode{IPAddressHigh: n.IPAddressHigh, IPAddressLow: n.IPAddressLow}, CustomData: n.CustomData}
+}
+
+// DataEquals implementation for the basic type
+func (n *TestIPNode) DataEquals(other IPNode) bool {
+	otherNode := other.(*TestIPNode)
+	return n.CustomData == otherNode.CustomData
 }
 
 // TestParser - a dummy parser for testing purposes
