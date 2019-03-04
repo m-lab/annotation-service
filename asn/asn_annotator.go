@@ -20,12 +20,6 @@ var (
 	ErrorIllegalIPNodeType = errors.New("Illegal IPNode type found")
 )
 
-// ASNDataset holds the database in the memory
-type ASNDataset struct {
-	IPList []iputils.IPNode
-	Start  time.Time // Date from which to start using this dataset
-}
-
 var lastLogTime = time.Time{}
 
 // Annotate expects an IP string and an api.GeoData pointer to find the ASN
@@ -38,7 +32,11 @@ func (asn *ASNDataset) Annotate(ip string, ann *api.GeoData) error {
 		return errors.New("ErrAlreadyPopulated") // TODO
 	}
 
-	node, err := iputils.SearchBinary(ip, asn.IPList)
+	ipNodeGetter := func(idx int) iputils.IPNode {
+		return &asn.IPList[idx]
+	}
+
+	node, err := iputils.SearchBinary(ip, len(asn.IPList), ipNodeGetter)
 	if err != nil {
 		// ErrNodeNotFound is super spammy - 10% of requests, so suppress those.
 		if err != iputils.ErrNodeNotFound {

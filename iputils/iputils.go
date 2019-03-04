@@ -5,9 +5,9 @@ import (
 	"encoding/csv"
 	"errors"
 	"io"
-	"log"
 	"net"
 
+	"github.com/m-lab/annotation-service/loader"
 	"github.com/m-lab/annotation-service/metrics"
 )
 
@@ -45,10 +45,19 @@ type IPNode interface {
 // This interface should be implemented for all the IP range based datasources (currently GeoLite2 and RouteView ASNs)
 type IPNodeParser interface {
 	PreconfigureReader(reader *csv.Reader) error           // should customize the CSV reader to the datasource-specific format
-	NewNode() IPNode                                       // should create a new instance of datasource-specific IPNode
 	ValidateRecord(record []string) error                  // should validate the raw CSV record
 	ExtractIP(record []string) string                      // should extract the IP (with bitmask) from a single raw CSV record
 	PopulateRecordData(record []string, node IPNode) error // should parse the raw CSV record and populate the necessary data to the IPNode
+	CreateNode() IPNode                                    // should create a new instance of datasource-specific IPNode
+
+	// KZ: These functions needs to be implemented because the collection of the list items should be handled by the IPNodeParser.
+	// This could be handled generally by iputils package as well by using interfaces, however on this scale this would have a significant
+	// memory penalty because of the interface vs struct memory layout. To keep the common logic in one place and externalize
+	// the storage of the created list item to the datasource-specific IPNodeParser the logic below should be implemented by
+	// the datasource-specific IPNodeParser
+	NodeListLen() int       // should return the length of the currently stored list
+	AppendNode(node IPNode) // should append a datasource-specific IPNode to the list
+	GetNode(idx int) IPNode // should return a datasource-specific node by the index
 }
 
 // SetIPBounds sets up the bounds of an IPNode
@@ -78,7 +87,7 @@ func (n *BaseIPNode) SetHighIP(newHigh net.IP) {
 }
 
 // SearchBinary does a binary search for a list element in the specified list
-func SearchBinary(ipLookUp string, list []IPNode) (p IPNode, e error) {
+func SearchBinary(ipLookUp string, nodeListSize int, ipNodeGetter func(idx int) IPNode) (p IPNode, e error) {
 	ip := net.ParseIP(ipLookUp)
 	if ip == nil {
 		metrics.BadIPTotal.Inc()
@@ -86,14 +95,15 @@ func SearchBinary(ipLookUp string, list []IPNode) (p IPNode, e error) {
 	}
 
 	start := 0
-	end := len(list) - 1
+	end := nodeListSize - 1
 
 	for start <= end {
 		median := (start + end) / 2
-		if bytes.Compare(ip, list[median].GetLowIP()) >= 0 && bytes.Compare(ip, list[median].GetHighIP()) <= 0 {
-			return list[median], nil
+		medianNode := ipNodeGetter(median)
+		if bytes.Compare(ip, medianNode.GetLowIP()) >= 0 && bytes.Compare(ip, medianNode.GetHighIP()) <= 0 {
+			return medianNode, nil
 		}
-		if bytes.Compare(ip, list[median].GetLowIP()) > 0 {
+		if bytes.Compare(ip, medianNode.GetLowIP()) > 0 {
 			start = median + 1
 		} else {
 			end = median - 1
@@ -102,64 +112,62 @@ func SearchBinary(ipLookUp string, list []IPNode) (p IPNode, e error) {
 	return p, ErrNodeNotFound
 }
 
-// BuildIPNodeList is a modified version of geolite2.LoadIPListGLite2 implementation. Uses exactly the same logic
-// but performs the datasource-specific operations through the parser passed in the parameter
-func BuildIPNodeList(reader io.Reader, parser IPNodeParser) ([]IPNode, error) {
-	r := csv.NewReader(reader)
-	err := parser.PreconfigureReader(r)
+// ipNodeConsumer is the consumer for loader.CSVReader
+type ipNodeCSVConsumer struct {
+	parser IPNodeParser
+	stack  []IPNode
+}
+
+// factory method for ipNodeCSVConsumer
+func newIPNodeCSVConsumer(parser IPNodeParser) *ipNodeCSVConsumer {
+	return &ipNodeCSVConsumer{
+		parser: parser,
+		stack:  []IPNode{},
+	}
+}
+
+// PreconfigureReader just propagates to the IPNodeParser
+func (c *ipNodeCSVConsumer) PreconfigureReader(reader *csv.Reader) error {
+	return c.parser.PreconfigureReader(reader)
+}
+
+// ValidateRecord just propagates to the IPNodeParser
+func (c *ipNodeCSVConsumer) ValidateRecord(record []string) error {
+	return c.parser.ValidateRecord(record)
+}
+
+// Consume implements the IPList building logic
+func (c *ipNodeCSVConsumer) Consume(record []string) error {
+	lowIP, highIP, err := rangeCIDR(c.parser.ExtractIP(record))
 	if err != nil {
-		log.Println(err)
-		return nil, err
+		return err
 	}
-
-	list := []IPNode{}
-	stack := []IPNode{}
-
-	errorCount := 0
-	maxErrorCount := maxWrongRecordsPerFile
-	for {
-		record, err := r.Read()
-		if err == io.EOF {
-			break
-		}
-		err = parser.ValidateRecord(record)
-		if err != nil {
-			log.Println(err)
-			errorCount++
-			if errorCount > maxErrorCount {
-				return nil, ErrorTooManyErrors
-			}
-			continue
-		}
-		lowIP, highIP, err := rangeCIDR(parser.ExtractIP(record))
-		if err != nil {
-			log.Println(err)
-			errorCount++
-			if errorCount > maxErrorCount {
-				return nil, ErrorTooManyErrors
-			}
-			continue
-		}
-		newNode := parser.NewNode()
-		newNode.SetIPBounds(lowIP, highIP)
-		err = parser.PopulateRecordData(record, newNode)
-		if err != nil {
-			log.Println(err)
-			errorCount++
-			if errorCount > maxErrorCount {
-				return nil, ErrorTooManyErrors
-			}
-			continue
-		}
-		stack, list = handleStack(stack, list, newNode)
+	newNode := c.parser.CreateNode()
+	newNode.SetIPBounds(lowIP, highIP)
+	err = c.parser.PopulateRecordData(record, newNode)
+	if err != nil {
+		return err
 	}
-	stack, list = finalizeStackAndList(stack, list)
-	return list, nil
+	c.stack = handleStack(c.stack, c.parser, newNode)
+	return nil
+}
+
+// BuildIPNodeList is a modified version of geolite2.LoadIPListGLite2 implementation. Uses the same logic
+// but performs the datasource-specific operations through the parser passed in the parameter
+func BuildIPNodeList(reader io.Reader, parser IPNodeParser) error {
+	consumer := newIPNodeCSVConsumer(parser)
+	csvReader := loader.NewCSVReader(reader, consumer)
+	err := csvReader.ReadAll()
+	if err != nil {
+		return err
+	}
+	finalizeStackAndList(consumer.stack, parser)
+	return nil
 }
 
 // finalizeStackAndList processes the remaining elements on the stack and closes the list
 // if it's necessary (if a parent range should have a subrange after the last embedded range)
-func finalizeStackAndList(stack, list []IPNode) ([]IPNode, []IPNode) {
+func finalizeStackAndList(stack []IPNode, parser IPNodeParser) []IPNode {
 	var pop IPNode
 	pop, stack = stack[len(stack)-1], stack[:len(stack)-1]
 	for ; len(stack) > 0; pop, stack = stack[len(stack)-1], stack[:len(stack)-1] {
@@ -173,9 +181,9 @@ func finalizeStackAndList(stack, list []IPNode) ([]IPNode, []IPNode) {
 		if lessThan(peek.GetHighIP(), peek.GetLowIP()) {
 			continue
 		}
-		list = append(list, peek)
+		parser.AppendNode(peek)
 	}
-	return stack, list
+	return stack
 }
 
 // handleStack works the same way as it worked in geolite2 package. The only difference is that
@@ -185,7 +193,7 @@ func finalizeStackAndList(stack, list []IPNode) ([]IPNode, []IPNode) {
 // handleStack finds the proper place in the stack for the new node.
 // `stack` holds a stack of nested IP ranges not yet resolved.
 // `list` is the complete list of flattened IPNodes.
-func handleStack(stack, list []IPNode, newNode IPNode) ([]IPNode, []IPNode) {
+func handleStack(stack []IPNode, parser IPNodeParser, newNode IPNode) []IPNode {
 	// Stack is not empty aka we're in a nested IP
 	if len(stack) != 0 {
 		// newNode is no longer inside stack's nested IP's
@@ -203,16 +211,16 @@ func handleStack(stack, list []IPNode, newNode IPNode) ([]IPNode, []IPNode) {
 					// complete the gap
 					peekCpy.SetLowIP(plusOne(pop.GetHighIP()))
 					peekCpy.SetHighIP(minusOne(newNode.GetLowIP()))
-					list = append(list, peekCpy)
+					parser.AppendNode(peekCpy)
 					break
 				}
 				peekCpy.SetLowIP(plusOne(pop.GetHighIP()))
-				list = append(list, peekCpy)
+				parser.AppendNode(peekCpy)
 			}
 		} else {
 			// if we're nesting IP's
 			// create begnning bounds
-			lastListNode := list[len(list)-1]
+			lastListNode := parser.GetNode(parser.NodeListLen() - 1)
 			lastListNode.SetHighIP(minusOne(newNode.GetLowIP()))
 
 		}
@@ -220,8 +228,8 @@ func handleStack(stack, list []IPNode, newNode IPNode) ([]IPNode, []IPNode) {
 	stack = append(stack, newNode)
 
 	// items in stack should not change, so we store the copy of the original items in stack
-	list = append(list, newNode.Clone())
-	return stack, list
+	parser.AppendNode(newNode.Clone())
+	return stack
 }
 
 // rangeCIDR works the same way as it worked in geolite2 package.

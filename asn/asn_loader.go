@@ -20,6 +20,12 @@ var (
 	expectedColumnCount = 3 // the number of the expected columns in the source dataset
 )
 
+// ASNDataset holds the database in the memory
+type ASNDataset struct {
+	IPList []ASNIPNode
+	Start  time.Time // Date from which to start using this dataset
+}
+
 //-----------------------------------------------------------------
 // CUSTOM ASN IPNode DEFINITION
 //-----------------------------------------------------------------
@@ -40,18 +46,21 @@ func (n *ASNIPNode) Clone() iputils.IPNode {
 //-----------------------------------------------------------------
 
 // asnNodeParser the parser object
-type asnNodeParser struct{}
+type asnNodeParser struct {
+	list []ASNIPNode
+}
+
+func createAsnNodeParser() *asnNodeParser {
+	return &asnNodeParser{
+		list: []ASNIPNode{},
+	}
+}
 
 // PreconfigureReader for details see the iputils.IPNodeParser interface!
 func (p *asnNodeParser) PreconfigureReader(reader *csv.Reader) error {
 	reader.Comma = '\t'
 	reader.FieldsPerRecord = expectedColumnCount
 	return nil
-}
-
-// NewNode for details see the iputils.IPNodeParser interface!
-func (p *asnNodeParser) NewNode() iputils.IPNode {
-	return &ASNIPNode{}
 }
 
 // ValidateRecord for details see the iputils.IPNodeParser interface!
@@ -72,6 +81,24 @@ func (p *asnNodeParser) PopulateRecordData(record []string, node iputils.IPNode)
 	}
 	asnNode.ASNString = record[2]
 	return nil
+}
+
+// NewNode for details see the iputils.IPNodeParser interface!
+func (p *asnNodeParser) CreateNode() iputils.IPNode {
+	return &ASNIPNode{}
+}
+
+func (p *asnNodeParser) NodeListLen() int {
+	return len(p.list)
+}
+
+func (p *asnNodeParser) AppendNode(node iputils.IPNode) {
+	n := node.(*ASNIPNode)
+	p.list = append(p.list, *n)
+}
+
+func (p *asnNodeParser) GetNode(idx int) iputils.IPNode {
+	return &p.list[idx]
 }
 
 //-----------------------------------------------------------------
@@ -100,15 +127,15 @@ func LoadASNDataset(file *storage.ObjectAttrs) (api.Annotator, error) {
 
 // loadData loads the data into an ASNIPNode list
 // FIXME eliminate, it's a copy-paste of LoadIPListGLite2 from geo-g2.go
-func loadData(fileName, datasetName string) ([]iputils.IPNode, error) {
+func loadData(fileName, datasetName string) ([]ASNIPNode, error) {
 	file, err := os.Open(fileName)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	parser := &asnNodeParser{}
-	return iputils.BuildIPNodeList(file, parser)
+	parser := createAsnNodeParser()
+	return parser.list, iputils.BuildIPNodeList(file, parser)
 }
 
 // ExtractTimeFromASNFileName extract the start time of the dataset validity

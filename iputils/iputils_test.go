@@ -29,13 +29,15 @@ func TestBuildIPNodeList(t *testing.T) {
 	}
 
 	r := strings.NewReader(inputCSV)
-	p := TestParser{}
+	p := TestParser{list: []TestIPNode{}}
 
-	got, err := BuildIPNodeList(r, &p)
+	err := BuildIPNodeList(r, &p)
 	assert.Nil(t, err)
-	assert.Equal(t, len(expectedResult), len(got))
+	assert.Equal(t, len(expectedResult), len(p.list))
 
-	assertEqual(t, expectedResult, got)
+	dumpStackAndList(t, p.list, p.list)
+
+	assertEqualTestIPNodes(t, expectedResult, p.list)
 }
 
 func TestSearchBinary(t *testing.T) {
@@ -46,11 +48,11 @@ func TestSearchBinary(t *testing.T) {
 2.1.0.0/8	cuustom5`
 
 	r := strings.NewReader(inputCSV)
-	p := TestParser{}
+	p := TestParser{list: []TestIPNode{}}
 
-	builtNodes, err := BuildIPNodeList(r, &p)
+	err := BuildIPNodeList(r, &p)
 	assert.Nil(t, err)
-	assert.Equal(t, 7, len(builtNodes))
+	assert.Equal(t, 7, len(p.list))
 
 	queries := []string{
 		"1.0.0.1",
@@ -73,8 +75,13 @@ func TestSearchBinary(t *testing.T) {
 	}
 
 	gotResult := []IPNode{}
+
+	ipNodeGetter := func(idx int) IPNode {
+		return &p.list[idx]
+	}
+
 	for _, q := range queries {
-		got, err := SearchBinary(q, builtNodes)
+		got, err := SearchBinary(q, len(p.list), ipNodeGetter)
 		assert.Nil(t, err)
 		gotResult = append(gotResult, got)
 	}
@@ -82,11 +89,11 @@ func TestSearchBinary(t *testing.T) {
 	assertEqual(t, expectedResult, gotResult)
 
 	// test not found
-	_, err = SearchBinary("192.4.1.123", builtNodes)
+	_, err = SearchBinary("192.4.1.123", len(p.list), ipNodeGetter)
 	assert.Equal(t, ErrNodeNotFound, err)
 
 	// test wrong input error
-	_, err = SearchBinary("badip", builtNodes)
+	_, err = SearchBinary("badip", len(p.list), ipNodeGetter)
 	assert.Equal(t, errors.New("ErrInvalidIP"), err)
 
 }
@@ -122,33 +129,31 @@ func TestRangeCIDR(t *testing.T) {
 
 // TestHandleStackNoIntersection tests the handleStack function - no intersection
 func TestHandleStackNoIntersection(t *testing.T) {
+	parser := &TestParser{list: []TestIPNode{}}
 	stack := []IPNode{}
-	list := []IPNode{}
 
 	// test no intersection
 	i1 := toIPNode(t, "1.0.0.0", "1.0.1.0")
 	i2 := toIPNode(t, "1.0.1.1", "1.0.1.12")
 	i3 := toIPNode(t, "1.0.1.100", "1.0.1.112")
 
-	stack, list = handleStack(stack, list, i1)
-	stack, list = handleStack(stack, list, i2)
-	stack, list = handleStack(stack, list, i3)
-	stack, list = finalizeStackAndList(stack, list)
-
-	dumpStackAndList(t, stack, list)
+	stack = handleStack(stack, parser, i1)
+	stack = handleStack(stack, parser, i2)
+	stack = handleStack(stack, parser, i3)
+	stack = finalizeStackAndList(stack, parser)
 
 	assertEqual(t, []IPNode{}, stack)
-	assertEqual(t, []IPNode{
+	assertEqualTestIPNodes(t, []IPNode{
 		toIPNode(t, "1.0.0.0", "1.0.1.0"),
 		toIPNode(t, "1.0.1.1", "1.0.1.12"),
 		toIPNode(t, "1.0.1.100", "1.0.1.112"),
-	}, list)
+	}, parser.list)
 }
 
 // TestHandleStackNestedNetworks tests the handleStack function - multiple embedded ranges
 func TestHandleStackNestedNetworks(t *testing.T) {
+	parser := &TestParser{list: []TestIPNode{}}
 	stack := []IPNode{}
-	list := []IPNode{}
 
 	// test no intersection
 	i1 := toIPNode(t, "1.0.0.0", "1.0.1.0")   // no overlap
@@ -157,17 +162,15 @@ func TestHandleStackNestedNetworks(t *testing.T) {
 	i4 := toIPNode(t, "1.0.1.30", "1.0.1.80") // second overlap
 	i5 := toIPNode(t, "1.0.2.1", "1.0.2.112") // no overlap
 
-	stack, list = handleStack(stack, list, i1)
-	stack, list = handleStack(stack, list, i2)
-	stack, list = handleStack(stack, list, i3)
-	stack, list = handleStack(stack, list, i4)
-	stack, list = handleStack(stack, list, i5)
-	stack, list = finalizeStackAndList(stack, list)
-
-	dumpStackAndList(t, stack, list)
+	stack = handleStack(stack, parser, i1)
+	stack = handleStack(stack, parser, i2)
+	stack = handleStack(stack, parser, i3)
+	stack = handleStack(stack, parser, i4)
+	stack = handleStack(stack, parser, i5)
+	stack = finalizeStackAndList(stack, parser)
 
 	assertEqual(t, []IPNode{}, stack)
-	assertEqual(t, []IPNode{
+	assertEqualTestIPNodes(t, []IPNode{
 		toIPNode(t, "1.0.0.0", "1.0.1.0"),    // first non overlapping
 		toIPNode(t, "1.0.1.1", "1.0.1.9"),    // beginning of parent range till the first subrange
 		toIPNode(t, "1.0.1.10", "1.0.1.20"),  // first subrange
@@ -175,28 +178,27 @@ func TestHandleStackNestedNetworks(t *testing.T) {
 		toIPNode(t, "1.0.1.30", "1.0.1.80"),  // second subrange
 		toIPNode(t, "1.0.1.81", "1.0.1.100"), // parent range from the end of second suubrange till the end of parent range
 		toIPNode(t, "1.0.2.1", "1.0.2.112"),  // third non overlapping
-	}, list)
+	}, parser.list)
 }
 
 // TestHandleStackNestedNetworks tests the handleStack function - intersection
 func TestHandleStackIntersection(t *testing.T) {
+	parser := &TestParser{list: []TestIPNode{}}
 	stack := []IPNode{}
-	list := []IPNode{}
 
 	// test no intersection
 	i1 := toIPNode(t, "1.0.0.0", "1.0.1.0")
 	i2 := toIPNode(t, "1.0.0.150", "1.0.3.1")
 
-	stack, list = handleStack(stack, list, i1)
-	stack, list = handleStack(stack, list, i2)
-	stack, list = finalizeStackAndList(stack, list)
-	dumpStackAndList(t, stack, list)
+	stack = handleStack(stack, parser, i1)
+	stack = handleStack(stack, parser, i2)
+	stack = finalizeStackAndList(stack, parser)
 
 	assertEqual(t, []IPNode{}, stack)
-	assertEqual(t, []IPNode{
+	assertEqualTestIPNodes(t, []IPNode{
 		toIPNode(t, "1.0.0.0", "1.0.0.149"),
 		toIPNode(t, "1.0.0.150", "1.0.3.1"),
-	}, list)
+	}, parser.list)
 }
 
 // TestPlusOneMinusOne tests the plusOne and minusOne functions
@@ -217,8 +219,8 @@ func TestPlusOneMinusOne(t *testing.T) {
 		"0.255.255.255",
 	}
 	for idx, source := range sourceIps {
-		gotPlus, gotMinus := plusOne(toNetIP(t, source)), minusOne(toNetIP(t, source))
-		expPlus, expMinus := toNetIP(t, expectedPlusResult[idx]), toNetIP(t, expectedMinusResult[idx])
+		gotPlus, gotMinus := plusOne(net.ParseIP(source)), minusOne(net.ParseIP(source))
+		expPlus, expMinus := net.ParseIP(expectedPlusResult[idx]), net.ParseIP(expectedMinusResult[idx])
 		assert.True(t, expPlus.Equal(gotPlus), "%s + 1 should be %s, but got %s", source, expPlus.String(), gotPlus.String())
 		assert.True(t, expMinus.Equal(gotMinus), "%s - 1 should be %s, but got %s", source, expMinus.String(), gotMinus.String())
 	}
@@ -226,14 +228,14 @@ func TestPlusOneMinusOne(t *testing.T) {
 
 // TestLessThan tests the lessThan method
 func TestLessThan(t *testing.T) {
-	assert.True(t, lessThan(toNetIP(t, "1.0.0.0"), toNetIP(t, "1.0.0.1")))
-	assert.False(t, lessThan(toNetIP(t, "1.0.2.0"), toNetIP(t, "1.0.0.1")))
-	assert.True(t, lessThan(toNetIP(t, "1.0.0.255"), toNetIP(t, "1.0.1.0")))
-	assert.False(t, lessThan(toNetIP(t, "1.0.0.0"), toNetIP(t, "1.0.0.0")))
+	assert.True(t, lessThan(net.ParseIP("1.0.0.0"), net.ParseIP("1.0.0.1")))
+	assert.False(t, lessThan(net.ParseIP("1.0.2.0"), net.ParseIP("1.0.0.1")))
+	assert.True(t, lessThan(net.ParseIP("1.0.0.255"), net.ParseIP("1.0.1.0")))
+	assert.False(t, lessThan(net.ParseIP("1.0.0.0"), net.ParseIP("1.0.0.0")))
 }
 
 // dumpStackAndList - logs the contents of the stack and list IPNodes
-func dumpStackAndList(t *testing.T, stack, list []IPNode) {
+func dumpStackAndList(t *testing.T, stack, list []TestIPNode) {
 	t.Log("Stack nodes:")
 	for _, v := range stack {
 		t.Logf("\t lower: %s, upper: %s", v.GetLowIP().String(), v.GetHighIP().String())
@@ -242,6 +244,15 @@ func dumpStackAndList(t *testing.T, stack, list []IPNode) {
 	for _, v := range list {
 		t.Logf("\t lower: %s, upper: %s", v.GetLowIP().String(), v.GetHighIP().String())
 	}
+}
+
+func assertEqualTestIPNodes(t *testing.T, expected []IPNode, got []TestIPNode) {
+	gotIPNodes := []IPNode{}
+	for _, v := range got {
+		vCpy := v
+		gotIPNodes = append(gotIPNodes, &vCpy)
+	}
+	assertEqual(t, expected, gotIPNodes)
 }
 
 // assertEqual - helps to assert if IPNodes are equal
@@ -261,21 +272,14 @@ func assertEqual(t *testing.T, expected []IPNode, got []IPNode) {
 }
 
 // toIPNode - helper function, returns an IP node
-func toIPNode(t *testing.T, lowerIpStr, upperIpStr string) IPNode {
-	return &TestIPNode{BaseIPNode: BaseIPNode{IPAddressLow: toNetIP(t, lowerIpStr), IPAddressHigh: toNetIP(t, upperIpStr)}}
+func toIPNode(t *testing.T, lowerIPStr, upperIPStr string) IPNode {
+	return &TestIPNode{BaseIPNode: BaseIPNode{IPAddressLow: net.ParseIP(lowerIPStr), IPAddressHigh: net.ParseIP(upperIPStr)}}
 }
 
-func toIPNodeWithProp(t *testing.T, lowerIpStr, upperIpStr, customData string) IPNode {
-	node := toIPNode(t, lowerIpStr, upperIpStr).(*TestIPNode)
+func toIPNodeWithProp(t *testing.T, lowerIPStr, upperIPStr, customData string) IPNode {
+	node := toIPNode(t, lowerIPStr, upperIPStr).(*TestIPNode)
 	node.CustomData = customData
 	return node
-}
-
-// toNetIP - helper function, creates a net.IP from string
-func toNetIP(t *testing.T, addrStr string) net.IP {
-	ip, _, err := net.ParseCIDR(addrStr + "/0")
-	assert.Nil(t, err)
-	return ip
 }
 
 // The IPNode implementation used for testing
@@ -290,18 +294,15 @@ func (n *TestIPNode) Clone() IPNode {
 }
 
 // TestParser - a dummy parser for testing purposes
-type TestParser struct{}
+type TestParser struct {
+	list []TestIPNode
+}
 
 func (p *TestParser) PreconfigureReader(reader *csv.Reader) error {
 	reader.FieldsPerRecord = 2
 	reader.Comma = '\t'
 	return nil
 }
-
-func (p *TestParser) NewNode() IPNode {
-	return &TestIPNode{}
-}
-
 func (p *TestParser) ValidateRecord(record []string) error {
 	return nil
 }
@@ -317,4 +318,21 @@ func (p *TestParser) PopulateRecordData(record []string, node IPNode) error {
 	}
 	d.CustomData = record[1]
 	return nil
+}
+
+func (p *TestParser) CreateNode() IPNode {
+	return &TestIPNode{}
+}
+
+func (p *TestParser) NodeListLen() int {
+	return len(p.list)
+}
+
+func (p *TestParser) AppendNode(node IPNode) {
+	n := node.(*TestIPNode)
+	p.list = append(p.list, *n)
+}
+
+func (p *TestParser) GetNode(idx int) IPNode {
+	return &p.list[idx]
 }
