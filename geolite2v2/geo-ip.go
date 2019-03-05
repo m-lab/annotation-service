@@ -38,12 +38,12 @@ type GeoDataset struct {
 	LocationNodes []LocationNode // The location nodes corresponding to the IPNodes
 }
 
-// LoadGeolite2 loads a dataset from a GCS object.
+// LoadG2 loads a dataset from a GCS object.
 func LoadG2(file *storage.ObjectAttrs) (api.Annotator, error) {
 	return LoadG2Dataset(file.Name, file.Bucket)
 }
 
-// LoadGeoLite2Dataset loads the dataset from the specified filename and bucket
+// LoadG2Dataset loads the dataset from the specified filename and bucket
 func LoadG2Dataset(filename string, bucketname string) (*GeoDataset, error) {
 	zip, err := loader.CreateZipReader(context.Background(), bucketname, filename)
 	log.Println("Loading dataset from", filename)

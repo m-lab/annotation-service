@@ -35,6 +35,8 @@ func (n *GeoIPNode) Clone() iputils.IPNode {
 	}
 }
 
+// DataEquals checks if the data source specific data of the IPNode specified in the parameter is equal to this node. This function
+// supports the merge of the equivalent overlapping nodes
 func (n *GeoIPNode) DataEquals(other iputils.IPNode) bool {
 	otherNode := other.(*GeoIPNode)
 	return n.LocationIndex == otherNode.LocationIndex && n.PostalCode == otherNode.PostalCode && n.Latitude == otherNode.Latitude && n.Longitude == otherNode.Longitude
