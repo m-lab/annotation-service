@@ -4,6 +4,7 @@ package manager
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"strings"
@@ -81,8 +82,11 @@ func MustUpdateDirectory() {
 		// This is only for testing purposes for sandbox environment.
 		//
 		// FILTER CODE TO REMOVE:
-		yearFilter := "2019"
-		geoloader.UseSpecificASNDate(&yearFilter, nil, nil)
+		// from unit tests we don't want this filter
+		if flag.Lookup("test.v") == nil {
+			yearFilter := "2019"
+			geoloader.UseSpecificASNDate(&yearFilter, nil, nil)
+		}
 		// FILTER CODE END
 		//
 		// ----------- DO NOT DEPLOY THIS INTO PRODUCTION! -----------
