@@ -60,7 +60,7 @@ func TestAnnotateV4(t *testing.T) {
 }
 
 func TestAnnotateV6(t *testing.T) {
-	datasetsTime := time.Date(2018, 1, 1, 8, 0, 0, 0, time.UTC)
+	datasetsTime := time.Date(2018, 1, 1, 0, 0, 0, 0, time.UTC)
 	ann := getAnnotatorForDay(t, false, datasetsTime)
 
 	// test simple ASN
