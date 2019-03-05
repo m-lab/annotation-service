@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/m-lab/annotation-service/asn"
+	"github.com/m-lab/annotation-service/geolite2v2"
 
-	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/geoloader"
 	"github.com/m-lab/annotation-service/legacy"
 
@@ -71,7 +71,7 @@ func MustUpdateDirectory() {
 	once.Do(func() {
 		v4loader := geoloader.LegacyV4Loader(legacy.LoadAnnotator)
 		v6loader := geoloader.LegacyV6Loader(legacy.LoadAnnotator)
-		g2loader := geoloader.Geolite2Loader(geolite2.LoadGeolite2)
+		g2loader := geoloader.Geolite2Loader(geolite2v2.LoadG2)
 		asnv4Loader := geoloader.ASNv4Loader(asn.LoadASNDataset)
 		asnv6Loader := geoloader.ASNv6Loader(asn.LoadASNDataset)
 
