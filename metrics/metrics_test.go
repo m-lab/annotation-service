@@ -1,36 +1,20 @@
 package metrics_test
 
 import (
-	"bytes"
-	"context"
-	"io/ioutil"
-	"log"
-	"net/http"
 	"testing"
 
+	"github.com/m-lab/annotation-service/api/v2"
 	"github.com/m-lab/annotation-service/metrics"
-	"github.com/prometheus/prometheus/util/promlint"
+	"github.com/m-lab/go/prometheusx"
 )
 
+// TestPrometheusMetrics ensures that all the metrics pass the linter. We apply
+// labels to all metrics which require them in an effort to run all metrics
+// through the linter.
 func TestPrometheusMetrics(t *testing.T) {
-	server := metrics.SetupPrometheus(0)
-	defer server.Shutdown(context.Background())
-	log.Println(server.Addr)
-
-	metricReader, err := http.Get("http://" + server.Addr + "/metrics")
-	if err != nil || metricReader == nil {
-		t.Fatalf("Could not GET metrics: %v", err)
-	}
-	metricBytes, err := ioutil.ReadAll(metricReader.Body)
-	if err != nil {
-		t.Fatalf("Could not read metrics: %v", err)
-	}
-	metricsLinter := promlint.New(bytes.NewBuffer(metricBytes))
-	problems, err := metricsLinter.Lint()
-	if err != nil {
-		t.Errorf("Could not lint metrics: %v", err)
-	}
-	for _, p := range problems {
-		t.Errorf("Bad metric %v: %v", p.Metric, p.Text)
-	}
+	api.RequestTimeHistogram.WithLabelValues("x")
+	metrics.RequestTimeHistogramUsec.WithLabelValues("x", "x")
+	metrics.ErrorTotal.WithLabelValues("x")
+	metrics.RejectionCount.WithLabelValues("x")
+	prometheusx.LintMetrics(t)
 }

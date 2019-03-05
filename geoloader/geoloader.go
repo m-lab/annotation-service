@@ -238,3 +238,7 @@ func Geolite2Loader(
 		loader,
 		api.MaxmindPrefix)
 }
+
+func IsLegacy(date time.Time) bool {
+	return date.Before(geoLite2StartDate)
+}
