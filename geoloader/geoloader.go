@@ -7,7 +7,7 @@ package geoloader
 import (
 	"context"
 	"errors"
-	"flag"
+	"fmt"
 	"log"
 	"regexp"
 	"runtime"
@@ -43,15 +43,27 @@ var (
 	errNoMatch = errors.New("Doesn't match") // TODO
 )
 
-// UseOnlyMarchForTest hacks the regular expressions to reduce the number of datasets for testing.
-func UseOnlyMarchForTest() {
-	if flag.Lookup("test.v") == nil {
-		log.Println("This should only be called in unit tests.")
-		return
+// Helper function for unit tests to narrow the datasets to load from GCS to a specific date.
+// The parameters are int pointers. If a parameter is nil, no filter will be used for that date part.
+func UseSpecificGeolite2Date(year, month, day *int) {
+	yearStr := `\d{4}`
+	monthStr := `\d{2}`
+	dayStr := monthStr
+
+	if year != nil {
+		yearStr = fmt.Sprintf("%04d", *year)
 	}
-	geoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/03/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
-	geoLegacyRegex = regexp.MustCompile(`Maxmind/\d{4}/03/\d{2}/\d{8}T.*-GeoLiteCity.dat.*`)
-	geoLegacyv6Regex = regexp.MustCompile(`Maxmind/\d{4}/03/\d{2}/\d{8}T.*-GeoLiteCityv6.dat.*`)
+	if month != nil {
+		monthStr = fmt.Sprintf("%02d", *month)
+	}
+	if day != nil {
+		dayStr = fmt.Sprintf("%02d", *day)
+	}
+
+	geoLite2Regex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/%s/%s/%s%s%sT\d{6}Z-GeoLite2-City-CSV\.zip`, yearStr, monthStr, dayStr, yearStr, monthStr, dayStr))
+	geoLegacyRegex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/%s/%s/%s%s%sT.*-GeoLiteCity.dat.*`, yearStr, monthStr, dayStr, yearStr, monthStr, dayStr))
+	geoLegacyv6Regex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/%s/%s/%s%s%sT.*-GeoLiteCityv6.dat.*`, yearStr, monthStr, dayStr, yearStr, monthStr, dayStr))
+	log.Printf("Date filter is set to %s%s%s", yearStr, monthStr, dayStr)
 }
 
 /*****************************************************************************
