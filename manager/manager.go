@@ -69,6 +69,24 @@ func logAnnotatorDates(header string, an []api.Annotator) {
 // TODO rename Directory and this function
 func MustUpdateDirectory() {
 	once.Do(func() {
+
+		// ------------- WARNING - ATTENTION - ACHTUNG -------------
+		//
+		// KZ: no decision was made so far about how to proceed with the critical
+		// memory pressure issue. The detailed summary can be found on this link:
+		//
+		// https://docs.google.com/document/d/1SOEyKil7gLyWWIjrpirGkfuxtU0L4DPJLIZPXsrjFCw/edit#
+		//
+		// The following line will limit the ASN datasets to load only from 2019. 01. 01.
+		// This is only for testing purposes for sandbox environment.
+		//
+		// FILTER CODE TO REMOVE:
+		yearFilter := "2019"
+		geoloader.UseSpecificASNDate(&yearFilter, nil, nil)
+		// FILTER CODE END
+		//
+		// ----------- DO NOT DEPLOY THIS INTO PRODUCTION! -----------
+
 		v4loader := geoloader.LegacyV4Loader(legacy.LoadAnnotator)
 		v6loader := geoloader.LegacyV6Loader(legacy.LoadAnnotator)
 		g2loader := geoloader.Geolite2Loader(geolite2v2.LoadG2)
