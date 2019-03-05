@@ -43,21 +43,21 @@ var (
 	errNoMatch = errors.New("Doesn't match") // TODO
 )
 
-// Helper function for unit tests to narrow the datasets to load from GCS to a specific date.
-// The parameters are int pointers. If a parameter is nil, no filter will be used for that date part.
-func UseSpecificGeolite2Date(year, month, day *int) {
+// UseSpecificGeolite2Date is for unit tests to narrow the datasets to load from GCS to date that can be matched to the date part regexes.
+// The parameters are string pointers. If a parameter is nil, no filter will be used for that date part.
+func UseSpecificGeolite2Date(yearRegex, monthRegex, dayRegex *string) {
 	yearStr := `\d{4}`
 	monthStr := `\d{2}`
 	dayStr := monthStr
 
-	if year != nil {
-		yearStr = fmt.Sprintf("%04d", *year)
+	if yearRegex != nil {
+		yearStr = *yearRegex
 	}
-	if month != nil {
-		monthStr = fmt.Sprintf("%02d", *month)
+	if monthRegex != nil {
+		monthStr = *monthRegex
 	}
-	if day != nil {
-		dayStr = fmt.Sprintf("%02d", *day)
+	if dayRegex != nil {
+		dayStr = *dayRegex
 	}
 
 	geoLite2Regex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/%s/%s/%s%s%sT\d{6}Z-GeoLite2-City-CSV\.zip`, yearStr, monthStr, dayStr, yearStr, monthStr, dayStr))

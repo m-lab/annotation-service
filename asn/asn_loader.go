@@ -160,8 +160,8 @@ func ExtractTimeFromASNFileName(fileName string) (*time.Time, error) {
 		asIntUnsafe(groups[1]),
 		time.Month(asIntUnsafe(groups[2])),
 		asIntUnsafe(groups[3]),
-		asIntUnsafe(groups[4]),
-		asIntUnsafe(groups[5]),
+		0,
+		0,
 		0,
 		0,
 		time.UTC)

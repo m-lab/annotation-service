@@ -183,7 +183,7 @@ func createSorterFor(forList []api.Annotator) func(int, int) bool {
 
 // loadOld loads only data from march with the old loader
 func loadOld(t *testing.T) []api.Annotator {
-	year, month, day := 2018, 3, 1
+	year, month, day := "2018", "03", "01"
 	geoloader.UseSpecificGeolite2Date(&year, &month, &day)
 	g2loader := geoloader.Geolite2Loader(geolite2.LoadGeolite2)
 	err := g2loader.UpdateCache()
@@ -193,7 +193,7 @@ func loadOld(t *testing.T) []api.Annotator {
 
 // loadNew loads only data from march with the new loader
 func loadNew(t *testing.T) []api.Annotator {
-	year, month, day := 2018, 3, 1
+	year, month, day := "2018", "03", "01"
 	geoloader.UseSpecificGeolite2Date(&year, &month, &day)
 	g2loader := geoloader.Geolite2Loader(geolite2v2.LoadG2)
 	err := g2loader.UpdateCache()

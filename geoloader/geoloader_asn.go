@@ -15,21 +15,21 @@ var (
 	asnRegexV6 = regexp.MustCompile(`RouteViewIPv6/\d{4}/\d{2}/routeviews-rv6-\d{8}-\d{4}\.pfx2as\.gz`)       // matches to the IPv6 RouteView datasets
 )
 
-// Helper function for unit tests to narrow the datasets to load from GCS to a specific date.
-// The parameters are int pointers. If a parameter is nil, no filter will be used for that date part.
-func UseSpecificASNDate(year, month, day *int) {
+// UseSpecificASNDate is for unit tests to narrow the datasets to load from GCS to date that can be matched to the date part regexes.
+// The parameters are string pointers. If a parameter is nil, no filter will be used for that date part.
+func UseSpecificASNDate(yearRegex, monthRegex, dayRegex *string) {
 	yearStr := `\d{4}`
 	monthStr := `\d{2}`
 	dayStr := monthStr
 
-	if year != nil {
-		yearStr = fmt.Sprintf("%04d", *year)
+	if yearRegex != nil {
+		yearStr = *yearRegex
 	}
-	if month != nil {
-		monthStr = fmt.Sprintf("%02d", *month)
+	if monthRegex != nil {
+		monthStr = *monthRegex
 	}
-	if day != nil {
-		dayStr = fmt.Sprintf("%02d", *day)
+	if dayRegex != nil {
+		dayStr = *dayRegex
 	}
 
 	asnRegexV4 = regexp.MustCompile(fmt.Sprintf(`RouteViewIPv4/%s/%s/routeviews-(oix|rv2)-%s%s%s-\d{4}\.pfx2as\.gz`, yearStr, monthStr, yearStr, monthStr, dayStr))

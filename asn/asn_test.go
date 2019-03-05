@@ -1,7 +1,9 @@
 package asn_test
 
 import (
+	"fmt"
 	"runtime"
+	"strconv"
 	"testing"
 	"time"
 
@@ -14,7 +16,7 @@ import (
 
 func TestAnnotateV4(t *testing.T) {
 	datasetsTime := time.Date(2018, 1, 1, 12, 0, 0, 0, time.UTC)
-	ann := getAnnotatorForDay(t, true, datasetsTime.Year(), int(datasetsTime.Month()), datasetsTime.Day(), datasetsTime)
+	ann := getAnnotatorForDay(t, true, datasetsTime)
 
 	// test simple ASN
 	geoData := api.GeoData{}
@@ -59,7 +61,7 @@ func TestAnnotateV4(t *testing.T) {
 
 func TestAnnotateV6(t *testing.T) {
 	datasetsTime := time.Date(2018, 1, 1, 8, 0, 0, 0, time.UTC)
-	ann := getAnnotatorForDay(t, false, datasetsTime.Year(), int(datasetsTime.Month()), datasetsTime.Day(), datasetsTime)
+	ann := getAnnotatorForDay(t, false, datasetsTime)
 
 	// test simple ASN
 	geoData := api.GeoData{}
@@ -107,8 +109,8 @@ func TestAnnotateV6(t *testing.T) {
 func TestExtractTimeFromASNFileName(t *testing.T) {
 	// test success scenario
 	successMap := map[string]time.Time{}
-	successMap["routeviews-rv6-20070101-1309.pfx2as"] = time.Date(2007, 1, 1, 13, 9, 0, 0, time.UTC)
-	successMap["routeviews-rv6-20190201-0930.pfx2as"] = time.Date(2019, 2, 1, 9, 30, 0, 0, time.UTC)
+	successMap["routeviews-rv6-20070101-1309.pfx2as"] = time.Date(2007, 1, 1, 0, 0, 0, 0, time.UTC)
+	successMap["routeviews-rv6-20190201-0930.pfx2as"] = time.Date(2019, 2, 1, 0, 0, 0, 0, time.UTC)
 
 	for file, time := range successMap {
 		extractedTime, err := asn.ExtractTimeFromASNFileName(file)
@@ -133,7 +135,10 @@ func bToMb(b uint64) uint64 {
 	return b >> 20
 }
 
-func getAnnotatorForDay(t *testing.T, v4 bool, year, month, day int, datasetStartTime time.Time) api.Annotator {
+func getAnnotatorForDay(t *testing.T, v4 bool, datasetStartTime time.Time) api.Annotator {
+	year := strconv.Itoa(datasetStartTime.Year())
+	month := fmt.Sprintf("%02d", datasetStartTime.Month())
+	day := fmt.Sprintf("%02d", datasetStartTime.Day())
 	geoloader.UseSpecificASNDate(&year, &month, &day)
 
 	var loader api.CachingLoader
