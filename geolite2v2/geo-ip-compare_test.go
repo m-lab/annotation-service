@@ -16,10 +16,6 @@ import (
 	"github.com/m-lab/annotation-service/geoloader"
 )
 
-var (
-	newAnnotators []api.Annotator
-)
-
 // TestCompareAnnotations tests if the new implementation annotates the same way as the old
 // implementation
 func TestCompareAnnotations(t *testing.T) {
