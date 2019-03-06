@@ -18,7 +18,7 @@ var (
 	asnRegexV4 = regexp.MustCompile(`RouteViewIPv4/\d{4}/\d{2}/routeviews-(oix|rv2)-\d{8}-\d{4}\.pfx2as\.gz`) // matches to the IPv4 RouteView datasets
 	asnRegexV6 = regexp.MustCompile(`RouteViewIPv6/\d{4}/\d{2}/routeviews-rv6-\d{8}-\d{4}\.pfx2as\.gz`)       // matches to the IPv6 RouteView datasets
 
-	asnV4StartTime = time.Date(2009, time.Month(2), 1, 0, 0, 0, 0, time.UTC)
+	asnV4StartTime = time.Date(2011, time.Month(2), 1, 0, 0, 0, 0, time.UTC)
 	asnV6StartTime = time.Date(2018, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
 
 	errNeededLoadingDate = errors.New("Befoore needed loading date")
