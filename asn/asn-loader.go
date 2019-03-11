@@ -18,6 +18,8 @@ import (
 
 var (
 	expectedColumnCount = 3 // the number of the expected columns in the source dataset
+
+	errExtractDateFromFilename = errors.New("cannot extract date from input filename")
 )
 
 // ASNDataset holds the database in the memory
@@ -148,18 +150,24 @@ func loadData(fileName, datasetName string) ([]ASNIPNode, error) {
 // from the name of the file.
 func ExtractTimeFromASNFileName(fileName string) (*time.Time, error) {
 	groups := timeComponentsFromFileNameRegex.FindStringSubmatch(fileName)
-	if groups == nil {
+	if groups == nil || len(groups) < 4 {
 		log.Printf("Could not extract time from ASN filename: %s\n", fileName)
-		return nil, errors.New("cannot extract date from input filename")
+		return nil, errExtractDateFromFilename
 	}
 
-	// We can be sure that we have integers in the groups, otherwise the regexp
-	// wouldn't match, so we cast those to int without error check
+	yearInt, erry := strconv.Atoi(groups[1])
+	monthInt, errm := strconv.Atoi(groups[2])
+	dayInt, errd := strconv.Atoi(groups[3])
+
+	if erry != nil || errm != nil || errd != nil {
+		return nil, errExtractDateFromFilename
+	}
+
 	// Based on the docs, the time should be ment in UTC
 	t := time.Date(
-		asIntUnsafe(groups[1]),
-		time.Month(asIntUnsafe(groups[2])),
-		asIntUnsafe(groups[3]),
+		yearInt,
+		time.Month(monthInt),
+		dayInt,
 		0,
 		0,
 		0,
@@ -167,12 +175,4 @@ func ExtractTimeFromASNFileName(fileName string) (*time.Time, error) {
 		time.UTC)
 
 	return &t, nil
-}
-
-// asIntUnsafe converts the string to int without error check.
-// the caller should be sure about the passed string can be converted
-// to int
-func asIntUnsafe(knownIntStr string) int {
-	v, _ := strconv.Atoi(knownIntStr)
-	return v
 }

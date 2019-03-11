@@ -20,6 +20,11 @@ import (
 	"google.golang.org/api/iterator"
 )
 
+const (
+	// Folder containing the maxmind files
+	maxmindPrefix = "Maxmind/"
+)
+
 var (
 	// geoLite2StartDate is the date we have the first GeoLite2 dataset.
 	// Any request earlier than this date using legacy binary datasets
@@ -43,9 +48,9 @@ var (
 	errNoMatch = errors.New("Doesn't match") // TODO
 )
 
-// UseSpecificGeolite2Date is for unit tests to narrow the datasets to load from GCS to date that can be matched to the date part regexes.
+// UseSpecificGeolite2DateForTesting is for unit tests to narrow the datasets to load from GCS to date that can be matched to the date part regexes.
 // The parameters are string pointers. If a parameter is nil, no filter will be used for that date part.
-func UseSpecificGeolite2Date(yearRegex, monthRegex, dayRegex *string) {
+func UseSpecificGeolite2DateForTesting(yearRegex, monthRegex, dayRegex *string) {
 	yearStr := `\d{4}`
 	monthStr := `\d{2}`
 	dayStr := monthStr
@@ -223,7 +228,7 @@ func LegacyV4Loader(
 			return filter(file, geoLegacyRegex, geoLite2StartDate)
 		},
 		loader,
-		api.MaxmindPrefix)
+		maxmindPrefix)
 }
 
 // LegacyV6Loader returns a CachingLoader that loads all v6 legacy datasets.
@@ -236,7 +241,7 @@ func LegacyV6Loader(
 			return filter(file, geoLegacyv6Regex, geoLite2StartDate)
 		},
 		loader,
-		api.MaxmindPrefix)
+		maxmindPrefix)
 }
 
 // Geolite2Loader returns a CachingLoader that loads all geolite2 datasets.
@@ -248,7 +253,7 @@ func Geolite2Loader(
 			return filter(file, geoLite2Regex, time.Time{})
 		},
 		loader,
-		api.MaxmindPrefix)
+		maxmindPrefix)
 }
 
 func IsLegacy(date time.Time) bool {

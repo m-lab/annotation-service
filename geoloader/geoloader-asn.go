@@ -14,19 +14,24 @@ import (
 	"github.com/m-lab/annotation-service/api"
 )
 
-var (
-	asnRegexV4 = regexp.MustCompile(`RouteViewIPv4/\d{4}/\d{2}/routeviews-(oix|rv2)-\d{8}-\d{4}\.pfx2as\.gz`) // matches to the IPv4 RouteView datasets
-	asnRegexV6 = regexp.MustCompile(`RouteViewIPv6/\d{4}/\d{2}/routeviews-rv6-\d{8}-\d{4}\.pfx2as\.gz`)       // matches to the IPv6 RouteView datasets
+const (
+	// Folder prefix containing the RouteView files
+	routeViewPrefix = "RouteView"
+)
 
-	asnV4StartTime = time.Date(2019, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
-	asnV6StartTime = time.Date(2019, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
+var (
+	asnRegexV4 = regexp.MustCompile(`RouteViewIPv4/\d{4}/\d{2}/routeviews-(oix|rv2)-\d{6}01-\d{4}\.pfx2as\.gz`) // matches to the IPv4 RouteView datasets (first day of each month)
+	asnRegexV6 = regexp.MustCompile(`RouteViewIPv6/\d{4}/\d{2}/routeviews-rv6-\d{6}01-\d{4}\.pfx2as\.gz`)       // matches to the IPv6 RouteView datasets (first day of each month)
+
+	asnV4StartTime = time.Date(2009, time.Month(2), 1, 0, 0, 0, 0, time.UTC) // load V4 data from 2009. 02 (info from @yachang on slack)
+	asnV6StartTime = time.Date(2018, time.Month(6), 1, 0, 0, 0, 0, time.UTC) // load V6 data from 2018. 06 (info from @yachang on slack)
 
 	errNeededLoadingDate = errors.New("Befoore needed loading date")
 )
 
-// UseSpecificASNDate is for unit tests to narrow the datasets to load from GCS to date that can be matched to the date part regexes.
+// UseSpecificASNDateForTesting is for unit tests to narrow the datasets to load from GCS to date that can be matched to the date part regexes.
 // The parameters are string pointers. If a parameter is nil, no filter will be used for that date part.
-func UseSpecificASNDate(yearRegex, monthRegex, dayRegex *string) {
+func UseSpecificASNDateForTesting(yearRegex, monthRegex, dayRegex *string) {
 	asnV4StartTime = time.Date(2001, 1, 1, 0, 0, 0, 0, time.UTC)
 	asnV6StartTime = asnV4StartTime
 
@@ -57,10 +62,10 @@ func ASNv4Loader(
 			return asnFilterFrom(file, asnRegexV4, asnV4StartTime)
 		},
 		loader,
-		api.RouteViewPrefix)
+		routeViewPrefix)
 }
 
-// ASNv4Loader should be used to load ASNv6 RouteView files
+// ASNv6Loader should be used to load ASNv6 RouteView files
 func ASNv6Loader(
 	loader func(*storage.ObjectAttrs) (api.Annotator, error)) api.CachingLoader {
 	return newCachingLoader(
@@ -68,7 +73,7 @@ func ASNv6Loader(
 			return asnFilterFrom(file, asnRegexV6, asnV6StartTime)
 		},
 		loader,
-		api.RouteViewPrefix)
+		routeViewPrefix)
 }
 
 func asnFilterFrom(file *storage.ObjectAttrs, r *regexp.Regexp, from time.Time) error {

@@ -61,10 +61,7 @@ func (asn *ASNDataset) Annotate(ip string, ann *api.GeoData) error {
 	for _, asn := range strings.Split(asnNode.ASNString, ",") {
 		// split the set elements on _ (multi-origin ASNs)
 		asnList := strings.Split(asn, "_")
-		newElement := api.ASNElement{ASNList: asnList, ASNListType: api.ASNSingle}
-		if len(asnList) > 1 {
-			newElement.ASNListType = api.ASNMultiOrigin
-		}
+		newElement := api.ASNElement{ASNList: asnList}
 		result = append(result, newElement)
 	}
 	ann.ASN = result
