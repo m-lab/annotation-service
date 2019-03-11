@@ -43,9 +43,20 @@ type GeolocationIP struct {
 	Longitude     float64 `json:"longitude,,omitempty"      bigquery:"longitude"`      // Longitude
 }
 
-// ASNData is the struct that will hold the IP/ASN data when it gets added to the
-// schema. Currently empty and unused.
-type ASNData struct{}
+/************************************************************************
+*                            ASN Annotations                            *
+************************************************************************/
+
+// We are currently using CAIDA Routeviews data to populate ASN annotations.
+// See documentation at:
+// http://data.caida.org/datasets/routing/routeviews-prefix2as/README.txt
+
+// ASNData reports the IP prefix and the list of AS Numbers in the associated AS set.
+// MOAS entries are truncated to just the first ASN in the list.
+type ASNData struct {
+	IPPrefix string  `json:"ip_prefix,,omitempty"  bigquery:"ip_prefix"` // the IP prefix
+	ASN      []int32 `json:"asn,,omitempty"        bigquery:"asn"`       // the AS Number for the IP range
+}
 
 // GeoData is the main struct for the geo metadata, which holds pointers to the
 // Geolocation data and the IP/ASN data. This is what we parse the JSON
