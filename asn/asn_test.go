@@ -24,7 +24,7 @@ func TestAnnotateV4(t *testing.T) {
 	assert.Nil(t, err)
 	assertASNData(t,
 		[]api.ASNElement{
-			api.ASNElement{[]string{"23969"}, api.ASNSingle},
+			api.ASNElement{[]string{"23969"}},
 		},
 		geoData.ASN)
 
@@ -34,8 +34,8 @@ func TestAnnotateV4(t *testing.T) {
 	assert.Nil(t, err)
 	assertASNData(t,
 		[]api.ASNElement{
-			api.ASNElement{[]string{"199430"}, api.ASNSingle},
-			api.ASNElement{[]string{"202079"}, api.ASNSingle},
+			api.ASNElement{[]string{"199430"}},
+			api.ASNElement{[]string{"202079"}},
 		},
 		geoData.ASN)
 
@@ -45,7 +45,7 @@ func TestAnnotateV4(t *testing.T) {
 	assert.Nil(t, err)
 	assertASNData(t,
 		[]api.ASNElement{
-			api.ASNElement{[]string{"12849", "65024"}, api.ASNMultiOrigin},
+			api.ASNElement{[]string{"12849", "65024"}},
 		},
 		geoData.ASN)
 
@@ -69,7 +69,7 @@ func TestAnnotateV6(t *testing.T) {
 	assert.Nil(t, err)
 	assertASNData(t,
 		[]api.ASNElement{
-			api.ASNElement{[]string{"17832"}, api.ASNSingle},
+			api.ASNElement{[]string{"17832"}},
 		},
 		geoData.ASN)
 
@@ -79,10 +79,10 @@ func TestAnnotateV6(t *testing.T) {
 	assert.Nil(t, err)
 	assertASNData(t,
 		[]api.ASNElement{
-			api.ASNElement{[]string{"271"}, api.ASNSingle},
-			api.ASNElement{[]string{"7860"}, api.ASNSingle},
-			api.ASNElement{[]string{"8111"}, api.ASNSingle},
-			api.ASNElement{[]string{"26677"}, api.ASNSingle},
+			api.ASNElement{[]string{"271"}},
+			api.ASNElement{[]string{"7860"}},
+			api.ASNElement{[]string{"8111"}},
+			api.ASNElement{[]string{"26677"}},
 		},
 		geoData.ASN)
 
@@ -92,7 +92,7 @@ func TestAnnotateV6(t *testing.T) {
 	assert.Nil(t, err)
 	assertASNData(t,
 		[]api.ASNElement{
-			api.ASNElement{[]string{"209", "3910", "3908"}, api.ASNMultiOrigin},
+			api.ASNElement{[]string{"209", "3910", "3908"}},
 		},
 		geoData.ASN)
 
@@ -165,7 +165,6 @@ func assertASNData(t *testing.T, expectedASNs, gotASNs []api.ASNElement) {
 	for idx, exp := range expectedASNs {
 		got := gotASNs[idx]
 		assert.Equal(t, exp.ASNList, got.ASNList)
-		assert.Equal(t, exp.ASNListType, got.ASNListType)
 	}
 }
 

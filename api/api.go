@@ -38,21 +38,9 @@ type GeolocationIP struct {
 	Longitude     float64 `json:"longitude,,omitempty"      bigquery:"longitude"`      // Longitude
 }
 
-// Constant string options will determine what type of ASN data can be found in the ASNData.ASNs list.
-// For more info pls. visit: http://data.caida.org/datasets/routing/routeviews-prefix2as/README.txt
-type ASNListType string
-
-const (
-	// A single ASN belongs to the IP
-	ASNSingle ASNListType = "single"
-	// Multi-origin ASNs (MOAS)
-	ASNMultiOrigin ASNListType = "multi-origin"
-)
-
-// ASNElement holds the data about a single element in the found ASN set. Can hold a single ASN or a multi-origin ASN list
+// ASNElement holds the data about a single element in the found ASN set. Can hold a single ASN or a multi-origin ASN list.
 type ASNElement struct {
-	ASNList     []string    `json:"asn_list,,omitempty"        bigquery:"asn_list"`      // the list of the ASNs found for the corresponding IP range
-	ASNListType ASNListType `json:"asn_list_type,,omitempty"   bigquery:"asn_list_type"` // the type of the ASNs list (single/multi-origin)
+	ASNList []string `json:"asn_list,,omitempty"        bigquery:"asn_list"` // the list of the ASNs found for the corresponding IP range
 }
 
 // GeoData is the main struct for the geo metadata, which holds pointers to the
@@ -64,20 +52,20 @@ type ASNElement struct {
 //
 // Single ASN belongs to the IP:
 //   - Example input: `"14061"`
-//   - Example GeoData.ASN: `[{"ASNList": ["14061"], "ASNListType": "single"}]`
+//   - Example GeoData.ASN: `[{"ASNList": ["14061"]}]`
 // A set of ASNs belongs to the IP:
 //   - Example input: `"367,1479,1504"`
 //   - Example GeoData.ASN: `[
-//       {"ASNList": ["367"], "ASNListType": "single"}
-//       {"ASNList": ["1479"], "ASNListType": "single"}
-//       {"ASNList": ["1504"], "ASNListType": "single"}
+//       {"ASNList": ["367"]}
+//       {"ASNList": ["1479"]}
+//       {"ASNList": ["1504"]}
 //     ]`
 // A set of ASNs - including multi-origin ASN - belongs to the IP:
 //   - Example input: `"46652_46653,4210010000,4210010200"`
 //   - Example GeoData.ASN: `[
-//       {"ASNList": ["46652", "46653"], "ASNListType": "multi-origin"}
-//       {"ASNList": ["4210010000"], "ASNListType": "single"}
-//       {"ASNList": ["4210010200"], "ASNListType": "single"}
+//       {"ASNList": ["46652", "46653"]}
+//       {"ASNList": ["4210010000"]}
+//       {"ASNList": ["4210010200"]}
 //     ]`
 // TODO - replace this with type Annotations struct.
 type GeoData struct {

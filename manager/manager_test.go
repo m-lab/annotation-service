@@ -44,11 +44,11 @@ func TestInitDataset(t *testing.T) {
 		res  string
 	}{
 		// Triggers legacy geo 2015-03-08  and ASN 2018-03-01
-		{"1.4.128.0", "1377820800", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","latitude":13.75,"longitude":100.467},"ASN":[{"asn_list":["23969"],"asn_list_type":"single"}]}`},
+		{"1.4.128.0", "1377820800", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","latitude":13.75,"longitude":100.467},"ASN":[{"asn_list":["23969"]}]}`},
 		// Triggers legacy geo 2015-03-08  and ASN 2018-03-01
-		{"1.9.128.0", "1512086400", `{"Geo":{"continent_code":"AS","country_code":"MY","country_code3":"MYS","country_name":"Malaysia","region":"05","city":"Seremban","postal_code":"70400","latitude":2.749,"longitude":101.943},"ASN":[{"asn_list":["4788"],"asn_list_type":"single"}]}`},
+		{"1.9.128.0", "1512086400", `{"Geo":{"continent_code":"AS","country_code":"MY","country_code3":"MYS","country_name":"Malaysia","region":"05","city":"Seremban","postal_code":"70400","latitude":2.749,"longitude":101.943},"ASN":[{"asn_list":["4788"]}]}`},
 		// Triggers geolite2 geo 2018-03-08  and ASN 2018-03-08
-		{"1.22.128.0", "1544400000", `{"Geo":{"continent_code":"AS","country_code":"IN","country_name":"India","region":"HR","city":"Faridabad","latitude":28.4333,"longitude":77.3167},"ASN":[{"asn_list":["45528"],"asn_list_type":"single"}]}`},
+		{"1.22.128.0", "1544400000", `{"Geo":{"continent_code":"AS","country_code":"IN","country_name":"India","region":"HR","city":"Faridabad","latitude":28.4333,"longitude":77.3167},"ASN":[{"asn_list":["45528"]}]}`},
 	}
 	for n, test := range tests {
 		w := httptest.NewRecorder()
