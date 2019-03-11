@@ -48,9 +48,9 @@ var (
 	errNoMatch = errors.New("Doesn't match") // TODO
 )
 
-// UseSpecificGeolite2Date is for unit tests to narrow the datasets to load from GCS to date that can be matched to the date part regexes.
+// UseSpecificGeolite2DateForTesting is for unit tests to narrow the datasets to load from GCS to date that can be matched to the date part regexes.
 // The parameters are string pointers. If a parameter is nil, no filter will be used for that date part.
-func UseSpecificGeolite2Date(yearRegex, monthRegex, dayRegex *string) {
+func UseSpecificGeolite2DateForTesting(yearRegex, monthRegex, dayRegex *string) {
 	yearStr := `\d{4}`
 	monthStr := `\d{2}`
 	dayStr := monthStr

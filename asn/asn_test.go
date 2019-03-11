@@ -139,7 +139,7 @@ func getAnnotatorForDay(t *testing.T, v4 bool, datasetStartTime time.Time) api.A
 	year := strconv.Itoa(datasetStartTime.Year())
 	month := fmt.Sprintf("%02d", datasetStartTime.Month())
 	day := fmt.Sprintf("%02d", datasetStartTime.Day())
-	geoloader.UseSpecificASNDate(&year, &month, &day)
+	geoloader.UseSpecificASNDateForTesting(&year, &month, &day)
 
 	var loader api.CachingLoader
 	if v4 {

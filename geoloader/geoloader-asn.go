@@ -29,9 +29,9 @@ var (
 	errNeededLoadingDate = errors.New("Befoore needed loading date")
 )
 
-// UseSpecificASNDate is for unit tests to narrow the datasets to load from GCS to date that can be matched to the date part regexes.
+// UseSpecificASNDateForTesting is for unit tests to narrow the datasets to load from GCS to date that can be matched to the date part regexes.
 // The parameters are string pointers. If a parameter is nil, no filter will be used for that date part.
-func UseSpecificASNDate(yearRegex, monthRegex, dayRegex *string) {
+func UseSpecificASNDateForTesting(yearRegex, monthRegex, dayRegex *string) {
 	asnV4StartTime = time.Date(2001, 1, 1, 0, 0, 0, 0, time.UTC)
 	asnV6StartTime = asnV4StartTime
 
