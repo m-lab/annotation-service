@@ -10,13 +10,6 @@ import (
 	"time"
 )
 
-const (
-	// Folder containing the maxmind files
-	MaxmindPrefix = "Maxmind/"
-	// Folder prefix containing the RouteView files
-	RouteViewPrefix = "RouteView"
-)
-
 var (
 	// MaxmindBucketName is the bucket containing maxmind files.
 	MaxmindBucketName = "downloader-" + os.Getenv("GCLOUD_PROJECT")

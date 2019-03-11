@@ -14,6 +14,11 @@ import (
 	"github.com/m-lab/annotation-service/api"
 )
 
+const (
+	// Folder prefix containing the RouteView files
+	routeViewPrefix = "RouteView"
+)
+
 var (
 	asnRegexV4 = regexp.MustCompile(`RouteViewIPv4/\d{4}/\d{2}/routeviews-(oix|rv2)-\d{8}-\d{4}\.pfx2as\.gz`) // matches to the IPv4 RouteView datasets
 	asnRegexV6 = regexp.MustCompile(`RouteViewIPv6/\d{4}/\d{2}/routeviews-rv6-\d{8}-\d{4}\.pfx2as\.gz`)       // matches to the IPv6 RouteView datasets
@@ -57,7 +62,7 @@ func ASNv4Loader(
 			return asnFilterFrom(file, asnRegexV4, asnV4StartTime)
 		},
 		loader,
-		api.RouteViewPrefix)
+		routeViewPrefix)
 }
 
 // ASNv4Loader should be used to load ASNv6 RouteView files
@@ -68,7 +73,7 @@ func ASNv6Loader(
 			return asnFilterFrom(file, asnRegexV6, asnV6StartTime)
 		},
 		loader,
-		api.RouteViewPrefix)
+		routeViewPrefix)
 }
 
 func asnFilterFrom(file *storage.ObjectAttrs, r *regexp.Regexp, from time.Time) error {

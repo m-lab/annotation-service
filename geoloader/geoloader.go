@@ -20,6 +20,11 @@ import (
 	"google.golang.org/api/iterator"
 )
 
+const (
+	// Folder containing the maxmind files
+	maxmindPrefix = "Maxmind/"
+)
+
 var (
 	// geoLite2StartDate is the date we have the first GeoLite2 dataset.
 	// Any request earlier than this date using legacy binary datasets
@@ -223,7 +228,7 @@ func LegacyV4Loader(
 			return filter(file, geoLegacyRegex, geoLite2StartDate)
 		},
 		loader,
-		api.MaxmindPrefix)
+		maxmindPrefix)
 }
 
 // LegacyV6Loader returns a CachingLoader that loads all v6 legacy datasets.
@@ -236,7 +241,7 @@ func LegacyV6Loader(
 			return filter(file, geoLegacyv6Regex, geoLite2StartDate)
 		},
 		loader,
-		api.MaxmindPrefix)
+		maxmindPrefix)
 }
 
 // Geolite2Loader returns a CachingLoader that loads all geolite2 datasets.
@@ -248,7 +253,7 @@ func Geolite2Loader(
 			return filter(file, geoLite2Regex, time.Time{})
 		},
 		loader,
-		api.MaxmindPrefix)
+		maxmindPrefix)
 }
 
 func IsLegacy(date time.Time) bool {
