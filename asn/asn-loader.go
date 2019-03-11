@@ -18,6 +18,8 @@ import (
 
 var (
 	expectedColumnCount = 3 // the number of the expected columns in the source dataset
+
+	errExtractDateFromFilename = errors.New("cannot extract date from input filename")
 )
 
 // ASNDataset holds the database in the memory
@@ -148,9 +150,9 @@ func loadData(fileName, datasetName string) ([]ASNIPNode, error) {
 // from the name of the file.
 func ExtractTimeFromASNFileName(fileName string) (*time.Time, error) {
 	groups := timeComponentsFromFileNameRegex.FindStringSubmatch(fileName)
-	if groups == nil {
+	if groups == nil || len(groups) < 4 {
 		log.Printf("Could not extract time from ASN filename: %s\n", fileName)
-		return nil, errors.New("cannot extract date from input filename")
+		return nil, errExtractDateFromFilename
 	}
 
 	// We can be sure that we have integers in the groups, otherwise the regexp
