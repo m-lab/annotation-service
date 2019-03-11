@@ -20,11 +20,11 @@ const (
 )
 
 var (
-	asnRegexV4 = regexp.MustCompile(`RouteViewIPv4/\d{4}/\d{2}/routeviews-(oix|rv2)-\d{8}-\d{4}\.pfx2as\.gz`) // matches to the IPv4 RouteView datasets
-	asnRegexV6 = regexp.MustCompile(`RouteViewIPv6/\d{4}/\d{2}/routeviews-rv6-\d{8}-\d{4}\.pfx2as\.gz`)       // matches to the IPv6 RouteView datasets
+	asnRegexV4 = regexp.MustCompile(`RouteViewIPv4/\d{4}/\d{2}/routeviews-(oix|rv2)-\d{6}01-\d{4}\.pfx2as\.gz`) // matches to the IPv4 RouteView datasets (first day of each month)
+	asnRegexV6 = regexp.MustCompile(`RouteViewIPv6/\d{4}/\d{2}/routeviews-rv6-\d{6}01-\d{4}\.pfx2as\.gz`)       // matches to the IPv6 RouteView datasets (first day of each month)
 
-	asnV4StartTime = time.Date(2019, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
-	asnV6StartTime = time.Date(2019, time.Month(1), 1, 0, 0, 0, 0, time.UTC)
+	asnV4StartTime = time.Date(2009, time.Month(2), 1, 0, 0, 0, 0, time.UTC) // load V4 data from 2009. 02 (info from @yachang on slack)
+	asnV6StartTime = time.Date(2018, time.Month(6), 1, 0, 0, 0, 0, time.UTC) // load V6 data from 2018. 06 (info from @yachang on slack)
 
 	errNeededLoadingDate = errors.New("Befoore needed loading date")
 )
@@ -65,7 +65,7 @@ func ASNv4Loader(
 		routeViewPrefix)
 }
 
-// ASNv4Loader should be used to load ASNv6 RouteView files
+// ASNv6Loader should be used to load ASNv6 RouteView files
 func ASNv6Loader(
 	loader func(*storage.ObjectAttrs) (api.Annotator, error)) api.CachingLoader {
 	return newCachingLoader(
