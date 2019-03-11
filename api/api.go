@@ -52,7 +52,8 @@ type GeolocationIP struct {
 // http://data.caida.org/datasets/routing/routeviews-prefix2as/README.txt
 
 // ASNData reports the IP prefix and the list of AS Numbers in the associated AS set.
-// MOAS entries are truncated to just the first ASN in the list.
+// For AS sets, the ASNs are listed in arbitrary order.
+// MOAS entries (alone or as elements of a set) are truncated to just the first ASN in the MOAS list.
 type ASNData struct {
 	IPPrefix string  `json:"ip_prefix,,omitempty"  bigquery:"ip_prefix"` // the IP prefix
 	ASN      []int32 `json:"asn,,omitempty"        bigquery:"asn"`       // the AS Number for the IP range
