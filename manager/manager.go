@@ -197,6 +197,8 @@ func (bldr *listBuilder) build() []api.Annotator {
 	return combo
 }
 
+// mergeV4V6 holds common logic to merge legacy location and ASN v4 and v6 annotators into composite annotators.
+// The purpose of the merge is to fallback to IPv6 lookup if IPv4 lookup was unsuccessful.
 func mergeV4V6(v4Annotators, v6Annotators []api.Annotator, discriminator string) []api.Annotator {
 	v4 := directory.SortSlice(v4Annotators)
 	v6 := directory.SortSlice(v6Annotators)
