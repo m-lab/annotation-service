@@ -53,8 +53,31 @@ type GeolocationIP struct {
 
 // An AS mapping is either a single ASN or AS set, or a Multi-Origin AS, with 2 or more elements, each of which
 // might be a single ASN or an AS set.
+// The following scenarios are possible:
+//
+// Single ASN belongs to the IP:
+//   - Example input: `"14061"`
+//   - Example GeoData.ASData.Systems: `[{"ASNs": [14061]}]`
+// An AS set for the IP:
+//   - Example input: `"367,1479,1504"`
+//   - Example GeoData.ASData.Systems: `[
+//       {"ASNs": [367, 1479, 1504]}
+//     ]`
+// A multi-origin AS, consisting of multiple of AS sets:
+//   - Example input: `"55967_38365_38365,64512,65323"`
+//   - Example GeoData.Systems: `[
+//       {"ASNs": [55967]},              // Appears most frequently
+//       {"ASNs": [38365]},              // Appears less frequently
+//       {"ASNs": [38365, 64512, 65323]} // Appears least frequently.
+//     ]`
+// Another multi-origin AS, consisting of multiple of AS sets:
+//   - Example input: `"8508,199279_15744"`
+//   - Example GeoData.Systems: `[
+//       {"ASNs": [8508, 199279]},  // Appears most frequently
+//       {"ASNs": [15744]},         // Appears less frequently
+//     ]`
 
-// An System is the base element.  It may contain a single ASN, or multiple ASNs comprising an AS set.
+// A System is the base element.  It may contain a single ASN, or multiple ASNs comprising an AS set.
 type System struct {
 	// ASNs contains a single ASN, or AS set.  There must always be at least one ASN.
 	// If there are more than one ASN, they are (arbitrarily) listed in increasing numerical order.
