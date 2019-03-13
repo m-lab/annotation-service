@@ -51,21 +51,30 @@ type GeolocationIP struct {
 // See documentation at:
 // http://data.caida.org/datasets/routing/routeviews-prefix2as/README.txt
 
-// ASNData reports the IP prefix and the list of AS Numbers in the associated AS set.
-// For AS sets, the ASNs are listed in arbitrary order.
+// An AS mapping is either a single ASN or AS set, or a Multi-Origin AS, with 2 or more elements, each of which
+// might be a single ASN or an AS set.
+
+// An System is the base element.  It may contain a single ASN, or multiple ASNs comprising an AS set.
+type System struct {
+	// ASNs contains a single ASN, or AS set.  There must always be at least one ASN.
+	// If there are more than one ASN, they are (arbitrarily) listed in increasing numerical order.
+	ASNs []uint32
+}
+
+// ASData contains the Autonomous System information associated with the IP prefix.
+// Roughly 99% of mappings consist of a single System with a single ASN.
+//
+// Looking at Routeviews data from 2019/01/01, the MOAS and AS set stats look like:
+// IPv4:   Single: 99%    MOAS: 1%     AS set: .005% (of entries) 1/2 of AS sets start with MOAS
+// IPv6:   Single: 99.3%  MOAS: 0.6%   AS set: .01%  (of entries) 1/3 of AS sets start with MOAS
 // NOTE: This is NOT intended to be used directly as the BigQuery schema.
-type ASNData struct {
-	IPPrefix string  `json:"ip_prefix,,omitempty"  bigquery:"ip_prefix"` // the IP prefix
-	ASN      []int32 `json:"asn,,omitempty"        bigquery:"asn"`       // the AS Number for the IP range
-	// IsMOAS Indicates that the list of ASN is from MOAS only.  Otherwise it is from an AS set, and MOAS entries
-	// in the set are truncated to just the first entry.
-	// Looking at Routeviews data from 2019/01/01, the MOAS and AS set stats look like:
-	// IPv4:   Single: 99%    MOAS: 1%     AS set: .005% (of entries) 1/2 of AS sets start with MOAS
-	// IPv6:   Single: 99.3%  MOAS: 0.6%   AS set: .01%  (of entries)  1/3 of AS sets start with MOAS
-	// So, this representation will lose some information for less than 0.01% of entries.  For IPv6, these entries
-	// are all /32 or /40.  For IPv4, they are mostly /20 or more, but include two /14 and one each /15, /16, /17,
-	// totalling less than 0.01% of the IPv4 address space.
-	IsMOAS bool
+type ASData struct {
+	IPPrefix string // the IP prefix found in the table.
+
+	// One or more "Systems".  There must always be at least one System.  If there are more than one,
+	// then this is a Multi-Origin AS, and the component Systems are in order of frequency in routing tables,
+	// most common first.
+	Systems []System
 }
 
 // GeoData is the main struct for the geo metadata, which holds pointers to the
@@ -73,8 +82,8 @@ type ASNData struct {
 // response from the annotator into.
 // TODO - replace this with type Annotations struct.
 type GeoData struct {
-	Geo *GeolocationIP // Holds the geolocation data
-	ASN *ASNData       // Holds the ASN data
+	Geo     *GeolocationIP // Holds the geolocation data
+	Network *ASData        // Holds the associated network Autonomous System data.
 }
 
 /*************************************************************************
@@ -84,7 +93,7 @@ type GeoData struct {
 // The RequestData schema is the schema for the json that we will send
 // down the pipe to the annotation service.
 // DEPRECATED
-// Should instead use a single Date (time.Time) and array of net.IP.
+// Should instead use a single Date (time.Time) and array of net.IP.  See the v2 API.
 type RequestData struct {
 	IP        string    // Holds the IP from an incoming request
 	IPFormat  int       // Holds the ip format, 4 or 6
