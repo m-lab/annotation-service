@@ -25,7 +25,7 @@ var (
 *************************************************************************/
 
 // The GeolocationIP struct contains all the information needed for the
-// geolocation data that will be inserted into big query. The fiels are
+// geolocation data that will be inserted into big query. The fields are
 // capitalized for exporting, although the originals in the DB schema
 // are not.
 // This is in common because it is used by the etl repository.
@@ -53,10 +53,19 @@ type GeolocationIP struct {
 
 // ASNData reports the IP prefix and the list of AS Numbers in the associated AS set.
 // For AS sets, the ASNs are listed in arbitrary order.
-// MOAS entries (alone or as elements of a set) are truncated to just the first ASN in the MOAS list.
+// NOTE: This is NOT intended to be used directly as the BigQuery schema.
 type ASNData struct {
 	IPPrefix string  `json:"ip_prefix,,omitempty"  bigquery:"ip_prefix"` // the IP prefix
 	ASN      []int32 `json:"asn,,omitempty"        bigquery:"asn"`       // the AS Number for the IP range
+	// IsMOAS Indicates that the list of ASN is from MOAS only.  Otherwise it is from an AS set, and MOAS entries
+	// in the set are truncated to just the first entry.
+	// Looking at Routeviews data from 2019/01/01, the MOAS and AS set stats look like:
+	// IPv4:   Single: 99%    MOAS: 1%     AS set: .005% (of entries) 1/2 of AS sets start with MOAS
+	// IPv6:   Single: 99.3%  MOAS: 0.6%   AS set: .01%  (of entries)  1/3 of AS sets start with MOAS
+	// So, this representation will lose some information for less than 0.01% of entries.  For IPv6, these entries
+	// are all /32 or /40.  For IPv4, they are mostly /20 or more, but include two /14 and one each /15, /16, /17,
+	// totalling less than 0.01% of the IPv4 address space.
+	IsMOAS bool
 }
 
 // GeoData is the main struct for the geo metadata, which holds pointers to the
