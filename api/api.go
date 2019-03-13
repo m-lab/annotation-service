@@ -77,6 +77,21 @@ type ASData struct {
 	Systems []System
 }
 
+// ErrNilOrEmptyASData is returned by BestASN if the ASData is nil or empty.
+var ErrNilOrEmptyASData = errors.New("Empty or Nil ASData")
+
+// BestASN returns a plausible ASN from a possibly complex ASData.
+func (as *ASData) BestASN() (int64, error) {
+	if as == nil || len(as.Systems) == 0 {
+		return 0, ErrNilOrEmptyASData
+	}
+	sys0 := as.Systems[0]
+	if len(sys0.ASNs) == 0 {
+		return 0, ErrNilOrEmptyASData
+	}
+	return int64(sys0.ASNs[0]), nil
+}
+
 // GeoData is the main struct for the geo metadata, which holds pointers to the
 // Geolocation data and the IP/ASN data. This is what we parse the JSON
 // response from the annotator into.
