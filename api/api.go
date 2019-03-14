@@ -10,11 +10,6 @@ import (
 	"time"
 )
 
-const (
-	// Folder containing the maxmind files
-	MaxmindPrefix = "Maxmind/"
-)
-
 var (
 	// MaxmindBucketName is the bucket containing maxmind files.
 	MaxmindBucketName = "downloader-" + os.Getenv("GCLOUD_PROJECT")
@@ -43,17 +38,36 @@ type GeolocationIP struct {
 	Longitude     float64 `json:"longitude,,omitempty"      bigquery:"longitude"`      // Longitude
 }
 
-// ASNData is the struct that will hold the IP/ASN data when it gets added to the
-// schema. Currently empty and unused.
-type ASNData struct{}
+// ASNElement holds the data about a single element in the found ASN set. Can hold a single ASN or a multi-origin ASN list.
+type ASNElement struct {
+	ASNList []string `json:"asn_list,,omitempty"        bigquery:"asn_list"` // the list of the ASNs found for the corresponding IP range
+}
 
 // GeoData is the main struct for the geo metadata, which holds pointers to the
 // Geolocation data and the IP/ASN data. This is what we parse the JSON
 // response from the annotator into.
+//
+// About the ASN:
+// The following scenarios are possible:
+//
+// The IP belongs to a single ASN:
+//   - Example input: `"14061"`
+//   - Example GeoData.ASN: `[{"ASNList": ["14061"]}]`
+// A IP belongs to an ASN set:
+//   - Example input: `"367,1479,1504"`
+//   - Example GeoData.ASN: `[
+//       {"ASNList": ["367", "1479", "1504"]}
+//     ]`
+// The IP belongs to multi-origin ASNs including an ASN set
+//   - Example input: `"46652_46653,4210010000,4210010200"`
+//   - Example GeoData.ASN: `[
+//       {"ASNList": ["46652"]}
+//       {"ASNList": ["46653", "4210010000", "4210010200"]}
+//     ]`
 // TODO - replace this with type Annotations struct.
 type GeoData struct {
 	Geo *GeolocationIP // Holds the geolocation data
-	ASN *ASNData       // Holds the ASN data
+	ASN []ASNElement   // Holds the ASN data
 }
 
 /*************************************************************************

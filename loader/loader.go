@@ -10,11 +10,20 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"path/filepath"
 	"strings"
 
 	"cloud.google.com/go/storage"
 	"golang.org/x/net/context"
 )
+
+// GetGzBase extracts basename, such as "20140307T160000Z-GeoLiteCity.dat"
+// from "Maxmind/2014/03/07/20140307T160000Z-GeoLiteCity.dat.gz"
+// KZ: moved from legacy package here
+func GetGzBase(filename string) string {
+	base := filepath.Base(filename)
+	return base[0 : len(base)-3]
+}
 
 // CreateZipReader reads a file from GCS and wraps it in a zip.Reader.
 func CreateZipReader(ctx context.Context, bucket string, bucketObj string) (*zip.Reader, error) {

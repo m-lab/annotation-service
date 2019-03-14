@@ -7,7 +7,7 @@ package geoloader
 import (
 	"context"
 	"errors"
-	"flag"
+	"fmt"
 	"log"
 	"regexp"
 	"runtime"
@@ -18,6 +18,11 @@ import (
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/metrics"
 	"google.golang.org/api/iterator"
+)
+
+const (
+	// Folder containing the maxmind files
+	maxmindPrefix = "Maxmind/"
 )
 
 var (
@@ -43,15 +48,27 @@ var (
 	errNoMatch = errors.New("Doesn't match") // TODO
 )
 
-// UseOnlyMarchForTest hacks the regular expressions to reduce the number of datasets for testing.
-func UseOnlyMarchForTest() {
-	if flag.Lookup("test.v") == nil {
-		log.Println("This should only be called in unit tests.")
-		return
+// UseSpecificGeolite2DateForTesting is for unit tests to narrow the datasets to load from GCS to date that can be matched to the date part regexes.
+// The parameters are string pointers. If a parameter is nil, no filter will be used for that date part.
+func UseSpecificGeolite2DateForTesting(yearRegex, monthRegex, dayRegex *string) {
+	yearStr := `\d{4}`
+	monthStr := `\d{2}`
+	dayStr := monthStr
+
+	if yearRegex != nil {
+		yearStr = *yearRegex
 	}
-	geoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/03/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
-	geoLegacyRegex = regexp.MustCompile(`Maxmind/\d{4}/03/\d{2}/\d{8}T.*-GeoLiteCity.dat.*`)
-	geoLegacyv6Regex = regexp.MustCompile(`Maxmind/\d{4}/03/\d{2}/\d{8}T.*-GeoLiteCityv6.dat.*`)
+	if monthRegex != nil {
+		monthStr = *monthRegex
+	}
+	if dayRegex != nil {
+		dayStr = *dayRegex
+	}
+
+	geoLite2Regex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/%s/%s/%s%s%sT\d{6}Z-GeoLite2-City-CSV\.zip`, yearStr, monthStr, dayStr, yearStr, monthStr, dayStr))
+	geoLegacyRegex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/%s/%s/%s%s%sT.*-GeoLiteCity.dat.*`, yearStr, monthStr, dayStr, yearStr, monthStr, dayStr))
+	geoLegacyv6Regex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/%s/%s/%s%s%sT.*-GeoLiteCityv6.dat.*`, yearStr, monthStr, dayStr, yearStr, monthStr, dayStr))
+	log.Printf("Date filter is set to %s%s%s", yearStr, monthStr, dayStr)
 }
 
 /*****************************************************************************
@@ -59,13 +76,13 @@ func UseOnlyMarchForTest() {
 *****************************************************************************/
 
 // Returns the normal iterator for objects in the appropriate GCS bucket.
-func bucketIterator() (*storage.ObjectIterator, error) {
+func bucketIterator(withPrefix string) (*storage.ObjectIterator, error) {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-	prospectiveFiles := client.Bucket(api.MaxmindBucketName).Objects(ctx, &storage.Query{Prefix: api.MaxmindPrefix})
+	prospectiveFiles := client.Bucket(api.MaxmindBucketName).Objects(ctx, &storage.Query{Prefix: withPrefix})
 	return prospectiveFiles, nil
 }
 
@@ -75,11 +92,12 @@ type Filename string
 func loadAll(
 	cache map[Filename]api.Annotator,
 	filter func(file *storage.ObjectAttrs) error,
-	loader func(*storage.ObjectAttrs) (api.Annotator, error)) (map[Filename]api.Annotator, error) {
+	loader func(*storage.ObjectAttrs) (api.Annotator, error),
+	gcsPrefix string) (map[Filename]api.Annotator, error) {
 	if loader == nil {
 		return nil, ErrNoLoader
 	}
-	source, err := bucketIterator()
+	source, err := bucketIterator(gcsPrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -155,6 +173,7 @@ func filter(file *storage.ObjectAttrs, r *regexp.Regexp, before time.Time) error
 // cachingLoader implements api.CachingLoader for legacy and geolite2 geolocation.
 type cachingLoader struct {
 	lock       sync.Mutex
+	gcsPrefix  string
 	annotators map[Filename]api.Annotator
 	filter     func(*storage.ObjectAttrs) error
 	loader     func(*storage.ObjectAttrs) (api.Annotator, error)
@@ -167,7 +186,8 @@ func (cl *cachingLoader) UpdateCache() error {
 			func(file *storage.ObjectAttrs) error {
 				return cl.filter(file)
 			},
-			cl.loader)
+			cl.loader,
+			cl.gcsPrefix)
 	if err != nil {
 		return err
 	}
@@ -193,8 +213,9 @@ func (cl *cachingLoader) Fetch() []api.Annotator {
 // NewCachingLoader creates a CachingLoader with the provided filter and loader.
 func newCachingLoader(
 	filter func(*storage.ObjectAttrs) error,
-	loader func(*storage.ObjectAttrs) (api.Annotator, error)) api.CachingLoader {
-	return &cachingLoader{filter: filter, loader: loader, annotators: make(map[Filename]api.Annotator, 100)}
+	loader func(*storage.ObjectAttrs) (api.Annotator, error),
+	gcsPrefix string) api.CachingLoader {
+	return &cachingLoader{filter: filter, loader: loader, annotators: make(map[Filename]api.Annotator, 100), gcsPrefix: gcsPrefix}
 }
 
 // LegacyV4Loader returns a CachingLoader that loads all v4 legacy datasets.
@@ -206,7 +227,8 @@ func LegacyV4Loader(
 			// We archived but do not use legacy datasets after GeoLite2StartDate.
 			return filter(file, geoLegacyRegex, geoLite2StartDate)
 		},
-		loader)
+		loader,
+		maxmindPrefix)
 }
 
 // LegacyV6Loader returns a CachingLoader that loads all v6 legacy datasets.
@@ -218,7 +240,8 @@ func LegacyV6Loader(
 			// We archived but do not use legacy datasets after GeoLite2StartDate.
 			return filter(file, geoLegacyv6Regex, geoLite2StartDate)
 		},
-		loader)
+		loader,
+		maxmindPrefix)
 }
 
 // Geolite2Loader returns a CachingLoader that loads all geolite2 datasets.
@@ -229,7 +252,8 @@ func Geolite2Loader(
 		func(file *storage.ObjectAttrs) error {
 			return filter(file, geoLite2Regex, time.Time{})
 		},
-		loader)
+		loader,
+		maxmindPrefix)
 }
 
 func IsLegacy(date time.Time) bool {

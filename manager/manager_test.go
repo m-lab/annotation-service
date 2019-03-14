@@ -30,7 +30,11 @@ func TestInitDataset(t *testing.T) {
 		t.Skip("Skipping test that uses GCS")
 	}
 	// Make the dataset filters much more restrictive to prevent OOM and make test faster.
-	geoloader.UseOnlyMarchForTest()
+	year, month, day := "(2018|2015)", "03", "(01|08)"
+	geoloader.UseSpecificGeolite2DateForTesting(&year, &month, &day)
+	year, month, day = "2018", "03", "(01|08)"
+	geoloader.UseSpecificASNDateForTesting(&year, &month, &day)
+
 	// Load the small directory.
 	manager.MustUpdateDirectory()
 
@@ -39,17 +43,12 @@ func TestInitDataset(t *testing.T) {
 		time string
 		res  string
 	}{
-		// This request needs a legacy binary dataset
-		{"1.4.128.0", "1199145600", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"ASN":null}`},
-		// This request needs another legacy binary dataset
-		// `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"77","city":"Bung","postal_code":"37000","latitude":15.695,"longitude":104.648},"ASN":null}`
-		{"1.4.128.0", "1399145600", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"ASN":null}`},
-		// This request needs a geolite2 dataset
-		{"1.9.128.0", "1512086400", `{"Geo":{"continent_code":"AS","country_code":"MY","country_code3":"MYS","country_name":"Malaysia","region":"14","city":"Kuala Lumpur","postal_code":"50586","latitude":3.167,"longitude":101.7},"ASN":null}`},
-		// This request needs the latest dataset in the memory.
-		{"1.22.128.0", "1544400000", `{"Geo":{"continent_code":"AS","country_code":"IN","country_name":"India","region":"HR","city":"Faridabad","latitude":28.4333,"longitude":77.3167},"ASN":null}`},
-		// This request used a loaded & removed legacy dataset.
-		//{"1.4.128.0", "1199145600", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"ASN":null}`},
+		// Triggers legacy geo 2015-03-08  and ASN 2018-03-01
+		{"1.4.128.0", "1377820800", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","latitude":13.75,"longitude":100.467},"ASN":[{"asn_list":["23969"]}]}`},
+		// Triggers legacy geo 2015-03-08  and ASN 2018-03-01
+		{"1.9.128.0", "1512086400", `{"Geo":{"continent_code":"AS","country_code":"MY","country_code3":"MYS","country_name":"Malaysia","region":"05","city":"Seremban","postal_code":"70400","latitude":2.749,"longitude":101.943},"ASN":[{"asn_list":["4788"]}]}`},
+		// Triggers geolite2 geo 2018-03-08  and ASN 2018-03-08
+		{"1.22.128.0", "1544400000", `{"Geo":{"continent_code":"AS","country_code":"IN","country_name":"India","region":"HR","city":"Faridabad","latitude":28.4333,"longitude":77.3167},"ASN":[{"asn_list":["45528"]}]}`},
 	}
 	for n, test := range tests {
 		w := httptest.NewRecorder()
