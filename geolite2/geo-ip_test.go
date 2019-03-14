@@ -92,15 +92,15 @@ func TestPopulateLocationData(t *testing.T) {
 			node: geolite2.IPNode{LocationIndex: 0, PostalCode: "10583"},
 			locs: []geolite2.LocationNode{{CityName: "Not A Real City", RegionCode: "ME"}},
 			res: api.GeoData{
-				Geo: &api.GeolocationIP{City: "Not A Real City", PostalCode: "10583", Region: "ME"},
-				ASN: nil},
+				Geo:     &api.GeolocationIP{City: "Not A Real City", PostalCode: "10583", Region: "ME"},
+				Network: nil},
 		},
 		{
 			node: geolite2.IPNode{LocationIndex: -1, PostalCode: "10583"},
 			locs: nil,
 			res: api.GeoData{
-				Geo: &api.GeolocationIP{PostalCode: "10583"},
-				ASN: nil},
+				Geo:     &api.GeolocationIP{PostalCode: "10583"},
+				Network: nil},
 		},
 	}
 	for _, test := range tests {
