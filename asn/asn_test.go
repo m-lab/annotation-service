@@ -34,8 +34,7 @@ func TestAnnotateV4(t *testing.T) {
 	assert.Nil(t, err)
 	assertASNData(t,
 		[]api.ASNElement{
-			api.ASNElement{[]string{"199430"}},
-			api.ASNElement{[]string{"202079"}},
+			api.ASNElement{[]string{"199430", "202079"}},
 		},
 		geoData.ASN)
 
@@ -45,7 +44,8 @@ func TestAnnotateV4(t *testing.T) {
 	assert.Nil(t, err)
 	assertASNData(t,
 		[]api.ASNElement{
-			api.ASNElement{[]string{"12849", "65024"}},
+			api.ASNElement{[]string{"12849"}},
+			api.ASNElement{[]string{"65024"}},
 		},
 		geoData.ASN)
 
@@ -79,10 +79,7 @@ func TestAnnotateV6(t *testing.T) {
 	assert.Nil(t, err)
 	assertASNData(t,
 		[]api.ASNElement{
-			api.ASNElement{[]string{"271"}},
-			api.ASNElement{[]string{"7860"}},
-			api.ASNElement{[]string{"8111"}},
-			api.ASNElement{[]string{"26677"}},
+			api.ASNElement{[]string{"271", "7860", "8111", "26677"}},
 		},
 		geoData.ASN)
 
@@ -92,7 +89,9 @@ func TestAnnotateV6(t *testing.T) {
 	assert.Nil(t, err)
 	assertASNData(t,
 		[]api.ASNElement{
-			api.ASNElement{[]string{"209", "3910", "3908"}},
+			api.ASNElement{[]string{"209"}},
+			api.ASNElement{[]string{"3910"}},
+			api.ASNElement{[]string{"3908"}},
 		},
 		geoData.ASN)
 
