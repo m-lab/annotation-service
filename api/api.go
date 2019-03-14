@@ -50,22 +50,19 @@ type ASNElement struct {
 // About the ASN:
 // The following scenarios are possible:
 //
-// Single ASN belongs to the IP:
+// The IP belongs to a single ASN:
 //   - Example input: `"14061"`
 //   - Example GeoData.ASN: `[{"ASNList": ["14061"]}]`
-// A set of ASNs belongs to the IP:
+// A IP belongs to an ASN set:
 //   - Example input: `"367,1479,1504"`
 //   - Example GeoData.ASN: `[
-//       {"ASNList": ["367"]}
-//       {"ASNList": ["1479"]}
-//       {"ASNList": ["1504"]}
+//       {"ASNList": ["367", "1479", "1504"]}
 //     ]`
-// A set of ASNs - including multi-origin ASN - belongs to the IP:
+// The IP belongs to multi-origin ASNs including an ASN set
 //   - Example input: `"46652_46653,4210010000,4210010200"`
 //   - Example GeoData.ASN: `[
-//       {"ASNList": ["46652", "46653"]}
-//       {"ASNList": ["4210010000"]}
-//       {"ASNList": ["4210010200"]}
+//       {"ASNList": ["46652"]}
+//       {"ASNList": ["46653", "4210010000", "4210010200"]}
 //     ]`
 // TODO - replace this with type Annotations struct.
 type GeoData struct {
