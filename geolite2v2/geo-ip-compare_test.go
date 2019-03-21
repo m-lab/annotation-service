@@ -3,8 +3,10 @@ package geolite2v2_test
 import (
 	"bytes"
 	"log"
+	"net"
 	_ "net/http/pprof"
 	"sort"
+	"sync"
 	"testing"
 
 	"github.com/Pallinder/go-randomdata"
@@ -18,63 +20,94 @@ import (
 
 // TestCompareAnnotations tests if the new implementation annotates the same way as the old
 // implementation
-func TestCompareAnnotations(t *testing.T) {
+func TestCompareV4Annotations(t *testing.T) {
 	if testing.Short() {
 		log.Println("Skipping test that relies on mlab-testing bucket")
 		return
 	}
-	oldAnnotators := loadOld(t)
-	newAnnotators := loadNew(t)
-
-	// sort the annotators to be able to compare their resuults
-	sort.Slice(oldAnnotators, createSorterFor(oldAnnotators))
-	sort.Slice(newAnnotators, createSorterFor(newAnnotators))
+	oldAnnotators, newAnnotators := oldAndNew(t)
 
 	// we need minimum 200 IP hits per annotator
-	minimumHitCountPerAnnotator := 200
+	minimumHitCountPerAnnotator := 10000
 
 	// get each annotator
 	for idx, oldAnn := range oldAnnotators {
 		newAnn := newAnnotators[idx]
-		notFoundCount, v4HitCount, v6HitCount := 0, 0, 0
-		ipV4 := true
+		notFoundCount, v4HitCount := 0, 0
 
 		// annotate v4 and v6 IP addresses and compare the resuults
-		for (v4HitCount + v6HitCount) < minimumHitCountPerAnnotator {
+		// TODO - hit rate is only about 1 in 10K.  WHY???
+		for v4HitCount < minimumHitCountPerAnnotator {
 			var oldResp, newResp api.GeoData
 			var oldErr, newErr error
 
 			var address string
-			if ipV4 {
-				address = randomdata.IpV4Address()
-			} else {
-				address = randomdata.IpV6Address()
-			}
+			address = randomdata.IpV4Address()
 
 			// the error should be the same if there's any
 			oldErr = oldAnn.Annotate(address, &oldResp)
 			newErr = newAnn.Annotate(address, &newResp)
-			if oldErr != nil {
+			if oldErr != nil || newErr != nil {
 				notFoundCount++
+				if notFoundCount%1000 == 0 {
+					log.Println("Not found:", address)
+				}
 				assert.EqualError(t, newErr, oldErr.Error())
 				continue
 			}
 			// the content should be the same if there's any
 			assertSameGeoData(t, &oldResp, &newResp)
 
-			if ipV4 {
-				v4HitCount++
-			} else {
-				v6HitCount++
-			}
-			ipV4 = !ipV4
+			v4HitCount++
 
-			if v4HitCount%100 == 0 || v6HitCount%100 == 0 {
-				log.Printf("Not found count: %d, v4 hit count: %d, v6 hit count %d", notFoundCount, v4HitCount, v6HitCount)
+			if v4HitCount%2000 == 0 {
+				log.Printf("Not found count: %d, v4 hit count: %d", notFoundCount, v4HitCount)
 			}
 		}
 
-		log.Printf("annotator[%d] - Not found count: %d, v4 hit count: %d, v6 hit count %d", idx, notFoundCount, v4HitCount, v6HitCount)
+		log.Printf("annotator[%d] - Not found count: %d, v4 hit count: %d", idx, notFoundCount, v4HitCount)
+	}
+
+	// Now do the ipv6, which needs a slightly different strategy.
+	for idx, oldAnn := range oldAnnotators {
+		newAnn := newAnnotators[idx]
+		notFoundCount, v6HitCount := 0, 0
+
+		// annotate v4 and v6 IP addresses and compare the resuults
+		// TODO - hit rate is only about 1 in 10K.  WHY???
+		for v6HitCount < minimumHitCountPerAnnotator {
+			var oldResp, newResp api.GeoData
+			var oldErr, newErr error
+
+			var address net.IP
+			if v6HitCount%2 == 0 {
+				_, address = randomValidIPv6(oldAnn)
+			} else {
+				_, address = randomValidIPv6(newAnn)
+			}
+
+			// the error should be the same if there's any
+			oldErr = oldAnn.Annotate(address.String(), &oldResp)
+			newErr = newAnn.Annotate(address.String(), &newResp)
+			if oldErr != nil || newErr != nil {
+				notFoundCount++
+				if notFoundCount%1000 == 0 {
+					log.Println("Not found:", address)
+				}
+				assert.EqualError(t, newErr, oldErr.Error())
+				continue
+			}
+			// the content should be the same if there's any
+			assertSameGeoData(t, &oldResp, &newResp)
+
+			v6HitCount++
+
+			if v6HitCount%2000 == 0 {
+				log.Printf("Not found count: %d, v6 hit count: %d", notFoundCount, v6HitCount)
+			}
+		}
+
+		log.Printf("annotator[%d] - Not found count: %d, v6 hit count: %d", idx, notFoundCount, v6HitCount)
 	}
 }
 
@@ -98,8 +131,7 @@ func TestCompareOldNewContent(t *testing.T) {
 		log.Println("Skipping test that relies on mlab-testing bucket")
 		return
 	}
-	oldAnnotators := loadOld(t)
-	newAnnotators := loadNew(t)
+	oldAnnotators, newAnnotators := oldAndNew(t)
 
 	// assert if we have the same number of annotators
 	assert.Equal(t, len(oldAnnotators), len(newAnnotators))
@@ -185,6 +217,7 @@ func createSorterFor(forList []api.Annotator) func(int, int) bool {
 }
 
 // loadOld loads only data from march with the old loader
+// TODO preload these only once
 func loadOld(t *testing.T) []api.Annotator {
 	year, month, day := "2018", "03", "01"
 	geoloader.UseSpecificGeolite2DateForTesting(&year, &month, &day)
@@ -195,6 +228,7 @@ func loadOld(t *testing.T) []api.Annotator {
 }
 
 // loadNew loads only data from march with the new loader
+// TODO preload these only once
 func loadNew(t *testing.T) []api.Annotator {
 	year, month, day := "2018", "03", "01"
 	geoloader.UseSpecificGeolite2DateForTesting(&year, &month, &day)
@@ -202,4 +236,26 @@ func loadNew(t *testing.T) []api.Annotator {
 	err := g2loader.UpdateCache()
 	assert.Nil(t, err)
 	return g2loader.Fetch()
+}
+
+func oldAndNew(t *testing.T) ([]api.Annotator, []api.Annotator) {
+	var oldAnnotators []api.Annotator
+	var newAnnotators []api.Annotator
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	go func() {
+		oldAnnotators = loadOld(t)
+		wg.Done()
+	}()
+
+	go func() {
+		newAnnotators = loadNew(t)
+		wg.Done()
+	}()
+
+	wg.Wait()
+	// sort the annotators to be able to compare their resuults
+	sort.Slice(oldAnnotators, createSorterFor(oldAnnotators))
+	sort.Slice(newAnnotators, createSorterFor(newAnnotators))
+	return oldAnnotators, newAnnotators
 }
