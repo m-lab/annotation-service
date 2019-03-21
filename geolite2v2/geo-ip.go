@@ -121,6 +121,27 @@ func populateLocationData(ipNode iputils.IPNode, locationNodes []LocationNode, d
 	}
 }
 
+// SearchBinary does a binary search for a list element.
+func (ds *GeoDataset) SearchBinary(ipLookUp string) (p iputils.IPNode, e error) {
+	parsedIP := net.ParseIP(ipLookUp)
+	if parsedIP == nil {
+		metrics.BadIPTotal.Inc()
+		return nil, errors.New("ErrInvalidIP") // TODO
+	}
+	ipNodes := ds.IP6Nodes
+	if parsedIP.To4() != nil {
+		ipNodes = ds.IP4Nodes
+	}
+
+	node, err := iputils.SearchBinary(ipLookUp,
+		len(ipNodes),
+		func(idx int) iputils.IPNode {
+			return &ipNodes[idx]
+		})
+
+	return node, err
+}
+
 var lastLogTime = time.Time{}
 
 // Annotate annotates the api.GeoData with the location informations
@@ -131,21 +152,8 @@ func (ds *GeoDataset) Annotate(ip string, data *api.GeoData) error {
 	if data.Geo != nil {
 		return errors.New("ErrAlreadyPopulated") // TODO
 	}
-	parsedIP := net.ParseIP(ip)
-	if parsedIP == nil {
-		metrics.BadIPTotal.Inc()
-		return errors.New("ErrInvalidIP") // TODO
-	}
-	ipNodes := ds.IP6Nodes
-	if parsedIP.To4() != nil {
-		ipNodes = ds.IP4Nodes
-	}
 
-	node, err := iputils.SearchBinary(ip,
-		len(ipNodes),
-		func(idx int) iputils.IPNode {
-			return &ipNodes[idx]
-		})
+	node, err := ds.SearchBinary(ip)
 
 	if err != nil {
 		// ErrNodeNotFound is super spammy - 10% of requests, so suppress those.
