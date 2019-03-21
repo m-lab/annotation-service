@@ -19,6 +19,10 @@ import (
 // TestCompareAnnotations tests if the new implementation annotates the same way as the old
 // implementation
 func TestCompareAnnotations(t *testing.T) {
+	if testing.Short() {
+		log.Println("Skipping test that relies on mlab-testing bucket")
+		return
+	}
 	oldAnnotators := loadOld(t)
 	newAnnotators := loadNew(t)
 
@@ -90,6 +94,10 @@ func assertSameGeoData(t *testing.T, old, new *api.GeoData) {
 
 // TestCompareOldNewContent loads all the data with the old and the new implementation and check if contents are the same
 func TestCompareOldNewContent(t *testing.T) {
+	if testing.Short() {
+		log.Println("Skipping test that relies on mlab-testing bucket")
+		return
+	}
 	oldAnnotators := loadOld(t)
 	newAnnotators := loadNew(t)
 

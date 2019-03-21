@@ -10,8 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/m-lab/annotation-service/geolite2v2"
-
+	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/geoloader"
 	"github.com/m-lab/annotation-service/legacy"
 
@@ -70,7 +69,7 @@ func MustUpdateDirectory() {
 	once.Do(func() {
 		v4loader := geoloader.LegacyV4Loader(legacy.LoadAnnotator)
 		v6loader := geoloader.LegacyV6Loader(legacy.LoadAnnotator)
-		g2loader := geoloader.Geolite2Loader(geolite2v2.LoadG2)
+		g2loader := geoloader.Geolite2Loader(geolite2.LoadGeolite2)
 
 		builder = newListBuilder(v4loader, v6loader, g2loader)
 		if builder == nil {
