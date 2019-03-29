@@ -10,6 +10,7 @@ import (
 
 	"github.com/m-lab/go/prometheusx"
 
+	"github.com/m-lab/annotation-service/gocron"
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/manager"
 )
@@ -53,7 +54,10 @@ func main() {
 	runtime.SetMutexProfileFraction(1000)
 
 	log.Print("Beginning Setup\n")
-	http.HandleFunc("/cron/update_maxmind_datasets", updateMaxmindDatasets)
+	s := gocron.NewScheduler()
+	s.Every(1).Day().Do(updateMaxmindDatasets)
+	<-s.Start()
+
 	http.HandleFunc("/status", Status)
 
 	handler.InitHandler()
