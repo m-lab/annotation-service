@@ -1,5 +1,7 @@
 package geolite2_test
 
+// TODO - migrate these tests to geolite2v2 before removing geolite2 package
+
 import (
 	"archive/zip"
 	"log"

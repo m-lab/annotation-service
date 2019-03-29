@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"regexp"
 	"runtime"
@@ -42,6 +43,29 @@ var (
 	// ErrNoMatch is returned (internally) when filename does not match regexp.
 	errNoMatch = errors.New("Doesn't match") // TODO
 )
+
+// UseSpecificGeolite2DateForTesting is for unit tests to narrow the datasets to load from GCS to date that can be matched to the date part regexes.
+// The parameters are string pointers. If a parameter is nil, no filter will be used for that date part.
+func UseSpecificGeolite2DateForTesting(yearRegex, monthRegex, dayRegex *string) {
+	yearStr := `\d{4}`
+	monthStr := `\d{2}`
+	dayStr := monthStr
+
+	if yearRegex != nil {
+		yearStr = *yearRegex
+	}
+	if monthRegex != nil {
+		monthStr = *monthRegex
+	}
+	if dayRegex != nil {
+		dayStr = *dayRegex
+	}
+
+	geoLite2Regex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/%s/%s/%s%s%sT\d{6}Z-GeoLite2-City-CSV\.zip`, yearStr, monthStr, dayStr, yearStr, monthStr, dayStr))
+	geoLegacyRegex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/%s/%s/%s%s%sT.*-GeoLiteCity.dat.*`, yearStr, monthStr, dayStr, yearStr, monthStr, dayStr))
+	geoLegacyv6Regex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/%s/%s/%s%s%sT.*-GeoLiteCityv6.dat.*`, yearStr, monthStr, dayStr, yearStr, monthStr, dayStr))
+	log.Printf("Date filter is set to %s%s%s", yearStr, monthStr, dayStr)
+}
 
 // UseOnlyMarchForTest hacks the regular expressions to reduce the number of datasets for testing.
 func UseOnlyMarchForTest() {
