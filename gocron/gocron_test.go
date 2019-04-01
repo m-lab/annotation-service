@@ -149,13 +149,20 @@ func Test_formatTime(t *testing.T) {
 // utility function for testing the weekday functions *on* the current weekday.
 func callTodaysWeekday(job *Job) *Job {
 	switch time.Now().Weekday() {
-	case 0: job.Sunday()
-	case 1: job.Monday()
-	case 2: job.Tuesday()
-	case 3: job.Wednesday()
-	case 4: job.Thursday()
-	case 5: job.Friday()
-	case 6: job.Saturday()
+	case 0:
+		job.Sunday()
+	case 1:
+		job.Monday()
+	case 2:
+		job.Tuesday()
+	case 3:
+		job.Wednesday()
+	case 4:
+		job.Thursday()
+	case 5:
+		job.Friday()
+	case 6:
+		job.Saturday()
 	}
 	return job
 }
