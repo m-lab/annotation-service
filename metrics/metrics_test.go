@@ -5,7 +5,7 @@ import (
 
 	"github.com/m-lab/annotation-service/api/v2"
 	"github.com/m-lab/annotation-service/metrics"
-	"github.com/m-lab/go/prometheusx"
+	"github.com/m-lab/go/prometheusx/promtest"
 )
 
 // TestPrometheusMetrics ensures that all the metrics pass the linter. We apply
@@ -16,5 +16,5 @@ func TestPrometheusMetrics(t *testing.T) {
 	metrics.RequestTimeHistogramUsec.WithLabelValues("x", "x")
 	metrics.ErrorTotal.WithLabelValues("x")
 	metrics.RejectionCount.WithLabelValues("x")
-	prometheusx.LintMetrics(t)
+	promtest.LintMetrics(t)
 }
