@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -15,6 +16,14 @@ import (
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/manager"
 	"github.com/m-lab/go/memoryless"
+)
+
+var (
+	updateInterval = flag.Duration("update_interval", time.Duration(24)*time.Hour, "Run the update dataset job with this frequency.")
+	minInterval    = flag.Duration("min_interval", time.Duration(23)*time.Hour, "minimum gap between 2 runs.")
+	maxInterval    = flag.Duration("max_interval", time.Duration(25)*time.Hour, "maximum gap between 2 runs.")
+	// Create a single unified context and a cancellationMethod for said context.
+	ctx, cancelCtx = context.WithCancel(context.Background())
 )
 
 // Status provides a simple status page, to help understand the current running version.
@@ -39,35 +48,27 @@ func Status(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</body></html>\n")
 }
 
+func updateMaxmindDatasets(w http.ResponseWriter, r *http.Request) {
+	manager.MustUpdateDirectory()
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
+}
+
 func init() {
 	// Always prepend the filename and line number.
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 }
 
 func main() {
+	flag.Parse()
+
 	runtime.SetBlockProfileRate(1000000) // 1 sample/msec
 	runtime.SetMutexProfileFraction(1000)
 
 	log.Print("Beginning Setup\n")
 
-	// set up a daily running job for updateMaxmindDatasets()
-	ctx, cancel := context.WithCancel(context.Background())
-	// It is very small chance that we do not redeploy the annotation service in 3 years.
-	count := 1000
-	f := func() {
-		if count < 0 {
-			cancel()
-		} else {
-			count--
-		}
-		// Update the list of maxmind datasets daily
-		manager.MustUpdateDirectory()
-	}
-	wt := time.Duration(24 * time.Hour)
-	min := time.Duration(1 * time.Minute)
-	max := time.Duration(20 * time.Minute)
-	go memoryless.Run(ctx, f, memoryless.Config{Expected: wt, Min: min, Max: max})
-	<-ctx.Done()
+	go memoryless.Run(ctx, manager.MustUpdateDirectory,
+		memoryless.Config{Expected: *updateInterval, Min: *minInterval, Max: *maxInterval})
 
 	http.HandleFunc("/status", Status)
 
