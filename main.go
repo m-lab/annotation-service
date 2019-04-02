@@ -71,6 +71,7 @@ func main() {
 		memoryless.Config{Expected: *updateInterval, Min: *minInterval, Max: *maxInterval})
 
 	http.HandleFunc("/status", Status)
+        http.HandleFunc("/updateDatasets", updateMaxmindDatasets)
 
 	handler.InitHandler()
 	prometheusx.MustStartPrometheus(":9090")
