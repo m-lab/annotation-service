@@ -1,18 +1,20 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"runtime"
+	"time"
 
 	"github.com/m-lab/go/prometheusx"
 
-	"github.com/m-lab/annotation-service/gocron"
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/manager"
+	"github.com/m-lab/go/memoryless"
 )
 
 // Status provides a simple status page, to help understand the current running version.
@@ -37,13 +39,6 @@ func Status(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</body></html>\n")
 }
 
-// Update the list of maxmind datasets daily
-func updateMaxmindDatasets(w http.ResponseWriter, r *http.Request) {
-	manager.MustUpdateDirectory()
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
-}
-
 func init() {
 	// Always prepend the filename and line number.
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
@@ -54,9 +49,25 @@ func main() {
 	runtime.SetMutexProfileFraction(1000)
 
 	log.Print("Beginning Setup\n")
-	s := gocron.NewScheduler()
-	s.Every(1).Day().Do(updateMaxmindDatasets)
-	<-s.Start()
+
+	// set up a daily running job for updateMaxmindDatasets()
+	ctx, cancel := context.WithCancel(context.Background())
+	// It is very small chance that we do not redeploy the annotation service in 3 years.
+	count := 1000
+	f := func() {
+		if count < 0 {
+			cancel()
+		} else {
+			count--
+		}
+		// Update the list of maxmind datasets daily
+		manager.MustUpdateDirectory()
+	}
+	wt := time.Duration(24 * time.Hour)
+	min := time.Duration(1 * time.Minute)
+	max := time.Duration(20 * time.Minute)
+	go memoryless.Run(ctx, f, memoryless.Config{Expected: wt, Min: min, Max: max})
+	<-ctx.Done()
 
 	http.HandleFunc("/status", Status)
 
