@@ -1,17 +1,29 @@
 package main
 
 import (
+	"context"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"runtime"
+	"time"
 
 	"github.com/m-lab/go/prometheusx"
 
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/manager"
+	"github.com/m-lab/go/memoryless"
+)
+
+var (
+	updateInterval = flag.Duration("update_interval", time.Duration(24)*time.Hour, "Run the update dataset job with this frequency.")
+	minInterval    = flag.Duration("min_interval", time.Duration(23)*time.Hour, "minimum gap between 2 runs.")
+	maxInterval    = flag.Duration("max_interval", time.Duration(25)*time.Hour, "maximum gap between 2 runs.")
+	// Create a single unified context and a cancellationMethod for said context.
+	ctx, cancelCtx = context.WithCancel(context.Background())
 )
 
 // Status provides a simple status page, to help understand the current running version.
@@ -36,7 +48,6 @@ func Status(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</body></html>\n")
 }
 
-// Update the list of maxmind datasets daily
 func updateMaxmindDatasets(w http.ResponseWriter, r *http.Request) {
 	manager.MustUpdateDirectory()
 	w.WriteHeader(http.StatusOK)
@@ -49,12 +60,18 @@ func init() {
 }
 
 func main() {
+	flag.Parse()
+
 	runtime.SetBlockProfileRate(1000000) // 1 sample/msec
 	runtime.SetMutexProfileFraction(1000)
 
 	log.Print("Beginning Setup\n")
-	http.HandleFunc("/cron/update_maxmind_datasets", updateMaxmindDatasets)
+
+	go memoryless.Run(ctx, manager.MustUpdateDirectory,
+		memoryless.Config{Expected: *updateInterval, Min: *minInterval, Max: *maxInterval})
+
 	http.HandleFunc("/status", Status)
+	http.HandleFunc("/updateDatasets", updateMaxmindDatasets)
 
 	handler.InitHandler()
 	prometheusx.MustStartPrometheus(":9090")
