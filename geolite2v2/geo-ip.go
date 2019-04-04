@@ -180,6 +180,7 @@ func (ds *GeoDataset) AnnotatorDate() time.Time {
 
 // IsEqualIPNodes returns nil if two nodes are equal
 // Used by the search package
+// TODO this seems to be the wrong place for this now.
 func IsEqualIPNodes(expectedIPNode, ipNode iputils.IPNode) error {
 	expected, eok := expectedIPNode.(*GeoIPNode)
 	node, nok := ipNode.(*GeoIPNode)
