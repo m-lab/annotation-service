@@ -64,7 +64,8 @@ func UseSpecificGeolite2DateForTesting(yearRegex, monthRegex, dayRegex *string) 
 	geoLite2Regex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/%s/%s/%s%s%sT\d{6}Z-GeoLite2-City-CSV\.zip`, yearStr, monthStr, dayStr, yearStr, monthStr, dayStr))
 	geoLegacyRegex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/%s/%s/%s%s%sT.*-GeoLiteCity.dat.*`, yearStr, monthStr, dayStr, yearStr, monthStr, dayStr))
 	geoLegacyv6Regex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/%s/%s/%s%s%sT.*-GeoLiteCityv6.dat.*`, yearStr, monthStr, dayStr, yearStr, monthStr, dayStr))
-	log.Printf("Date filter is set to %s%s%s", yearStr, monthStr, dayStr)
+	_, file, line, _ := runtime.Caller(1)
+	log.Printf("Date filter is set to %s%s%s by %s:%d", yearStr, monthStr, dayStr, file, line)
 }
 
 // UseOnlyMarchForTest hacks the regular expressions to reduce the number of datasets for testing.
