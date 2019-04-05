@@ -194,46 +194,6 @@ func checkCaps(str, field string) (string, error) {
 	return "", errors.New(output)
 }
 
-// IsEqualIPNodes returns nil if two nodes are equal
-// Used by the search package
-func IsEqualIPNodes(expected, node IPNode) error {
-	if !((node.IPAddressLow).Equal(expected.IPAddressLow)) {
-		output := strings.Join([]string{"IPAddress Low inconsistent\ngot:", node.IPAddressLow.String(), " \nwanted:", expected.IPAddressLow.String()}, "")
-		log.Println(output)
-		return errors.New(output)
-	}
-	if !((node.IPAddressHigh).Equal(expected.IPAddressHigh)) {
-		output := strings.Join([]string{"IPAddressHigh inconsistent\ngot:", node.IPAddressHigh.String(), " \nwanted:", expected.IPAddressHigh.String()}, "")
-		log.Println(output)
-		return errors.New(output)
-	}
-	if node.LocationIndex != expected.LocationIndex {
-		output := strings.Join([]string{"LocationIndex inconsistent\ngot:", strconv.Itoa(node.LocationIndex), " \nwanted:", strconv.Itoa(expected.LocationIndex)}, "")
-		log.Println(output)
-		return errors.New(output)
-	}
-	if node.PostalCode != expected.PostalCode {
-		output := strings.Join([]string{"PostalCode inconsistent\ngot:", node.PostalCode, " \nwanted:", expected.PostalCode}, "")
-		log.Println(output)
-		return errors.New(output)
-	}
-	if node.Latitude != expected.Latitude {
-		output := strings.Join([]string{"Latitude inconsistent\ngot:", floatToString(node.Latitude), " \nwanted:", floatToString(expected.Latitude)}, "")
-		log.Println(output)
-		return errors.New(output)
-	}
-	if node.Longitude != expected.Longitude {
-		output := strings.Join([]string{"Longitude inconsistent\ngot:", floatToString(node.Longitude), " \nwanted:", floatToString(expected.Longitude)}, "")
-		log.Println(output)
-		return errors.New(output)
-	}
-	return nil
-}
-
-func floatToString(num float64) string {
-	return strconv.FormatFloat(num, 'f', 6, 64)
-}
-
 // TODO(gfr) What are list and stack?
 // handleStack finds the proper place in the stack for the new node.
 // `stack` holds a stack of nested IP ranges not yet resolved.

@@ -6,8 +6,6 @@ import (
 	"errors"
 	"log"
 	"net"
-	"strconv"
-	"strings"
 	"time"
 
 	"cloud.google.com/go/storage"
@@ -176,51 +174,4 @@ func (ds *GeoDataset) Annotate(ip string, data *api.GeoData) error {
 // TODO implement actual dataset time!!
 func (ds *GeoDataset) AnnotatorDate() time.Time {
 	return ds.Start
-}
-
-// IsEqualIPNodes returns nil if two nodes are equal
-// Used by the search package
-// TODO this seems to be the wrong place for this now.
-func IsEqualIPNodes(expectedIPNode, ipNode iputils.IPNode) error {
-	expected, eok := expectedIPNode.(*GeoIPNode)
-	node, nok := ipNode.(*GeoIPNode)
-	if !eok || !nok {
-		return errors.New("Illegal type of IPNode")
-	}
-
-	if !((node.IPAddressLow).Equal(expected.IPAddressLow)) {
-		output := strings.Join([]string{"IPAddress Low inconsistent\ngot:", node.IPAddressLow.String(), " \nwanted:", expected.IPAddressLow.String()}, "")
-		log.Println(output)
-		return errors.New(output)
-	}
-	if !((node.IPAddressHigh).Equal(expected.IPAddressHigh)) {
-		output := strings.Join([]string{"IPAddressHigh inconsistent\ngot:", node.IPAddressHigh.String(), " \nwanted:", expected.IPAddressHigh.String()}, "")
-		log.Println(output)
-		return errors.New(output)
-	}
-	if node.LocationIndex != expected.LocationIndex {
-		output := strings.Join([]string{"LocationIndex inconsistent\ngot:", strconv.Itoa(node.LocationIndex), " \nwanted:", strconv.Itoa(expected.LocationIndex)}, "")
-		log.Println(output)
-		return errors.New(output)
-	}
-	if node.PostalCode != expected.PostalCode {
-		output := strings.Join([]string{"PostalCode inconsistent\ngot:", node.PostalCode, " \nwanted:", expected.PostalCode}, "")
-		log.Println(output)
-		return errors.New(output)
-	}
-	if node.Latitude != expected.Latitude {
-		output := strings.Join([]string{"Latitude inconsistent\ngot:", floatToString(node.Latitude), " \nwanted:", floatToString(expected.Latitude)}, "")
-		log.Println(output)
-		return errors.New(output)
-	}
-	if node.Longitude != expected.Longitude {
-		output := strings.Join([]string{"Longitude inconsistent\ngot:", floatToString(node.Longitude), " \nwanted:", floatToString(expected.Longitude)}, "")
-		log.Println(output)
-		return errors.New(output)
-	}
-	return nil
-}
-
-func floatToString(num float64) string {
-	return strconv.FormatFloat(num, 'f', 6, 64)
 }

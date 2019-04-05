@@ -6,23 +6,127 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"log"
 	"math/rand"
 	"net"
+	"strconv"
+	"strings"
 	"testing"
 
+	"github.com/go-test/deep"
+
+	"github.com/m-lab/annotation-service/api"
+	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/geolite2v2"
 	"github.com/m-lab/annotation-service/geoloader"
 	"github.com/m-lab/annotation-service/iputils"
-
-	"github.com/go-test/deep"
-	"github.com/m-lab/annotation-service/api"
-	"github.com/m-lab/annotation-service/geolite2"
 )
 
 // This just allows compiler to check that GeoDataset satisfies the Finder interface.
 func assertAnnotator(f api.Annotator) {
 	func(api.Annotator) {}(&geolite2.GeoDataset{})
+}
+
+// Returns nil if two IP Lists are equal
+func isEqualIPLists(listComp, list []geolite2v2.GeoIPNode) error {
+	for index, element := range list {
+		err := isEqualIPNodes(&element, &listComp[index])
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Returns nil if two Location lists are equal
+func isEqualLocLists(list, listComp []geolite2v2.LocationNode) error {
+	for index, element := range list {
+		if index >= len(listComp) {
+			output := fmt.Sprint("Out of range:", index)
+			log.Println(output)
+			return errors.New(output)
+		}
+		if element.GeonameID != listComp[index].GeonameID {
+			output := strings.Join([]string{"GeonameID inconsistent\ngot:", strconv.Itoa(element.GeonameID), " \nwanted:", strconv.Itoa(listComp[index].GeonameID)}, "")
+			log.Println(output)
+			return errors.New(output)
+		}
+		if element.ContinentCode != listComp[index].ContinentCode {
+			output := strings.Join([]string{"Continent code inconsistent\ngot:", element.ContinentCode, " \nwanted:", listComp[index].ContinentCode}, "")
+			log.Println(output)
+			return errors.New(output)
+		}
+		if element.CountryCode != listComp[index].CountryCode {
+			output := strings.Join([]string{"Country code inconsistent\ngot:", element.CountryCode, " \nwanted:", listComp[index].CountryCode}, "")
+			log.Println(output)
+			return errors.New(output)
+		}
+		if element.CountryName != listComp[index].CountryName {
+			output := strings.Join([]string{"Country name inconsistent\ngot:", element.CountryName, " \nwanted:", listComp[index].CountryName}, "")
+			log.Println(output)
+			return errors.New(output)
+		}
+		if element.MetroCode != listComp[index].MetroCode {
+			output := strings.Join([]string{"Longitude inconsistent\ngot:", strconv.FormatInt(element.MetroCode, 16), " \nwanted:", strconv.FormatInt(listComp[index].MetroCode, 16)}, "")
+			log.Println(output)
+			return errors.New(output)
+		}
+		if element.CityName != listComp[index].CityName {
+			output := strings.Join([]string{"Longitude inconsistent\ngot:", element.CityName, " \nwanted:", listComp[index].CityName}, "")
+			log.Println(output)
+			return errors.New(output)
+		}
+		if element.RegionName != listComp[index].RegionName {
+			output := strings.Join([]string{"RegionName inconsistent\ngot:", element.RegionName, " \nwanted:", listComp[index].RegionName}, "")
+			log.Println(output)
+			return errors.New(output)
+		}
+	}
+	return nil
+}
+
+// isEqualIPNodes returns nil if two nodes are equal
+// TODO should we just use deep.Equal?
+func isEqualIPNodes(expectedIPNode, ipNode iputils.IPNode) error {
+	expected, eok := expectedIPNode.(*geolite2v2.GeoIPNode)
+	node, nok := ipNode.(*geolite2v2.GeoIPNode)
+	if !eok || !nok {
+		return errors.New("Illegal type of IPNode")
+	}
+
+	if !((node.IPAddressLow).Equal(expected.IPAddressLow)) {
+		output := strings.Join([]string{"IPAddress Low inconsistent\ngot:", node.IPAddressLow.String(), " \nwanted:", expected.IPAddressLow.String()}, "")
+		log.Println(output)
+		return errors.New(output)
+	}
+	if !((node.IPAddressHigh).Equal(expected.IPAddressHigh)) {
+		output := strings.Join([]string{"IPAddressHigh inconsistent\ngot:", node.IPAddressHigh.String(), " \nwanted:", expected.IPAddressHigh.String()}, "")
+		log.Println(output)
+		return errors.New(output)
+	}
+	if node.LocationIndex != expected.LocationIndex {
+		output := strings.Join([]string{"LocationIndex inconsistent\ngot:", strconv.Itoa(node.LocationIndex), " \nwanted:", strconv.Itoa(expected.LocationIndex)}, "")
+		log.Println(output)
+		return errors.New(output)
+	}
+	if node.PostalCode != expected.PostalCode {
+		output := strings.Join([]string{"PostalCode inconsistent\ngot:", node.PostalCode, " \nwanted:", expected.PostalCode}, "")
+		log.Println(output)
+		return errors.New(output)
+	}
+	if node.Latitude != expected.Latitude {
+		strconv.FormatFloat(node.Latitude, 'f', 6, 64)
+		output := fmt.Sprintf("Latitude inconsistent\ngot: %.6f\nwanted: %.6f\n", node.Latitude, expected.Latitude)
+		log.Println(output)
+		return errors.New(output)
+	}
+	if node.Longitude != expected.Longitude {
+		output := fmt.Sprintf("Longitude inconsistent\ngot: %.6f\nwanted: %.6f\n", node.Longitude, expected.Longitude)
+		log.Println(output)
+		return errors.New(output)
+	}
+	return nil
 }
 
 func TestPopulateLocationData(t *testing.T) {
@@ -152,7 +256,7 @@ func TestGeoLite2SearchBinary(t *testing.T) {
 			} else {
 				t.Error(errBin, "!=", errLin)
 			}
-		} else if geolite2v2.IsEqualIPNodes(ipBin, ipLin) != nil {
+		} else if isEqualIPNodes(ipBin, ipLin) != nil {
 			log.Println("bad ", ipBin, ipLin)
 			t.Errorf("Failed Binary vs Linear")
 		}
@@ -179,7 +283,7 @@ func TestGeoLite2SearchBinary(t *testing.T) {
 			} else {
 				t.Error(errBin, "!=", errLin)
 			}
-		} else if geolite2v2.IsEqualIPNodes(ipBin, ipLin) != nil {
+		} else if isEqualIPNodes(ipBin, ipLin) != nil {
 			log.Println("bad ", ipBin, ipLin)
 			t.Errorf("Failed Binary vs Linear")
 		}
