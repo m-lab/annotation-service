@@ -4,16 +4,15 @@ package geolite2v2_test
 
 import (
 	"archive/zip"
-	"errors"
-	"fmt"
 	"log"
-	"strconv"
+	"net"
 	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
 
 	"github.com/m-lab/annotation-service/geolite2v2"
+	"github.com/m-lab/annotation-service/iputils"
 	"github.com/m-lab/annotation-service/loader"
 )
 
@@ -22,86 +21,30 @@ func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 }
 
-// Returns nil if two IP Lists are equal
-func isEqualIPLists(listComp, list []geolite2v2.GeoIPNode) error {
-	for index, element := range list {
-		err := geolite2v2.IsEqualIPNodes(&element, &listComp[index])
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// Returns nil if two Location lists are equal
-func isEqualLocLists(list, listComp []geolite2v2.LocationNode) error {
-	for index, element := range list {
-		if index >= len(listComp) {
-			output := fmt.Sprint("Out of range:", index)
-			log.Println(output)
-			return errors.New(output)
-		}
-		if element.GeonameID != listComp[index].GeonameID {
-			output := strings.Join([]string{"GeonameID inconsistent\ngot:", strconv.Itoa(element.GeonameID), " \nwanted:", strconv.Itoa(listComp[index].GeonameID)}, "")
-			log.Println(output)
-			return errors.New(output)
-		}
-		if element.ContinentCode != listComp[index].ContinentCode {
-			output := strings.Join([]string{"Continent code inconsistent\ngot:", element.ContinentCode, " \nwanted:", listComp[index].ContinentCode}, "")
-			log.Println(output)
-			return errors.New(output)
-		}
-		if element.CountryCode != listComp[index].CountryCode {
-			output := strings.Join([]string{"Country code inconsistent\ngot:", element.CountryCode, " \nwanted:", listComp[index].CountryCode}, "")
-			log.Println(output)
-			return errors.New(output)
-		}
-		if element.CountryName != listComp[index].CountryName {
-			output := strings.Join([]string{"Country name inconsistent\ngot:", element.CountryName, " \nwanted:", listComp[index].CountryName}, "")
-			log.Println(output)
-			return errors.New(output)
-		}
-		if element.MetroCode != listComp[index].MetroCode {
-			output := strings.Join([]string{"Longitude inconsistent\ngot:", strconv.FormatInt(element.MetroCode, 16), " \nwanted:", strconv.FormatInt(listComp[index].MetroCode, 16)}, "")
-			log.Println(output)
-			return errors.New(output)
-		}
-		if element.CityName != listComp[index].CityName {
-			output := strings.Join([]string{"Longitude inconsistent\ngot:", element.CityName, " \nwanted:", listComp[index].CityName}, "")
-			log.Println(output)
-			return errors.New(output)
-		}
-		if element.RegionName != listComp[index].RegionName {
-			output := strings.Join([]string{"RegionName inconsistent\ngot:", element.RegionName, " \nwanted:", listComp[index].RegionName}, "")
-			log.Println(output)
-			return errors.New(output)
-		}
-	}
-	return nil
-}
-
-/*
-func TestIPLisGLite2(t *testing.T) {
+func TestIPListGLite2(t *testing.T) {
 	var ipv4, ipv6 []geolite2v2.GeoIPNode
 	var ipv6Expected = []geolite2v2.GeoIPNode{
 		{
-			IPAddressLow:  net.ParseIP("600:8801:9400:5a1:948b:ab15:dde3:61a3"),
-			IPAddressHigh: net.ParseIP("600:8801:9400:5a1:948b:ab15:dde3:61a3"),
+			BaseIPNode: iputils.BaseIPNode{
+				IPAddressLow:  net.ParseIP("600:8801:9400:5a1:948b:ab15:dde3:61a3"),
+				IPAddressHigh: net.ParseIP("600:8801:9400:5a1:948b:ab15:dde3:61a3")},
 			LocationIndex: 4,
 			PostalCode:    "91941",
 			Latitude:      32.7596,
 			Longitude:     -116.994,
 		},
 		{
-			IPAddressLow:  net.ParseIP("2001:5::"),
-			IPAddressHigh: net.ParseIP("2001:0005:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF"),
+			BaseIPNode: iputils.BaseIPNode{
+				IPAddressLow:  net.ParseIP("2001:5::"),
+				IPAddressHigh: net.ParseIP("2001:0005:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF")},
 			LocationIndex: 4,
 			Latitude:      47,
 			Longitude:     8,
 		},
 		{
-			IPAddressLow:  net.ParseIP("2001:200::"),
-			IPAddressHigh: net.ParseIP("2001:0200:00FF:FFFF:FFFF:FFFF:FFFF:FFFF"),
+			BaseIPNode: iputils.BaseIPNode{
+				IPAddressLow:  net.ParseIP("2001:200::"),
+				IPAddressHigh: net.ParseIP("2001:0200:00FF:FFFF:FFFF:FFFF:FFFF:FFFF")},
 			LocationIndex: 4,
 			Latitude:      36,
 			Longitude:     138,
@@ -109,23 +52,26 @@ func TestIPLisGLite2(t *testing.T) {
 	}
 	var ipv4Expected = []geolite2v2.GeoIPNode{
 		{
-			IPAddressLow:  net.ParseIP("1.0.0.0"),
-			IPAddressHigh: net.ParseIP("1.0.0.255"),
+			BaseIPNode: iputils.BaseIPNode{
+				IPAddressLow:  net.ParseIP("1.0.0.0"),
+				IPAddressHigh: net.ParseIP("1.0.0.255")},
 			LocationIndex: 0,
 			PostalCode:    "3095",
 			Latitude:      -37.7,
 			Longitude:     145.1833,
 		},
 		{
-			IPAddressLow:  net.ParseIP("1.0.1.0"),
-			IPAddressHigh: net.ParseIP("1.0.1.255"),
+			BaseIPNode: iputils.BaseIPNode{
+				IPAddressLow:  net.ParseIP("1.0.1.0"),
+				IPAddressHigh: net.ParseIP("1.0.1.255")},
 			LocationIndex: 4,
 			Latitude:      26.0614,
 			Longitude:     119.3061,
 		},
 		{
-			IPAddressLow:  net.ParseIP("1.0.2.0"),
-			IPAddressHigh: net.ParseIP("1.0.3.255"),
+			BaseIPNode: iputils.BaseIPNode{
+				IPAddressLow:  net.ParseIP("1.0.2.0"),
+				IPAddressHigh: net.ParseIP("1.0.3.255")}, // This currently maps to 1.0.1.255
 			LocationIndex: 4,
 			Latitude:      26.0614,
 			Longitude:     119.3061,
@@ -149,9 +95,14 @@ func TestIPLisGLite2(t *testing.T) {
 		t.Fatalf("Failed to create io.ReaderCloser")
 	}
 	defer rcIPv4.Close()
-	ipv4, err = geolite2.LoadIPListGLite2(rcIPv4, locationIDMap)
+	ipv4, err = geolite2v2.LoadIPListG2(rcIPv4, locationIDMap)
 	if err != nil {
 		t.Errorf("Failed to create ipv4")
+	}
+	if diff := deep.Equal(ipv4Expected, ipv4); diff != nil {
+		t.Error(diff)
+		t.Logf("Expected:\n%+v\n", ipv4Expected)
+		t.Logf("Expected:\n%+v\n", ipv4)
 	}
 	err = isEqualIPLists(ipv4Expected, ipv4)
 	if err != nil {
@@ -163,17 +114,21 @@ func TestIPLisGLite2(t *testing.T) {
 		t.Errorf("Failed to create io.ReaderCloser")
 	}
 	defer rcIPv6.Close()
-	ipv6, err = geolite2.LoadIPListGLite2(rcIPv6, locationIDMap)
+	ipv6, err = geolite2v2.LoadIPListG2(rcIPv6, locationIDMap)
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Failed to create ipv6")
+	}
+
+	if diff := deep.Equal(ipv6Expected, ipv6); diff != nil {
+		t.Error(diff)
 	}
 	err = isEqualIPLists(ipv6Expected, ipv6)
 	if err != nil {
 		t.Errorf("Lists are not equal")
 	}
 }
-*/
+
 func TestLocationListGLite2(t *testing.T) {
 	var expectedLocList = []geolite2v2.LocationNode{
 		{

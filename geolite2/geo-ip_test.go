@@ -29,7 +29,7 @@ func assertAnnotator(f api.Annotator) {
 // Returns nil if two IP Lists are equal
 func isEqualIPLists(listComp, list []geolite2.IPNode) error {
 	for index, element := range list {
-		err := geolite2.IsEqualIPNodes(element, listComp[index])
+		err := isEqualIPNodes(element, listComp[index])
 		if err != nil {
 			return err
 		}
@@ -80,6 +80,43 @@ func isEqualLocLists(list, listComp []geolite2.LocationNode) error {
 			log.Println(output)
 			return errors.New(output)
 		}
+	}
+	return nil
+}
+
+// isEqualIPNodes returns nil if two nodes are equal
+// Used by the search package
+func isEqualIPNodes(expected, node geolite2.IPNode) error {
+	if !((node.IPAddressLow).Equal(expected.IPAddressLow)) {
+		output := strings.Join([]string{"IPAddress Low inconsistent\ngot:", node.IPAddressLow.String(), " \nwanted:", expected.IPAddressLow.String()}, "")
+		log.Println(output)
+		return errors.New(output)
+	}
+	if !((node.IPAddressHigh).Equal(expected.IPAddressHigh)) {
+		output := strings.Join([]string{"IPAddressHigh inconsistent\ngot:", node.IPAddressHigh.String(), " \nwanted:", expected.IPAddressHigh.String()}, "")
+		log.Println(output)
+		return errors.New(output)
+	}
+	if node.LocationIndex != expected.LocationIndex {
+		output := strings.Join([]string{"LocationIndex inconsistent\ngot:", strconv.Itoa(node.LocationIndex), " \nwanted:", strconv.Itoa(expected.LocationIndex)}, "")
+		log.Println(output)
+		return errors.New(output)
+	}
+	if node.PostalCode != expected.PostalCode {
+		output := strings.Join([]string{"PostalCode inconsistent\ngot:", node.PostalCode, " \nwanted:", expected.PostalCode}, "")
+		log.Println(output)
+		return errors.New(output)
+	}
+	if node.Latitude != expected.Latitude {
+		strconv.FormatFloat(node.Latitude, 'f', 6, 64)
+		output := fmt.Sprintf("Latitude inconsistent\ngot: %.6f\nwanted: %.6f\n", node.Latitude, expected.Latitude)
+		log.Println(output)
+		return errors.New(output)
+	}
+	if node.Longitude != expected.Longitude {
+		output := fmt.Sprintf("Longitude inconsistent\ngot: %.6f\nwanted: %.6f\n", node.Longitude, expected.Longitude)
+		log.Println(output)
+		return errors.New(output)
 	}
 	return nil
 }
@@ -169,7 +206,7 @@ func TestGeoLite2(t *testing.T) {
 			log.Println(errBin.Error(), "vs", errLin.Error())
 			t.Errorf("Failed Error")
 		}
-		if geolite2.IsEqualIPNodes(ipBin, ipLin) != nil {
+		if isEqualIPNodes(ipBin, ipLin) != nil {
 			log.Println("bad ", ipBin, ipLin)
 			t.Errorf("Failed Binary vs Linear")
 		}
@@ -189,7 +226,7 @@ func TestGeoLite2(t *testing.T) {
 			log.Println(errBin.Error(), "vs", errLin.Error())
 			t.Errorf("Failed Error")
 		}
-		if geolite2.IsEqualIPNodes(ipBin, ipLin) != nil {
+		if isEqualIPNodes(ipBin, ipLin) != nil {
 			log.Println("bad ", ipBin, ipLin)
 			t.Errorf("Failed Binary vs Linear")
 		}
