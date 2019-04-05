@@ -18,6 +18,13 @@ var (
 	countryRE                = regexp.MustCompile(`^[^0-9]*$`)
 )
 
+// Loader errors
+var (
+	ErrEmptyFile      = errors.New("Empty input data")
+	ErrBadGeonameID   = errors.New("Corrupted Data: GeonameID should be a number")
+	ErrBadCountryName = errors.New("Corrupted Data: country name should be letters")
+)
+
 // LocationNode defines Location databases
 type LocationNode struct {
 	GeonameID     int
@@ -51,14 +58,14 @@ func (l *locationCsvConsumer) PreconfigureReader(reader *csv.Reader) error {
 	first, err := reader.Read()
 	if err == io.EOF {
 		log.Println("Empty input data")
-		return errors.New("Empty input data")
+		return ErrEmptyFile
 	}
 	// TODO - this is a bit hacky.  May want to improve it.
 	// Older geoLite2 have 13 columns, but since 2018/03, they have 14 columns.
 	// Added last column is is_in_european_union
 	if len(first) != glite2LocationMinColumns {
 		if len(first) < glite2LocationMinColumns {
-			return errors.New("Corrupted Data: wrong number of columns")
+			return loader.ErrTooFewColumns
 		}
 	}
 	l.fieldsPerRecord = reader.FieldsPerRecord
@@ -69,7 +76,7 @@ func (l *locationCsvConsumer) ValidateRecord(record []string) error {
 	if len(record) != l.fieldsPerRecord {
 		log.Println("Incorrect number of columns in IP list got: ", len(record), " wanted: ", l.fieldsPerRecord)
 		log.Println(record)
-		return errors.New("Corrupted Data: wrong number of columns")
+		return loader.ErrBadRecord
 	}
 	return nil
 }
@@ -81,7 +88,8 @@ func (l *locationCsvConsumer) Consume(record []string) error {
 	if err != nil {
 		if len(record[0]) > 0 {
 			log.Println("GeonameID should be a number ", record[0])
-			return errors.New("Corrupted Data: GeonameID should be a number")
+			return ErrBadGeonameID
+
 		}
 	}
 	lNode.ContinentCode, err = checkCaps(record[2], "Continent code")
@@ -96,7 +104,7 @@ func (l *locationCsvConsumer) Consume(record []string) error {
 		lNode.CountryName = record[5]
 	} else {
 		log.Println("Country name should be letters only : ", record[5])
-		return errors.New("Corrupted Data: country name should be letters")
+		return ErrBadCountryName
 	}
 	// TODO - should probably do some validation.
 	lNode.RegionCode = record[6]
