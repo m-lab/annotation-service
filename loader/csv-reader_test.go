@@ -2,7 +2,6 @@ package loader_test
 
 import (
 	"encoding/csv"
-	"errors"
 	"strings"
 	"testing"
 
@@ -36,7 +35,7 @@ func TestCSVReaderOK(t *testing.T) {
 	tsvStrReader := strings.NewReader(tabSeparatedCSV)
 	tsvConsumer := newConsumerForTSV()
 	tsvReader := loader.NewCSVReader(tsvStrReader, tsvConsumer)
-	tsvReader.MaxWrongRecordsPerFile = 0
+	tsvReader.MaxBadRecordsPerFile = 0
 	err := tsvReader.ReadAll()
 	assert.Nil(t, err)
 	assertEqual(t, expected, tsvConsumer.results)
@@ -45,7 +44,7 @@ func TestCSVReaderOK(t *testing.T) {
 	csvStrReader := strings.NewReader(commaSeparatedCSV)
 	csvConsumer := newConsumerForCSV()
 	csvReader := loader.NewCSVReader(csvStrReader, csvConsumer)
-	csvReader.MaxWrongRecordsPerFile = 0
+	csvReader.MaxBadRecordsPerFile = 0
 	err = csvReader.ReadAll()
 	assert.Nil(t, err)
 	assertEqual(t, expected, csvConsumer.results)
@@ -68,7 +67,7 @@ func TestFailsWhenMaxErrorCountReached(t *testing.T) {
 	tsvStrReader := strings.NewReader(tabSeparatedCSV)
 	tsvConsumer := newConsumerForTSV()
 	tsvReader := loader.NewCSVReader(tsvStrReader, tsvConsumer)
-	tsvReader.MaxWrongRecordsPerFile = 2
+	tsvReader.MaxBadRecordsPerFile = 2
 	err := tsvReader.ReadAll()
 	assert.Nil(t, err)
 	assertEqual(t, expected, tsvConsumer.results)
@@ -77,9 +76,9 @@ func TestFailsWhenMaxErrorCountReached(t *testing.T) {
 	tsvStrReader = strings.NewReader(tabSeparatedCSV)
 	tsvConsumer = newConsumerForTSV()
 	tsvReader = loader.NewCSVReader(tsvStrReader, tsvConsumer)
-	tsvReader.MaxWrongRecordsPerFile = 1
+	tsvReader.MaxBadRecordsPerFile = 1
 	err = tsvReader.ReadAll()
-	assert.EqualError(t, err, "Too many errors during loading the dataset IP list")
+	assert.EqualError(t, err, loader.ErrBadRecord.Error())
 }
 
 func assertEqual(t *testing.T, expected []testCSVRecord, got []testCSVRecord) {
@@ -132,7 +131,7 @@ func (c *testCSVConsumer) PreconfigureReader(reader *csv.Reader) error {
 
 func (c *testCSVConsumer) ValidateRecord(record []string) error {
 	if len(record) != 2 {
-		return errors.New("column length should be 2")
+		return loader.ErrBadRecord
 	}
 	return nil
 }

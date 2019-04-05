@@ -262,7 +262,6 @@ func TestCorruptData(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error finding file")
 	}
-	// Should this be geolite2v2.LoadLocationsG2?
 	_, _, err = geolite2v2.LoadLocationsG2(rc)
 	if err == nil {
 		t.Error("Should have errored")
