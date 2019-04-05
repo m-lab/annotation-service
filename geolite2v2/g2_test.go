@@ -21,9 +21,73 @@ func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 }
 
-func TestIPListGLite2(t *testing.T) {
-	var ipv4, ipv6 []geolite2v2.GeoIPNode
-	var ipv6Expected = []geolite2v2.GeoIPNode{
+func TestIPListGLite2v4(t *testing.T) {
+	expect := []geolite2v2.GeoIPNode{
+		{
+			BaseIPNode: iputils.BaseIPNode{
+				IPAddressLow:  net.ParseIP("1.0.0.0"),
+				IPAddressHigh: net.ParseIP("1.0.0.255")},
+			LocationIndex: 0,
+			PostalCode:    "3095",
+			Latitude:      -37.7,
+			Longitude:     145.1833,
+		},
+		{
+			BaseIPNode: iputils.BaseIPNode{
+				IPAddressLow:  net.ParseIP("1.0.1.0"),
+				IPAddressHigh: net.ParseIP("1.0.3.255")}, // BUG: Instead we are getting 1.0.1.255
+			LocationIndex: 4,
+			Latitude:      26.0614,
+			Longitude:     119.3061,
+		},
+	}
+
+	// Guess this is a fake map.  Why?
+	locationIDMap := map[int]int{
+		2151718: 0,
+		1810821: 4,
+		5363990: 4,
+		6255148: 4,
+		1861060: 4,
+	}
+	reader, err := zip.OpenReader("testdata/GeoLite2City.zip")
+	if err != nil {
+		t.Fatalf("Error opening zip file")
+	}
+
+	csv, err := loader.FindFile("GeoLite2-City-Blocks-IPv4.csv", &reader.Reader)
+	if err != nil {
+		t.Fatalf("Failed to create io.ReaderCloser")
+	}
+	defer csv.Close()
+	got, err := geolite2v2.LoadIPListG2(csv, locationIDMap)
+	if err != nil {
+		t.Errorf("Failed to create ipv4")
+	}
+	if len(expect) != len(got) {
+		t.Errorf("wrong number of nodes. Expected: %d. Got %d.\n", len(expect), len(got))
+		t.Logf("Expected:\n%+v\n", expect)
+		t.Logf("Got:\n%+v\n", got)
+	} else if diff := deep.Equal(expect, got); diff != nil {
+		t.Error(diff)
+	}
+}
+
+func TestIPListGLite2v6(t *testing.T) {
+	// Guess this is a fake map.  Why?
+	locationIDMap := map[int]int{
+		2151718: 0,
+		1810821: 4,
+		5363990: 4,
+		6255148: 4,
+		1861060: 4,
+	}
+	reader, err := zip.OpenReader("testdata/GeoLite2City.zip")
+	if err != nil {
+		t.Fatalf("Error opening zip file")
+	}
+
+	expect := []geolite2v2.GeoIPNode{
 		{
 			BaseIPNode: iputils.BaseIPNode{
 				IPAddressLow:  net.ParseIP("600:8801:9400:5a1:948b:ab15:dde3:61a3"),
@@ -50,87 +114,26 @@ func TestIPListGLite2(t *testing.T) {
 			Longitude:     138,
 		},
 	}
-	var ipv4Expected = []geolite2v2.GeoIPNode{
-		{
-			BaseIPNode: iputils.BaseIPNode{
-				IPAddressLow:  net.ParseIP("1.0.0.0"),
-				IPAddressHigh: net.ParseIP("1.0.0.255")},
-			LocationIndex: 0,
-			PostalCode:    "3095",
-			Latitude:      -37.7,
-			Longitude:     145.1833,
-		},
-		{
-			BaseIPNode: iputils.BaseIPNode{
-				IPAddressLow:  net.ParseIP("1.0.1.0"),
-				IPAddressHigh: net.ParseIP("1.0.1.255")},
-			LocationIndex: 4,
-			Latitude:      26.0614,
-			Longitude:     119.3061,
-		},
-		{
-			BaseIPNode: iputils.BaseIPNode{
-				IPAddressLow:  net.ParseIP("1.0.2.0"),
-				IPAddressHigh: net.ParseIP("1.0.3.255")}, // This currently maps to 1.0.1.255
-			LocationIndex: 4,
-			Latitude:      26.0614,
-			Longitude:     119.3061,
-		},
-	}
-
-	locationIDMap := map[int]int{
-		2151718: 0,
-		1810821: 4,
-		5363990: 4,
-		6255148: 4,
-		1861060: 4,
-	}
-	reader, err := zip.OpenReader("testdata/GeoLite2City.zip")
-	if err != nil {
-		t.Fatalf("Error opening zip file")
-	}
-
-	rcIPv4, err := loader.FindFile("GeoLite2-City-Blocks-IPv4.csv", &reader.Reader)
+	csv, err := loader.FindFile("GeoLite2-City-Blocks-IPv6.csv", &reader.Reader)
 	if err != nil {
 		t.Fatalf("Failed to create io.ReaderCloser")
 	}
-	defer rcIPv4.Close()
-	ipv4, err = geolite2v2.LoadIPListG2(rcIPv4, locationIDMap)
+	defer csv.Close()
+	got, err := geolite2v2.LoadIPListG2(csv, locationIDMap)
 	if err != nil {
-		t.Errorf("Failed to create ipv4")
-	}
-	if diff := deep.Equal(ipv4Expected, ipv4); diff != nil {
-		t.Error(diff)
-		t.Logf("Expected:\n%+v\n", ipv4Expected)
-		t.Logf("Expected:\n%+v\n", ipv4)
-	}
-	err = isEqualIPLists(ipv4Expected, ipv4)
-	if err != nil {
-		t.Errorf("Lists are not equal")
-	}
-
-	rcIPv6, err := loader.FindFile("GeoLite2-City-Blocks-IPv6.csv", &reader.Reader)
-	if err != nil {
-		t.Errorf("Failed to create io.ReaderCloser")
-	}
-	defer rcIPv6.Close()
-	ipv6, err = geolite2v2.LoadIPListG2(rcIPv6, locationIDMap)
-	if err != nil {
-		log.Println(err)
 		t.Errorf("Failed to create ipv6")
 	}
-
-	if diff := deep.Equal(ipv6Expected, ipv6); diff != nil {
+	if len(expect) != len(got) {
+		t.Errorf("wrong number of nodes. Expected: %d. Got %d.\n", len(expect), len(got))
+		t.Logf("Expected:\n%+v\n", expect)
+		t.Logf("Got:\n%+v\n", got)
+	} else if diff := deep.Equal(expect, got); diff != nil {
 		t.Error(diff)
-	}
-	err = isEqualIPLists(ipv6Expected, ipv6)
-	if err != nil {
-		t.Errorf("Lists are not equal")
 	}
 }
 
 func TestLocationListGLite2(t *testing.T) {
-	var expectedLocList = []geolite2v2.LocationNode{
+	expectedLocList := []geolite2v2.LocationNode{
 		{
 			GeonameID:     32909,
 			ContinentCode: "AS",
@@ -182,28 +185,20 @@ func TestLocationListGLite2(t *testing.T) {
 	}
 	defer rc.Close()
 
-	var actualLocList []geolite2v2.LocationNode
-	var actualIDMap map[int]int
-	actualLocList, actualIDMap, err = geolite2v2.LoadLocationsG2(rc)
+	actualLocList, actualIDMap, err := geolite2v2.LoadLocationsG2(rc)
 	if err != nil {
 		log.Println(err)
 		t.Errorf("Failed to LoadLocationList")
 	}
-	if actualLocList == nil || actualIDMap == nil {
-		t.Errorf("Failed to create LocationList and mapID")
-	}
 
-	if diff := deep.Equal(actualLocList, expectedLocList); diff != nil {
-		log.Printf("%+v\n", actualLocList)
-		log.Printf("%+v\n", expectedLocList)
+	if diff := deep.Equal(expectedLocList, actualLocList); diff != nil {
+		log.Printf("Expected%+v\n", expectedLocList)
+		log.Printf("Actual:%+v\n", actualLocList)
 		t.Error(diff)
 	}
-	err = isEqualLocLists(actualLocList, expectedLocList)
-	if err != nil {
-		t.Errorf("Location lists are not equal")
-	}
-
 	if diff := deep.Equal(expectedIDMap, actualIDMap); diff != nil {
+		log.Printf("Expected%+v\n", expectedIDMap)
+		log.Printf("Actual:%+v\n", actualIDMap)
 		t.Error(diff)
 	}
 }
