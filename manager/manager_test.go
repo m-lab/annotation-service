@@ -25,7 +25,7 @@ func fakeLoader(date string) (api.Annotator, error) {
 	return &geolite2.GeoDataset{}, nil
 }
 
-func XTestInitDataset(t *testing.T) {
+func TestInitDataset(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping test that uses GCS")
 	}
