@@ -175,5 +175,6 @@ func stringToFloat(str, field string) (float64, error) {
 // the error message should indicate that we need a different dataset for that date range.
 func LoadIPListG2(reader io.Reader, idMap map[int]int) ([]GeoIPNode, error) {
 	parser := newGeoNodeParser(idMap)
-	return parser.list, iputils.BuildIPNodeList(reader, parser)
+	err := iputils.BuildIPNodeList(reader, parser)
+	return parser.list, err
 }
