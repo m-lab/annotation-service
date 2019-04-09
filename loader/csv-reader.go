@@ -7,19 +7,25 @@ import (
 	"log"
 )
 
+// Loader errors
 var (
-	maxWrongRecordsPerFile = 50 // the default maximum number of wrong records per file
+	ErrBadRecord     = errors.New("Corrupted Data: wrong number of columns")
+	ErrTooFewColumns = errors.New("Header has too few columns")
+	ErrTooManyErrors = errors.New("Too many errors during loading the dataset IP list")
+)
 
-	// ErrorTooManyErrors raised when the maximum number of errors during the import of a single file is > then maxWrongRecordsPerFile
-	ErrorTooManyErrors = errors.New("Too many errors during loading the dataset IP list")
+var (
+	maxFieldErrorsPerFile = 50 // the default maximum number of field errors per file
+	maxBadRecordsPerFile  = 0  // the default maximum number of wrong records per file
 )
 
 // CSVReader reads the CSV and uses the CSVRecordConsumer interface to coordinate
 // the parsing. Counts the errors and exits when the read fails.
 type CSVReader struct {
-	MaxWrongRecordsPerFile int
-	consumer               CSVRecordConsumer
-	csvReader              *csv.Reader
+	MaxBadRecordsPerFile  int
+	MaxFieldErrorsPerFile int
+	consumer              CSVRecordConsumer
+	csvReader             *csv.Reader
 }
 
 // CSVRecordConsumer interface enables the abstraction of loading CSV files
@@ -31,12 +37,17 @@ type CSVRecordConsumer interface {
 
 // NewCSVReader initializes a new CSV reader
 func NewCSVReader(reader io.Reader, consumer CSVRecordConsumer) CSVReader {
-	newReader := CSVReader{MaxWrongRecordsPerFile: maxWrongRecordsPerFile, consumer: consumer}
+	newReader := CSVReader{
+		MaxBadRecordsPerFile:  maxBadRecordsPerFile,
+		MaxFieldErrorsPerFile: maxFieldErrorsPerFile,
+		consumer:              consumer}
 	csvReader := csv.NewReader(reader)
 	newReader.csvReader = csvReader
 	return newReader
 }
 
+// ReadAll reads all rows of the CSV file, validating records and fields as it goes.
+// Returns ErrorTooManyErrors if there are too many record or field errors.
 func (r *CSVReader) ReadAll() error {
 	err := r.consumer.PreconfigureReader(r.csvReader)
 	if err != nil {
@@ -44,7 +55,8 @@ func (r *CSVReader) ReadAll() error {
 		return err
 	}
 
-	errorCount := 0
+	fieldErrors := 0
+	badRecords := 0
 	for {
 		record, err := r.csvReader.Read()
 		if err == io.EOF {
@@ -54,9 +66,9 @@ func (r *CSVReader) ReadAll() error {
 		err = r.consumer.ValidateRecord(record)
 		if err != nil {
 			log.Println(err)
-			errorCount++
-			if errorCount > r.MaxWrongRecordsPerFile {
-				return ErrorTooManyErrors
+			badRecords++
+			if badRecords > r.MaxBadRecordsPerFile {
+				return ErrBadRecord
 			}
 			continue
 		}
@@ -64,9 +76,9 @@ func (r *CSVReader) ReadAll() error {
 		err = r.consumer.Consume(record)
 		if err != nil {
 			log.Println(err)
-			errorCount++
-			if errorCount > r.MaxWrongRecordsPerFile {
-				return ErrorTooManyErrors
+			fieldErrors++
+			if fieldErrors > r.MaxFieldErrorsPerFile {
+				return ErrTooManyErrors
 			}
 			continue
 		}

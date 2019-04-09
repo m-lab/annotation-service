@@ -6,84 +6,23 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"log"
 	"math/rand"
 	"net"
-	"strconv"
-	"strings"
 	"testing"
 
+	"github.com/go-test/deep"
+
+	"github.com/m-lab/annotation-service/api"
+	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/geolite2v2"
 	"github.com/m-lab/annotation-service/geoloader"
 	"github.com/m-lab/annotation-service/iputils"
-
-	"github.com/go-test/deep"
-	"github.com/m-lab/annotation-service/api"
-	"github.com/m-lab/annotation-service/geolite2"
 )
 
 // This just allows compiler to check that GeoDataset satisfies the Finder interface.
 func assertAnnotator(f api.Annotator) {
 	func(api.Annotator) {}(&geolite2.GeoDataset{})
-}
-
-// Returns nil if two IP Lists are equal
-func isEqualIPLists(listComp, list []geolite2.IPNode) error {
-	for index, element := range list {
-		err := geolite2.IsEqualIPNodes(element, listComp[index])
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// Returns nil if two Location lists are equal
-func isEqualLocLists(list, listComp []geolite2.LocationNode) error {
-	for index, element := range list {
-		if index >= len(listComp) {
-			output := fmt.Sprint("Out of range:", index)
-			log.Println(output)
-			return errors.New(output)
-		}
-		if element.GeonameID != listComp[index].GeonameID {
-			output := strings.Join([]string{"GeonameID inconsistent\ngot:", strconv.Itoa(element.GeonameID), " \nwanted:", strconv.Itoa(listComp[index].GeonameID)}, "")
-			log.Println(output)
-			return errors.New(output)
-		}
-		if element.ContinentCode != listComp[index].ContinentCode {
-			output := strings.Join([]string{"Continent code inconsistent\ngot:", element.ContinentCode, " \nwanted:", listComp[index].ContinentCode}, "")
-			log.Println(output)
-			return errors.New(output)
-		}
-		if element.CountryCode != listComp[index].CountryCode {
-			output := strings.Join([]string{"Country code inconsistent\ngot:", element.CountryCode, " \nwanted:", listComp[index].CountryCode}, "")
-			log.Println(output)
-			return errors.New(output)
-		}
-		if element.CountryName != listComp[index].CountryName {
-			output := strings.Join([]string{"Country name inconsistent\ngot:", element.CountryName, " \nwanted:", listComp[index].CountryName}, "")
-			log.Println(output)
-			return errors.New(output)
-		}
-		if element.MetroCode != listComp[index].MetroCode {
-			output := strings.Join([]string{"Longitude inconsistent\ngot:", strconv.FormatInt(element.MetroCode, 16), " \nwanted:", strconv.FormatInt(listComp[index].MetroCode, 16)}, "")
-			log.Println(output)
-			return errors.New(output)
-		}
-		if element.CityName != listComp[index].CityName {
-			output := strings.Join([]string{"Longitude inconsistent\ngot:", element.CityName, " \nwanted:", listComp[index].CityName}, "")
-			log.Println(output)
-			return errors.New(output)
-		}
-		if element.RegionName != listComp[index].RegionName {
-			output := strings.Join([]string{"RegionName inconsistent\ngot:", element.RegionName, " \nwanted:", listComp[index].RegionName}, "")
-			log.Println(output)
-			return errors.New(output)
-		}
-	}
-	return nil
 }
 
 func TestPopulateLocationData(t *testing.T) {
@@ -121,8 +60,6 @@ var (
 	preloadStatus   error = nil
 	// Preloaded by preload()
 	annotator *geolite2v2.GeoDataset
-	//gl2ipv4 []geolite2.IPNode
-	//gl2ipv6 []geolite2.IPNode
 )
 
 // Returns a geolite2.IPNode with the smallet range that includes the provided IP address
@@ -213,9 +150,9 @@ func TestGeoLite2SearchBinary(t *testing.T) {
 			} else {
 				t.Error(errBin, "!=", errLin)
 			}
-		} else if geolite2v2.IsEqualIPNodes(ipBin, ipLin) != nil {
-			log.Println("bad ", ipBin, ipLin)
-			t.Errorf("Failed Binary vs Linear")
+		} else if diff := deep.Equal(ipBin, ipLin); diff != nil {
+			log.Println(ipBin, diff)
+			t.Error("Failed Binary vs Linear", diff)
 		}
 		v6ipMatch++
 		i += 100
@@ -240,9 +177,9 @@ func TestGeoLite2SearchBinary(t *testing.T) {
 			} else {
 				t.Error(errBin, "!=", errLin)
 			}
-		} else if geolite2v2.IsEqualIPNodes(ipBin, ipLin) != nil {
-			log.Println("bad ", ipBin, ipLin)
-			t.Errorf("Failed Binary vs Linear")
+		} else if diff := deep.Equal(ipBin, ipLin); diff != nil {
+			log.Println(ipBin, diff)
+			t.Error("Failed Binary vs Linear", diff)
 		}
 		v4ipMatch++
 		i += 100
