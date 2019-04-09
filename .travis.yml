@@ -13,6 +13,10 @@
 #
 # yamllint disable rule:line-length
 
+# CGO broken in go 1.12.2 with trusty, so this forces xenial, which should work.
+# https://github.com/golang/go/issues/31293
+dist: xenial
+
 language: go
 
 # Without this, annotator.sh fails, related to gcloud.
