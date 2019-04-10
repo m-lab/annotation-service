@@ -11,12 +11,10 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/m-lab/go/memoryless"
-	"github.com/m-lab/go/prometheusx"
-
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/manager"
 	"github.com/m-lab/go/memoryless"
+	"github.com/m-lab/go/prometheusx"
 )
 
 var (
