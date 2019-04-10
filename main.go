@@ -15,7 +15,6 @@ import (
 
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/manager"
-	"github.com/m-lab/go/memoryless"
 )
 
 var (
@@ -67,8 +66,8 @@ func main() {
 
 	log.Print("Beginning Setup\n")
 
-	go memoryless.Run(ctx, manager.MustUpdateDirectory,
-		memoryless.Config{Expected: *updateInterval, Min: *minInterval, Max: *maxInterval})
+	//	go memoryless.Run(ctx, manager.MustUpdateDirectory,
+	//		memoryless.Config{Expected: *updateInterval, Min: *minInterval, Max: *maxInterval})
 
 	http.HandleFunc("/status", Status)
 	http.HandleFunc("/updateDatasets", updateMaxmindDatasets)
