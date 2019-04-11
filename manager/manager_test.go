@@ -31,6 +31,7 @@ func TestInitDataset(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping test that uses GCS")
 	}
+
 	// Make the dataset filters much more restrictive to prevent OOM and make test faster.
 	//geoloader.UseOnlyMarchForTest()
 	year, month, day := "(2018|2017|2015|2014)", "03", "(07|08)"
@@ -66,7 +67,6 @@ func TestInitDataset(t *testing.T) {
 			t.Error("Failed annotation for", test.ip)
 			continue
 		}
-
 		body := w.Body.String()
 		log.Println(body)
 
@@ -75,7 +75,6 @@ func TestInitDataset(t *testing.T) {
 		}
 	}
 	PrintMemUsage()
-	//t.Error()
 }
 
 // PrintMemUsage outputs the current, total and OS memory being used. As well as the number
