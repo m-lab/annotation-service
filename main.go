@@ -11,17 +11,16 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/m-lab/go/prometheusx"
-
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/manager"
 	"github.com/m-lab/go/memoryless"
+	"github.com/m-lab/go/prometheusx"
 )
 
 var (
 	updateInterval = flag.Duration("update_interval", time.Duration(24)*time.Hour, "Run the update dataset job with this frequency.")
-	minInterval    = flag.Duration("min_interval", time.Duration(23)*time.Hour, "minimum gap between 2 runs.")
-	maxInterval    = flag.Duration("max_interval", time.Duration(25)*time.Hour, "maximum gap between 2 runs.")
+	minInterval    = flag.Duration("min_interval", time.Duration(18)*time.Hour, "minimum gap between 2 runs.")
+	maxInterval    = flag.Duration("max_interval", time.Duration(26)*time.Hour, "maximum gap between 2 runs.")
 	// Create a single unified context and a cancellationMethod for said context.
 	ctx, cancelCtx = context.WithCancel(context.Background())
 )
@@ -66,6 +65,7 @@ func main() {
 	runtime.SetMutexProfileFraction(1000)
 
 	log.Print("Beginning Setup\n")
+	prometheusx.MustStartPrometheus(":9090")
 
 	go memoryless.Run(ctx, manager.MustUpdateDirectory,
 		memoryless.Config{Expected: *updateInterval, Min: *minInterval, Max: *maxInterval})
@@ -74,7 +74,6 @@ func main() {
 	http.HandleFunc("/updateDatasets", updateMaxmindDatasets)
 
 	handler.InitHandler()
-	prometheusx.MustStartPrometheus(":9090")
 	log.Print("Listening on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

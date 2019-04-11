@@ -102,6 +102,7 @@ func MustUpdateDirectory() {
 // listBuilder wraps a set of CachingLoaders, and creates a set of merged Annotators on request.
 // TODO - unit tests?
 type listBuilder struct {
+	mutex    sync.Mutex        // Prevents concurrent update and/or build
 	legacyV4 api.CachingLoader // loader for legacy v4 annotators
 	legacyV6 api.CachingLoader // loader for legacy v6 annotators
 	geolite2 api.CachingLoader // loader for geolite2 annotators
@@ -119,6 +120,9 @@ func newListBuilder(v4, v6, g2 api.CachingLoader) *listBuilder {
 
 // Update updates the (dynamic) CachingLoaders
 func (bldr *listBuilder) update() error {
+	bldr.mutex.Lock()
+	defer bldr.mutex.Unlock()
+
 	var errV4, errV6, errG2 error
 
 	wg := sync.WaitGroup{}
@@ -152,6 +156,9 @@ func (bldr *listBuilder) update() error {
 // build creates a complete list of CompositeAnnotators from the cached annotators
 // from the CachingLoaders.
 func (bldr *listBuilder) build() []api.Annotator {
+	bldr.mutex.Lock()
+	defer bldr.mutex.Unlock()
+
 	v4 := directory.SortSlice(bldr.legacyV4.Fetch())
 	v6 := directory.SortSlice(bldr.legacyV6.Fetch())
 
