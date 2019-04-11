@@ -10,7 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/m-lab/annotation-service/geolite2"
+	"github.com/m-lab/annotation-service/asn"
+	"github.com/m-lab/annotation-service/geolite2v2"
+
 	"github.com/m-lab/annotation-service/geoloader"
 	"github.com/m-lab/annotation-service/legacy"
 
@@ -69,9 +71,11 @@ func MustUpdateDirectory() {
 	once.Do(func() {
 		v4loader := geoloader.LegacyV4Loader(legacy.LoadAnnotator)
 		v6loader := geoloader.LegacyV6Loader(legacy.LoadAnnotator)
-		g2loader := geoloader.Geolite2Loader(geolite2.LoadGeolite2)
+		g2loader := geoloader.Geolite2Loader(geolite2v2.LoadG2)
+		asnv4Loader := geoloader.ASNv4Loader(asn.LoadASNDataset)
+		asnv6Loader := geoloader.ASNv6Loader(asn.LoadASNDataset)
 
-		builder = newListBuilder(v4loader, v6loader, g2loader)
+		builder = newListBuilder(v4loader, v6loader, g2loader, asnv4Loader, asnv6Loader)
 		if builder == nil {
 			// This only happens if one of the loaders is nil.
 			log.Fatal("Nil list builder")
@@ -106,15 +110,17 @@ type listBuilder struct {
 	legacyV4 api.CachingLoader // loader for legacy v4 annotators
 	legacyV6 api.CachingLoader // loader for legacy v6 annotators
 	geolite2 api.CachingLoader // loader for geolite2 annotators
+	asnV4    api.CachingLoader // loader for asn v4 annotators
+	asnV6    api.CachingLoader // loader for asn v6 annotators
 }
 
 // newListBuilder initializes a listBuilder object, and preloads the CachingLoaders.
 // The arguments must all be non-nil, or the return value will be nil.
-func newListBuilder(v4, v6, g2 api.CachingLoader) *listBuilder {
-	if v4 == nil || v6 == nil || g2 == nil {
+func newListBuilder(v4, v6, g2, asnV4, asnV6 api.CachingLoader) *listBuilder {
+	if v4 == nil || v6 == nil || g2 == nil || asnV4 == nil || asnV6 == nil {
 		return nil
 	}
-	return &listBuilder{legacyV4: v4, legacyV6: v6, geolite2: g2}
+	return &listBuilder{legacyV4: v4, legacyV6: v6, geolite2: g2, asnV4: asnV4, asnV6: asnV6}
 }
 
 // Update updates the (dynamic) CachingLoaders
@@ -122,10 +128,10 @@ func (bldr *listBuilder) update() error {
 	bldr.mutex.Lock()
 	defer bldr.mutex.Unlock()
 
-	var errV4, errV6, errG2 error
+	var errV4, errV6, errG2, errAsnV4, errAsnV6 error
 
 	wg := sync.WaitGroup{}
-	wg.Add(3)
+	wg.Add(5)
 	go func() {
 		errV4 = bldr.legacyV4.UpdateCache()
 		wg.Done()
@@ -136,6 +142,14 @@ func (bldr *listBuilder) update() error {
 	}()
 	go func() {
 		errG2 = bldr.geolite2.UpdateCache()
+		wg.Done()
+	}()
+	go func() {
+		errAsnV4 = bldr.asnV4.UpdateCache()
+		wg.Done()
+	}()
+	go func() {
+		errAsnV6 = bldr.asnV6.UpdateCache()
 		wg.Done()
 	}()
 	wg.Wait()
@@ -149,6 +163,12 @@ func (bldr *listBuilder) update() error {
 	if errG2 != nil {
 		return errG2
 	}
+	if errAsnV4 != nil {
+		return errAsnV4
+	}
+	if errAsnV6 != nil {
+		return errAsnV6
+	}
 	return nil
 }
 
@@ -158,23 +178,23 @@ func (bldr *listBuilder) build() []api.Annotator {
 	bldr.mutex.Lock()
 	defer bldr.mutex.Unlock()
 
-	v4 := directory.SortSlice(bldr.legacyV4.Fetch())
-	v6 := directory.SortSlice(bldr.legacyV6.Fetch())
-
-	var legacy []api.Annotator
-	if len(v4)*len(v6) < 1 {
-		log.Println("empty legacy v4 or v6 annotator list - skipping legacy")
-		legacy = make([]api.Annotator, 0)
-	} else {
-		legacy = directory.MergeAnnotators(v4, v6)
-	}
+	// merge the legacy V4 & V6 annotators
+	legacy := mergeV4V6(bldr.legacyV4.Fetch(), bldr.legacyV6.Fetch(), "legacy")
 
 	// Now append the Geolite2 annotators
 	g2 := directory.SortSlice(bldr.geolite2.Fetch())
 
-	combo := make([]api.Annotator, 0, len(g2)+len(legacy))
-	combo = append(combo, legacy...)
-	combo = append(combo, g2...)
+	geo := make([]api.Annotator, 0, len(g2)+len(legacy))
+	geo = append(geo, legacy...)
+	geo = append(geo, g2...)
+
+	// here we have all the geo annotators in the ordered list.
+	// now merge the ASN V4 & V6 annotators
+	asn := mergeV4V6(bldr.asnV4.Fetch(), bldr.asnV6.Fetch(), "ASN")
+
+	// and now we need to create the composite annotators. First list is the
+	// geo annotators, the second is the ASN
+	combo := directory.MergeAnnotators(geo, asn)
 
 	if len(combo) < 1 {
 		log.Println("No annotators available")
@@ -182,4 +202,20 @@ func (bldr *listBuilder) build() []api.Annotator {
 	}
 
 	return combo
+}
+
+// mergeV4V6 holds common logic to merge legacy location and ASN v4 and v6 annotators into composite annotators.
+// The purpose of the merge is to fallback to IPv6 lookup if IPv4 lookup was unsuccessful.
+func mergeV4V6(v4Annotators, v6Annotators []api.Annotator, discriminator string) []api.Annotator {
+	v4 := directory.SortSlice(v4Annotators)
+	v6 := directory.SortSlice(v6Annotators)
+
+	var merged []api.Annotator
+	if len(v4)*len(v6) < 1 {
+		log.Printf("empty v4 or v6 annotator list for %s data, skipping", discriminator)
+		merged = make([]api.Annotator, 0)
+	} else {
+		merged = directory.MergeAnnotators(v4, v6)
+	}
+	return merged
 }
