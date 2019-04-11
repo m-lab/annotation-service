@@ -92,7 +92,7 @@ type System struct {
 // IPv6:   Single: 99.3%  MOAS: 0.6%   AS set: .01%  (of entries) 1/3 of AS sets start with MOAS
 // NOTE: This is NOT intended to be used directly as the BigQuery schema.
 type ASData struct {
-	IPPrefix string // the IP prefix found in the table.
+	IPPrefix string `json:",omitempty"` // the IP prefix found in the table.
 
 	// One or more "Systems".  There must always be at least one System.  If there are more than one,
 	// then this is a Multi-Origin AS, and the component Systems are in order of frequency in routing tables,
