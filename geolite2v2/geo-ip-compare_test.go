@@ -18,6 +18,11 @@ import (
 	"github.com/m-lab/annotation-service/geoloader"
 )
 
+func init() {
+	// Always prepend the filename and line number.
+	log.SetFlags(log.LstdFlags | log.Lshortfile | log.Lmicroseconds)
+}
+
 // TestCompareAnnotations tests if the new implementation annotates the same way as the old
 // implementation
 func TestCompareV4Annotations(t *testing.T) {
