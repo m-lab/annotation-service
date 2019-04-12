@@ -1,8 +1,6 @@
-# etl
+# annotation-service
 
-| branch | travis-ci | coveralls |
-|--------|-----------|-----------|
-| master | [![Travis Build Status](https://travis-ci.org/m-lab/annotation-service.svg?branch=master)](https://travis-ci.org/m-lab/annotation-service) | [![Coverage Status](https://coveralls.io/repos/m-lab/annotation-service/badge.svg?branch=master)](https://coveralls.io/github/m-lab/annotation-service?branch=master) |
+[![GoDoc](https://godoc.org/github.com/m-lab/annotation-service?status.svg)](https://godoc.org/github.com/m-lab/annotation-service) [![Build Status](https://travis-ci.org/m-lab/annotation-service.svg?branch=master)](https://travis-ci.org/m-lab/annotation-service) [![Coverage Status](https://coveralls.io/repos/github/m-lab/annotation-service/badge.svg?branch=master)](https://coveralls.io/github/m-lab/annotation-service?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/m-lab/annotation-service)](https://goreportcard.com/report/github.com/m-lab/annotation-service)
 
 Annotation integration service provides geolocation for IPv4 and IPv6 MaxMind databases from Google Cloud Storage.
 
