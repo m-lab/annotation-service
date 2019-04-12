@@ -21,6 +21,50 @@ func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile | log.Lmicroseconds)
 }
 
+func bToMb(b uint64) uint64 {
+	return b >> 20
+}
+
+func getAnnotatorForDay(t *testing.T, v4 bool, datasetStartTime time.Time) api.Annotator {
+	year := strconv.Itoa(datasetStartTime.Year())
+	month := fmt.Sprintf("%02d", datasetStartTime.Month())
+	day := fmt.Sprintf("%02d", datasetStartTime.Day())
+	geoloader.UseSpecificASNDateForTesting(&year, &month, &day)
+
+	var loader api.CachingLoader
+	if v4 {
+		loader = geoloader.ASNv4Loader(asn.LoadASNDataset)
+	} else {
+		loader = geoloader.ASNv6Loader(asn.LoadASNDataset)
+	}
+
+	err := loader.UpdateCache()
+	assert.Nil(t, err)
+
+	annotators := loader.Fetch()
+	assert.Equal(t, 1, len(annotators))
+
+	ann := annotators[0]
+	assert.True(t, ann.AnnotatorDate().Equal(datasetStartTime))
+
+	return ann
+}
+
+func assertASNData(t *testing.T, expected, got *api.ASData) {
+	if !assert.Nil(t, deep.Equal(expected, got)) {
+		t.Logf("%+v\n", got)
+	}
+}
+
+func dumpMemoryStats(t *testing.T) {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	t.Logf("Alloc = %v MiB", bToMb(m.Alloc))
+	t.Logf("TotalAlloc = %v MiB", bToMb(m.TotalAlloc))
+	t.Logf("Sys = %v MiB", bToMb(m.Sys))
+	t.Logf("NumGC = %v\n", m.NumGC)
+}
+
 func TestAnnotateV4(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Ignoring test that depend on GCS")
@@ -131,48 +175,4 @@ func TestExtractTimeFromASNFileName(t *testing.T) {
 		assert.Nil(t, extractedTime)
 		assert.Error(t, err)
 	}
-}
-
-func bToMb(b uint64) uint64 {
-	return b >> 20
-}
-
-func getAnnotatorForDay(t *testing.T, v4 bool, datasetStartTime time.Time) api.Annotator {
-	year := strconv.Itoa(datasetStartTime.Year())
-	month := fmt.Sprintf("%02d", datasetStartTime.Month())
-	day := fmt.Sprintf("%02d", datasetStartTime.Day())
-	geoloader.UseSpecificASNDateForTesting(&year, &month, &day)
-
-	var loader api.CachingLoader
-	if v4 {
-		loader = geoloader.ASNv4Loader(asn.LoadASNDataset)
-	} else {
-		loader = geoloader.ASNv6Loader(asn.LoadASNDataset)
-	}
-
-	err := loader.UpdateCache()
-	assert.Nil(t, err)
-
-	annotators := loader.Fetch()
-	assert.Equal(t, 1, len(annotators))
-
-	ann := annotators[0]
-	assert.True(t, ann.AnnotatorDate().Equal(datasetStartTime))
-
-	return ann
-}
-
-func assertASNData(t *testing.T, expected, got *api.ASData) {
-	if !assert.Nil(t, deep.Equal(expected, got)) {
-		t.Logf("%+v\n", got)
-	}
-}
-
-func dumpMemoryStats(t *testing.T) {
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-	t.Logf("Alloc = %v MiB", bToMb(m.Alloc))
-	t.Logf("TotalAlloc = %v MiB", bToMb(m.TotalAlloc))
-	t.Logf("Sys = %v MiB", bToMb(m.Sys))
-	t.Logf("NumGC = %v\n", m.NumGC)
 }

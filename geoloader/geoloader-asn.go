@@ -23,10 +23,10 @@ var (
 	asnRegexV4 = regexp.MustCompile(`RouteViewIPv4/\d{4}/\d{2}/routeviews-(oix|rv2)-\d{6}01-\d{4}\.pfx2as\.gz`) // matches to the IPv4 RouteView datasets (first day of each month)
 	asnRegexV6 = regexp.MustCompile(`RouteViewIPv6/\d{4}/\d{2}/routeviews-rv6-\d{6}01-\d{4}\.pfx2as\.gz`)       // matches to the IPv6 RouteView datasets (first day of each month)
 
-	asnV4StartTime = time.Date(2009, time.Month(2), 1, 0, 0, 0, 0, time.UTC) // load V4 data from 2009. 02 (info from @yachang on slack)
-	asnV6StartTime = time.Date(2018, time.Month(6), 1, 0, 0, 0, 0, time.UTC) // load V6 data from 2018. 06 (info from @yachang on slack)
+	asnV4StartTime = time.Date(2009, time.Month(2), 1, 0, 0, 0, 0, time.UTC) // load V4 data from 2009. 02
+	asnV6StartTime = time.Date(2018, time.Month(6), 1, 0, 0, 0, 0, time.UTC) // load V6 data from 2018. 06
 
-	errNeededLoadingDate = errors.New("Befoore needed loading date")
+	errNeededLoadingDate = errors.New("Before needed loading date")
 )
 
 // UseSpecificASNDateForTesting is for unit tests to narrow the datasets to load from GCS to date that can be matched to the date part regexes.
@@ -37,7 +37,7 @@ func UseSpecificASNDateForTesting(yearRegex, monthRegex, dayRegex *string) {
 
 	yearStr := `\d{4}`
 	monthStr := `\d{2}`
-	dayStr := monthStr
+	dayStr := `\d{2}`
 
 	if yearRegex != nil {
 		yearStr = *yearRegex
@@ -52,6 +52,25 @@ func UseSpecificASNDateForTesting(yearRegex, monthRegex, dayRegex *string) {
 	asnRegexV4 = regexp.MustCompile(fmt.Sprintf(`RouteViewIPv4/%s/%s/routeviews-(oix|rv2)-%s%s%s-\d{4}\.pfx2as\.gz`, yearStr, monthStr, yearStr, monthStr, dayStr))
 	asnRegexV6 = regexp.MustCompile(fmt.Sprintf(`RouteViewIPv6/%s/%s/routeviews-rv6-%s%s%s-\d{4}\.pfx2as\.gz`, yearStr, monthStr, yearStr, monthStr, dayStr))
 	log.Printf("Date filter is set to %s%s%s", yearStr, monthStr, dayStr)
+}
+
+// asnFilterFrom returns nil if a file object's name matches the regular expression, and has a date field <= fileTime.
+func asnFilterFrom(file *storage.ObjectAttrs, r *regexp.Regexp, from time.Time) error {
+	baseFilename := loader.GetGzBase(file.Name)
+	fileTime, err := asn.ExtractTimeFromASNFileName(baseFilename)
+	if err != nil {
+		return err
+	}
+
+	if from.After(*fileTime) {
+		return errNeededLoadingDate
+	}
+
+	if !r.MatchString(file.Name) {
+		return errNoMatch
+	}
+
+	return nil
 }
 
 // ASNv4Loader should be used to load ASNv4 RouteView files
@@ -74,22 +93,4 @@ func ASNv6Loader(
 		},
 		loader,
 		routeViewPrefix)
-}
-
-func asnFilterFrom(file *storage.ObjectAttrs, r *regexp.Regexp, from time.Time) error {
-	baseFilename := loader.GetGzBase(file.Name)
-	fileTime, err := asn.ExtractTimeFromASNFileName(baseFilename)
-	if err != nil {
-		return err
-	}
-
-	if from.After(*fileTime) {
-		return errNeededLoadingDate
-	}
-
-	if !r.MatchString(file.Name) {
-		return errNoMatch
-	}
-
-	return nil
 }
