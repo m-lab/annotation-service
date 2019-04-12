@@ -56,9 +56,8 @@ type IPNodeParser interface {
 	// memory penalty because of the interface vs struct memory layout. To keep the common logic in one place and externalize
 	// the storage of the created list item to the datasource-specific IPNodeParser the logic below should be implemented by
 	// the datasource-specific IPNodeParser
-	NodeListLen() int       // should return the length of the currently stored list
 	AppendNode(node IPNode) // should append a datasource-specific IPNode to the list
-	GetNode(idx int) IPNode // should return a datasource-specific node by the index
+	LastNode() IPNode       // should return the last node.
 }
 
 // SetIPBounds sets up the bounds of an IPNode
@@ -151,15 +150,13 @@ func (c *ipNodeCSVConsumer) Consume(record []string) error {
 	}
 
 	// merge if it's possible
-	if c.parser.NodeListLen() > 0 {
-		lastNode := c.parser.GetNode(c.parser.NodeListLen() - 1)
-		if lastNode != nil && canBeMergedByIP(lastNode, newNode) && lastNode.DataEquals(newNode) {
-			// we can merge, so if the new node's IP is greater, that will be the new high IP of the last node
-			if lessThan(lastNode.GetHighIP(), newNode.GetHighIP()) {
-				lastNode.SetHighIP(newNode.GetHighIP())
-			}
-			return nil
+	lastNode := c.parser.LastNode()
+	if lastNode != nil && canBeMergedByIP(lastNode, newNode) && lastNode.DataEquals(newNode) {
+		// we can merge, so if the new node's IP is greater, that will be the new high IP of the last node
+		if lessThan(lastNode.GetHighIP(), newNode.GetHighIP()) {
+			lastNode.SetHighIP(newNode.GetHighIP())
 		}
+		return nil
 	}
 
 	c.stack = handleStack(c.stack, c.parser, newNode)
@@ -239,7 +236,7 @@ func handleStack(stack []IPNode, parser IPNodeParser, newNode IPNode) []IPNode {
 		} else {
 			// if we're nesting IP's
 			// create begnning bounds
-			lastListNode := parser.GetNode(parser.NodeListLen() - 1)
+			lastListNode := parser.LastNode()
 			lastListNode.SetHighIP(minusOne(newNode.GetLowIP()))
 
 		}

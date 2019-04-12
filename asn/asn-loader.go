@@ -96,17 +96,17 @@ func (p *asnNodeParser) CreateNode() iputils.IPNode {
 	return &ASNIPNode{}
 }
 
-func (p *asnNodeParser) NodeListLen() int {
-	return len(p.list)
-}
-
 func (p *asnNodeParser) AppendNode(node iputils.IPNode) {
 	n := node.(*ASNIPNode)
 	p.list = append(p.list, *n)
 }
 
-func (p *asnNodeParser) GetNode(idx int) iputils.IPNode {
-	return &p.list[idx]
+// LastNode for details see the iputils.IPNodeParser interface!
+func (p *asnNodeParser) LastNode() iputils.IPNode {
+	if len(p.list) < 1 {
+		return nil
+	}
+	return &p.list[len(p.list)-1]
 }
 
 //-----------------------------------------------------------------
