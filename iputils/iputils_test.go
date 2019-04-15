@@ -352,15 +352,14 @@ func (p *TestParser) CreateNode() IPNode {
 	return &TestIPNode{}
 }
 
-func (p *TestParser) NodeListLen() int {
-	return len(p.list)
-}
-
 func (p *TestParser) AppendNode(node IPNode) {
 	n := node.(*TestIPNode)
 	p.list = append(p.list, *n)
 }
 
-func (p *TestParser) GetNode(idx int) IPNode {
-	return &p.list[idx]
+func (p *TestParser) LastNode() IPNode {
+	if len(p.list) < 1 {
+		return nil
+	}
+	return &p.list[len(p.list)-1]
 }

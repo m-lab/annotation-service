@@ -1,10 +1,12 @@
 package manager_test
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"runtime"
 	"testing"
 	"time"
 
@@ -25,12 +27,15 @@ func fakeLoader(date string) (api.Annotator, error) {
 	return &geolite2.GeoDataset{}, nil
 }
 
-func XTestInitDataset(t *testing.T) {
+func TestInitDataset(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping test that uses GCS")
 	}
 	// Make the dataset filters much more restrictive to prevent OOM and make test faster.
-	geoloader.UseOnlyMarchForTest()
+	//geoloader.UseOnlyMarchForTest()
+	year, month, day := "(2018|2017|2015|2014)", "03", "(07|08)"
+	geoloader.UseSpecificGeolite2DateForTesting(&year, &month, &day)
+
 	// Load the small directory.
 	manager.MustUpdateDirectory()
 
@@ -69,4 +74,22 @@ func XTestInitDataset(t *testing.T) {
 			t.Errorf("%d:\nGot\n__%s__\nexpected\n__%s__\n", n, body, test.res)
 		}
 	}
+	PrintMemUsage()
+	//t.Error()
+}
+
+// PrintMemUsage outputs the current, total and OS memory being used. As well as the number
+// of garage collection cycles completed.
+func PrintMemUsage() {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	// For info on each, see: https://golang.org/pkg/runtime/#MemStats
+	fmt.Printf("Alloc = %v MiB", bToMb(m.Alloc))
+	fmt.Printf("\tTotalAlloc = %v MiB", bToMb(m.TotalAlloc))
+	fmt.Printf("\tSys = %v MiB", bToMb(m.Sys))
+	fmt.Printf("\tNumGC = %v\n", m.NumGC)
+}
+
+func bToMb(b uint64) uint64 {
+	return b / 1024 / 1024
 }

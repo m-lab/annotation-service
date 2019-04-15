@@ -112,20 +112,18 @@ func (p *geoNodeParser) CreateNode() iputils.IPNode {
 	return &GeoIPNode{}
 }
 
-// NodeListLen for details see the iputils.IPNodeParser interface!
-func (p *geoNodeParser) NodeListLen() int {
-	return len(p.list)
-}
-
 // AppendNode for details see the iputils.IPNodeParser interface!
 func (p *geoNodeParser) AppendNode(node iputils.IPNode) {
 	n := node.(*GeoIPNode)
 	p.list = append(p.list, *n)
 }
 
-// GetNode for details see the iputils.IPNodeParser interface!
-func (p *geoNodeParser) GetNode(idx int) iputils.IPNode {
-	return &p.list[idx]
+// LastNode for details see the iputils.IPNodeParser interface!
+func (p *geoNodeParser) LastNode() iputils.IPNode {
+	if len(p.list) < 1 {
+		return nil
+	}
+	return &p.list[len(p.list)-1]
 }
 
 func checkNumColumns(record []string, size int) error {

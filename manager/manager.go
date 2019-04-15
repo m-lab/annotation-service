@@ -106,7 +106,6 @@ type listBuilder struct {
 	legacyV4 api.CachingLoader // loader for legacy v4 annotators
 	legacyV6 api.CachingLoader // loader for legacy v6 annotators
 	geolite2 api.CachingLoader // loader for geolite2 annotators
-	asn      api.CachingLoader // loader for asn annotators (currently nil)
 }
 
 // newListBuilder initializes a listBuilder object, and preloads the CachingLoaders.
