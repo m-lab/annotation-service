@@ -30,7 +30,9 @@ func TestInitDataset(t *testing.T) {
 		t.Skip("Skipping test that uses GCS")
 	}
 	// Make the dataset filters much more restrictive to prevent OOM and make test faster.
-	geoloader.UseOnlyMarchForTest()
+	year, month, day := "(2018|2015)", "03", "(01|08)"
+	geoloader.UseSpecificGeolite2DateForTesting(&year, &month, &day)
+
 	// Load the small directory.
 	manager.MustUpdateDirectory()
 
