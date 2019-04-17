@@ -14,9 +14,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/m-lab/annotation-service/geolite2v2"
+	"github.com/m-lab/annotation-service/iputils"
+
 	"github.com/go-test/deep"
 	"github.com/m-lab/annotation-service/api"
-	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/manager"
 )
@@ -36,29 +38,33 @@ func TestAnnotate(t *testing.T) {
 		{"This will be an error.", "1000", "invalid IP address"},
 	}
 	// TODO - make and use an annotator generator
-	ann := &geolite2.GeoDataset{
+	ann := &geolite2v2.GeoDataset{
 		Start: time.Now().Truncate(24 * time.Hour),
-		IP4Nodes: []geolite2.IPNode{
+		IP4Nodes: []geolite2v2.GeoIPNode{
 			{
-				IPAddressLow:  net.IPv4(0, 0, 0, 0),
-				IPAddressHigh: net.IPv4(255, 255, 255, 255),
+				BaseIPNode: iputils.BaseIPNode{
+					IPAddressLow:  net.IPv4(0, 0, 0, 0),
+					IPAddressHigh: net.IPv4(255, 255, 255, 255),
+				},
 				LocationIndex: 0,
 				PostalCode:    "10583",
 				Latitude:      42.1,
 				Longitude:     -73.1,
 			},
 		},
-		IP6Nodes: []geolite2.IPNode{
+		IP6Nodes: []geolite2v2.GeoIPNode{
 			{
-				IPAddressLow:  net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-				IPAddressHigh: net.IP{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+				BaseIPNode: iputils.BaseIPNode{
+					IPAddressLow:  net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					IPAddressHigh: net.IP{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+				},
 				LocationIndex: 0,
 				PostalCode:    "10583",
 				Latitude:      42.1,
 				Longitude:     -73.1,
 			},
 		},
-		LocationNodes: []geolite2.LocationNode{
+		LocationNodes: []geolite2v2.LocationNode{
 			{
 				CityName: "Not A Real City", RegionCode: "ME",
 			},
@@ -210,25 +216,29 @@ func TestBatchAnnotate(t *testing.T) {
 		},
 	}
 	// TODO - make a test utility in geolite2 package.
-	ann := &geolite2.GeoDataset{
+	ann := &geolite2v2.GeoDataset{
 		Start: time.Now().Truncate(24 * time.Hour),
-		IP4Nodes: []geolite2.IPNode{
+		IP4Nodes: []geolite2v2.GeoIPNode{
 			{
-				IPAddressLow:  net.IPv4(0, 0, 0, 0),
-				IPAddressHigh: net.IPv4(255, 255, 255, 255),
+				BaseIPNode: iputils.BaseIPNode{
+					IPAddressLow:  net.IPv4(0, 0, 0, 0),
+					IPAddressHigh: net.IPv4(255, 255, 255, 255),
+				},
 				LocationIndex: 0,
 				PostalCode:    "10583",
 			},
 		},
-		IP6Nodes: []geolite2.IPNode{
+		IP6Nodes: []geolite2v2.GeoIPNode{
 			{
-				IPAddressLow:  net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-				IPAddressHigh: net.IP{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+				BaseIPNode: iputils.BaseIPNode{
+					IPAddressLow:  net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					IPAddressHigh: net.IP{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+				},
 				LocationIndex: 0,
 				PostalCode:    "10583",
 			},
 		},
-		LocationNodes: []geolite2.LocationNode{
+		LocationNodes: []geolite2v2.LocationNode{
 			{
 				CityName: "Not A Real City", RegionCode: "ME",
 			},
@@ -260,25 +270,29 @@ func TestGetMetadataForSingleIP(t *testing.T) {
 				Network: nil},
 		},
 	}
-	ann := &geolite2.GeoDataset{
+	ann := &geolite2v2.GeoDataset{
 		Start: time.Now().Truncate(24 * time.Hour),
-		IP4Nodes: []geolite2.IPNode{
+		IP4Nodes: []geolite2v2.GeoIPNode{
 			{
-				IPAddressLow:  net.IPv4(0, 0, 0, 0),
-				IPAddressHigh: net.IPv4(255, 255, 255, 255),
+				BaseIPNode: iputils.BaseIPNode{
+					IPAddressLow:  net.IPv4(0, 0, 0, 0),
+					IPAddressHigh: net.IPv4(255, 255, 255, 255),
+				},
 				LocationIndex: 0,
 				PostalCode:    "10583",
 			},
 		},
-		IP6Nodes: []geolite2.IPNode{
+		IP6Nodes: []geolite2v2.GeoIPNode{
 			{
-				IPAddressLow:  net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-				IPAddressHigh: net.IP{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+				BaseIPNode: iputils.BaseIPNode{
+					IPAddressLow:  net.IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+					IPAddressHigh: net.IP{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+				},
 				LocationIndex: 0,
 				PostalCode:    "10583",
 			},
 		},
-		LocationNodes: []geolite2.LocationNode{
+		LocationNodes: []geolite2v2.LocationNode{
 			{
 				CityName: "Not A Real City",
 			},

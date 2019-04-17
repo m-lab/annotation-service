@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
-	"github.com/m-lab/annotation-service/geolite2"
+	"github.com/m-lab/annotation-service/geolite2v2"
 	"github.com/m-lab/annotation-service/geoloader"
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/manager"
@@ -24,7 +24,7 @@ func init() {
 
 func fakeLoader(date string) (api.Annotator, error) {
 	time.Sleep(10 * time.Millisecond)
-	return &geolite2.GeoDataset{}, nil
+	return &geolite2v2.GeoDataset{}, nil
 }
 
 func TestInitDataset(t *testing.T) {
