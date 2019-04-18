@@ -14,6 +14,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/m-lab/annotation-service/api"
+	"github.com/m-lab/go/logx"
 )
 
 /*************************************************************************
@@ -123,6 +124,11 @@ func postWithRetry(ctx context.Context, url string, encodedData []byte) (*http.R
 	}
 }
 
+// ErrMoreJSON is returned if the message body was not completely consumed by decoder.
+var ErrMoreJSON = errors.New("JSON body not completely consumed")
+
+var decodeLogEvery = logx.NewLogEvery(nil, 30*time.Second)
+
 // GetAnnotations takes a url, and Request, makes remote call, and returns parsed ResponseV2
 // TODO(gfr) Should pass the annotator's request context through and use it here.
 func GetAnnotations(ctx context.Context, url string, date time.Time, ips []string) (*Response, error) {
@@ -165,9 +171,26 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 
 	resp := Response{}
 
-	err = json.Unmarshal(body, &resp)
+	decoder := json.NewDecoder(bytes.NewReader(body))
+	decoder.DisallowUnknownFields()
+
+	err = decoder.Decode(&resp)
 	if err != nil {
-		return nil, err
+		// TODO add metric, but in the correct namespace???
+		// When this happens, it is likely to be very spammy.
+		decodeLogEvery.Println("Decode error:", err)
+
+		decoder := json.NewDecoder(bytes.NewReader(body))
+		decoder.DisallowUnknownFields()
+
+		err = decoder.Decode(&resp)
+		if err != nil {
+			// This is a more serious error.
+			return nil, err
+		}
+	}
+	if decoder.More() {
+		decodeLogEvery.Println("Decode error:", ErrMoreJSON)
 	}
 	return &resp, nil
 }
