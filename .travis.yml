@@ -18,6 +18,8 @@
 dist: xenial
 
 language: go
+go: 
+ - 1.12
 
 # Without this, annotator.sh fails, related to gcloud.
 sudo: required
