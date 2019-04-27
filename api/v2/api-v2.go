@@ -180,9 +180,8 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 		// When this happens, it is likely to be very spammy.
 		decodeLogEvery.Println("Decode error:", err)
 
+		// Try again but ignore unknown fields.
 		decoder := json.NewDecoder(bytes.NewReader(body))
-		decoder.DisallowUnknownFields()
-
 		err = decoder.Decode(&resp)
 		if err != nil {
 			// This is a more serious error.
