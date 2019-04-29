@@ -14,7 +14,6 @@ import (
 	"github.com/go-test/deep"
 
 	"github.com/m-lab/annotation-service/api"
-	"github.com/m-lab/annotation-service/geolite2"
 	"github.com/m-lab/annotation-service/geolite2v2"
 	"github.com/m-lab/annotation-service/geoloader"
 	"github.com/m-lab/annotation-service/iputils"
@@ -22,7 +21,7 @@ import (
 
 // This just allows compiler to check that GeoDataset satisfies the Finder interface.
 func assertAnnotator(f api.Annotator) {
-	func(api.Annotator) {}(&geolite2.GeoDataset{})
+	func(api.Annotator) {}(&geolite2v2.GeoDataset{})
 }
 
 func TestPopulateLocationData(t *testing.T) {
@@ -62,7 +61,7 @@ var (
 	annotator *geolite2v2.GeoDataset
 )
 
-// Returns a geolite2.IPNode with the smallet range that includes the provided IP address
+// Returns a iputils.IPNode with the smallet range that includes the provided IP address
 // TODO - should these be iputils.IPNode instead of GeoIPNode?
 func searchList(list []geolite2v2.GeoIPNode, ipLookUp string) (iputils.IPNode, error) {
 	inRange := false
@@ -88,11 +87,6 @@ func searchList(list []geolite2v2.GeoIPNode, ipLookUp string) (iputils.IPNode, e
 
 func randomValidIPv6(ann api.Annotator) (int, net.IP) {
 	switch v := ann.(type) {
-	case *geolite2.GeoDataset:
-		gl2ipv6 := v.IP6Nodes
-		i := rand.Intn(len(gl2ipv6))
-		ipMiddle := findMiddle(gl2ipv6[i].IPAddressLow, gl2ipv6[i].IPAddressHigh)
-		return i, ipMiddle
 	case *geolite2v2.GeoDataset:
 		gl2ipv6 := v.IP6Nodes
 		i := rand.Intn(len(gl2ipv6))
@@ -105,11 +99,6 @@ func randomValidIPv6(ann api.Annotator) (int, net.IP) {
 
 func randomValidIPv4(ann api.Annotator) (int, net.IP) {
 	switch v := ann.(type) {
-	case *geolite2.GeoDataset:
-		gl2ipv4 := v.IP4Nodes
-		i := rand.Intn(len(gl2ipv4))
-		ipMiddle := findMiddle(gl2ipv4[i].IPAddressLow, gl2ipv4[i].IPAddressHigh)
-		return i, ipMiddle
 	case *geolite2v2.GeoDataset:
 		gl2ipv4 := v.IP4Nodes
 		i := rand.Intn(len(gl2ipv4))
@@ -189,6 +178,17 @@ func TestGeoLite2SearchBinary(t *testing.T) {
 	t.Logf("Found %d matching err and %d matching ip for v6", v6errMatch, v6ipMatch)
 }
 
+// plusOne adds one to a net.IP.
+func plusOne(a net.IP) net.IP {
+	a = append([]byte(nil), a...)
+	var i int
+	for i = 15; a[i] == 255; i-- {
+		a[i] = 0
+	}
+	a[i]++
+	return a
+}
+
 // TODO(gfr) This needs good comment and validation?
 func findMiddle(low, high net.IP) net.IP {
 	lowInt := binary.BigEndian.Uint32(low[12:16])
@@ -198,7 +198,7 @@ func findMiddle(low, high net.IP) net.IP {
 	i := 0
 	if middleInt < 100000 {
 		for i < middleInt/2 {
-			mid = geolite2.PlusOne(mid)
+			mid = plusOne(mid)
 			i++
 		}
 	}
