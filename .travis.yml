@@ -34,16 +34,16 @@ before_install:
 # This installs gcloud, sets up devappserver.
  - $TRAVIS_BUILD_DIR/annotator.sh
 
-# NB: Encrypted values are not defined in forks or pull requests.
-#
-# Decrypt the tar archive containing the GCP service account key files.
-# After unpacking, there should be one service account key file for every GCP
-# project referenced in the "deploy" section. These keys authenticate the
-# gcloud deploy operations.
-#
-# Reusing the etl-travis-deploy service accounts, since we need identical
-# capabilities.  The tar file contains newly created keys for each of the three
-# service accounts.
+ # NB: Encrypted values are not defined in forks or pull requests.
+ #
+ # Decrypt the tar archive containing the GCP service account key files.
+ # After unpacking, there should be one service account key file for every GCP
+ # project referenced in the "deploy" section. These keys authenticate the
+ # gcloud deploy operations.
+ #
+ # Reusing the etl-travis-deploy service accounts, since we need identical
+ # capabilities.  The tar file contains newly created keys for each of the three
+ # service accounts.
  - travis/decrypt.sh "$encrypted_ca29bb0d9214_key" "$encrypted_ca29bb0d9214_iv"
   keys/service-accounts.tar.enc /tmp/service-accounts.tar /tmp
  - if [[ -r /tmp/service-accounts.tar ]] ; then
@@ -64,7 +64,7 @@ cache:
   - $HOME/google-cloud-sdk/
 
 script:
-# This sets up the dev appserver for the aetest support used by unit tests.
+ # This sets up the dev appserver for the aetest support used by unit tests.
  - if [[ -r "${HOME}/gcloud-service-key.json" ]]; then
   export GOOGLE_APPLICATION_CREDENTIALS="${HOME}/gcloud-service-key.json";
   fi
@@ -84,11 +84,11 @@ script:
 # Deploy steps never trigger on a new Pull Request. Deploy steps will trigger
 # after a merge with matching "on:" conditions.
 deploy:
-######################################################################
-## Service: annotation-service -- AppEngine Flexible Environment.
+ ######################################################################
+ ## Service: annotation-service -- AppEngine Flexible Environment.
 
-# SANDBOX:  Allows any branch with sandbox-*, to trigger deploying that
-# branch to sandbox for pre-review testing.
+ # SANDBOX:  Allows any branch with sandbox-*, to trigger deploying that
+ # branch to sandbox for pre-review testing.
  - provider: script
    script:
     $TRAVIS_BUILD_DIR/travis/deploy_app_legacy_keyfile.sh mlab-sandbox /tmp/mlab-sandbox.json $TRAVIS_BUILD_DIR annotator.yaml
@@ -99,7 +99,7 @@ deploy:
     condition: "$TRAVIS_EVENT_TYPE == push"
 
 
-# STAGING: Should trigger AFTER code review and commit to master branch.
+ # STAGING: Should trigger AFTER code review and commit to master branch.
  - provider: script
    script:
     $TRAVIS_BUILD_DIR/travis/deploy_app_legacy_keyfile.sh mlab-staging /tmp/mlab-staging.json $TRAVIS_BUILD_DIR annotator.yaml
@@ -108,8 +108,8 @@ deploy:
     repo: m-lab/annotation-service
     branch: master
 
-# PROD: Should trigger AFTER code review and commit to master branch. Triggers
-# when tagged with prod-*.
+ # PROD: Should trigger AFTER code review and commit to master branch. Triggers
+ # when tagged with prod-*.
  - provider: script
    script:
     $TRAVIS_BUILD_DIR/travis/deploy_app_legacy_keyfile.sh mlab-oti /tmp/mlab-oti.json $TRAVIS_BUILD_DIR annotator.yaml
