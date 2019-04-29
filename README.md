@@ -5,43 +5,63 @@
 Annotation integration service provides geolocation for IPv4 and IPv6 MaxMind databases from Google Cloud Storage.
 
 ## API
-### v1
+
+### v1 - Deprecated
+
 This is the original, deprecated API, which includes an unwrapped array of
-RequestData objects. It's use is discouraged.  Please use the v2 API, which
+RequestData objects. Its use is discouraged.  Please use the v2 API, which
 has better support for batch requests, including returning the date of the
- Annotator used to provide the annotations.
+Annotator used to provide the annotations.
 
 ### v2
-The v2 api introduces a standard wrapper struct, beginning with a string 
-specifying the version identifier, and an Info string that may include 
+
+The v2 api introduces a standard wrapper struct, beginning with a string
+specifying the version identifier, and an Info string that may include
 arbitrary request info, e.g. for use in tracing or debugging.
 It is described in the api/v2 package in the api/v2 directory.  The recommended
- GetAnnotations function is only available in the v2 package.
+GetAnnotations function is only available in the v2 package.
 
 ### Response contents
+
 Annotatation service will respond with the following data:
 - IP Address range
 - Postal Code
 - Latitude
 - Longitude
 - Continent Code
-- Country Code 
+- Country Code
 - Country Name
 - Metro Code
 - City Name
 
 ---
 
-# Code structure
-The code is divided into the following packages:
+## Code structure
 
-* api - handles external API, including GetAnnotations() call which handles composing and sending requests, with retries.
-* handler - receives incoming requests, handles marshalling, unmarshalling, interpretation of requests.
-* loader - handles files downloads and decompression
-* geoloader - maintains directory of available MaxMind files, and selects which file(s) to use for a given request.  (Needs a lot of renaming)
-* geolite2v2 and legacy - handle details of interpreting MaxMind files and creating annotators.
+The code is divided into the following packages (organized in rough order of dependencies, except for api package):
+
+- api - defines external API, including GetAnnotations() call which handles composing and sending requests, with retries.
+- manager - handles caching of Annotators
+- directory - used by manager to create and keep track of CompositeAnnotators.
+- handler - receives incoming requests, handles marshalling, unmarshalling, interpretation of requests.
+- geoloader - maintains directory of available MaxMind (GEO) and Routeview (ASN) files, and selects which file(s) to use for a given date.  (Needs a lot of renaming)
+- asn - handles details of interpreting RouteViews ASN files, and creating ASN annotators.
+- geolite2v2 and legacy - handle details of interpreting MaxMind files and creating annotators.
 Currently this is divided into two packages, but should be merged.
-* manager - handles caching of Annotators
+- loader - handles files downloads and decompression
+- iputil - general IP utility functions that are used across asn, legacy geo,
+and geolite2 datasets.
+- metrics - all metric definitions.
+
+### Dependencies (as of April 2019)
+
+(higher depends on lower, left -> depends on right)
+
+- main.go
+- manager -> handler, directory
+- geoloader -> asn, geolite2v2, legacy
+- iputils -> loader
+- api, metrics
 
 ---
 
@@ -55,10 +75,13 @@ provided below.
 MaxMind GeoLiteLatest databases include:
 
   1. GeoLiteCity-Blocks.csv
+
     - StartIPNum IPv4
     - EndIPNum  IPv4
     - GeonameID
+
   1. GeoLiteCity-Location.csv
+
     - GeonameID
     - Country Code
     - City
@@ -70,13 +93,16 @@ MaxMind GeoLiteLatest databases include:
 MaxMind GeoLite2 databases include:
 
   1. GeoLite2-City-Blocks-IPv4.csv & GeoLite2-City-Blocks-IPv6.csv
+
     - IP network (CIDR Format)
     - GeonameID (identifies end user location)
     - Registered Country Geoname ID (identifies country where IP address is
       registered to an ISP)
     - Latitude
     - Longitude
+
   1. GeoLite2-City-Locations-en.csv
+
     - GeonameID
     - Continent Code
     - Country ISO
@@ -94,11 +120,6 @@ Important discrepencies to note include:
 1. GeoLite2 provides both end user location as well as country registration
    information while GeoLiteLatest includes only end user location.
    www.maxmind.com/en/geoip2-precision-city-service
-
-## The directory package
-
-The directory package provides tools to create a list of CompositeAnnotator (CA) wrappers.
-directory.GetAnnotator(date time.Time) returns an appropriate CA for the given date.
 
 ### CompositeAnnotator
 
