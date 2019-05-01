@@ -88,7 +88,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net"
 	"os"
 	"strconv"
 	"sync"
@@ -96,8 +95,8 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/m-lab/annotation-service/api"
+	"github.com/m-lab/annotation-service/iputils"
 	"github.com/m-lab/annotation-service/loader"
-	"github.com/m-lab/annotation-service/metrics"
 )
 
 var (
@@ -133,10 +132,9 @@ func (gi *Annotator) Annotate(IP string, data *api.GeoData) error {
 	if gi.dataset == nil {
 		return ErrDatasetNotLoaded
 	}
-	ip := net.ParseIP(IP)
-	if ip == nil {
-		metrics.BadIPTotal.Inc()
-		return errors.New("ErrInvalidIP") // TODO
+	ip, err := iputils.ParseIPWithMetrics(IP)
+	if err != nil {
+		return err
 	}
 	var record *GeoIPRecord
 	if ip.To4() != nil {

@@ -37,11 +37,16 @@ func (asn *ASNDataset) Annotate(ip string, ann *api.GeoData) error {
 		return &asn.IPList[idx]
 	}
 
-	node, err := iputils.SearchBinary(ip, len(asn.IPList), ipNodeGetter)
+	parsed, err := iputils.ParseIPWithMetrics(ip)
+	if err != nil {
+		return err
+	}
+	node, err := iputils.SearchBinary(parsed, len(asn.IPList), ipNodeGetter)
 	if err != nil {
 		// ErrNodeNotFound is super spammy - 10% of requests, so suppress those.
 		if err != iputils.ErrNodeNotFound {
 			// Horribly noisy now.
+			// TODO - might be better since we no longer test unknown ipv6 addresses.
 			if time.Since(lastLogTime) > time.Minute {
 				log.Println(err, ip)
 				lastLogTime = time.Now()

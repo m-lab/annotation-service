@@ -103,7 +103,9 @@ func TestSearchBinary(t *testing.T) {
 	}
 
 	for _, q := range queries {
-		got, err := SearchBinary(q, len(p.list), ipNodeGetter)
+		parsed, err := ParseIPWithMetrics(q)
+		assert.Nil(t, err)
+		got, err := SearchBinary(parsed, len(p.list), ipNodeGetter)
 		assert.Nil(t, err)
 		gotResult = append(gotResult, got)
 	}
@@ -111,12 +113,14 @@ func TestSearchBinary(t *testing.T) {
 	assertEqual(t, expectedResult, gotResult)
 
 	// test not found
-	_, err = SearchBinary("192.4.1.123", len(p.list), ipNodeGetter)
+	parsed, err := ParseIPWithMetrics("192.4.1.123")
+	assert.Nil(t, err)
+	_, err = SearchBinary(parsed, len(p.list), ipNodeGetter)
 	assert.Equal(t, ErrNodeNotFound, err)
 
 	// test wrong input error
-	_, err = SearchBinary("badip", len(p.list), ipNodeGetter)
-	assert.Equal(t, errors.New("ErrInvalidIP"), err)
+	_, err = ParseIPWithMetrics("badip")
+	assert.Equal(t, ErrInvalidIP, err)
 
 }
 
