@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/m-lab/annotation-service/iputils"
+
 	"github.com/go-test/deep"
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/geoloader"
@@ -105,7 +107,7 @@ func TestAnnotateV4(t *testing.T) {
 	// test bad IP error
 	geoData.Network = nil
 	err = ann.Annotate("43.228.11", &geoData)
-	assert.EqualError(t, err, "ErrInvalidIP")
+	assert.EqualError(t, err, iputils.ErrInvalidIP.Error())
 }
 
 func TestAnnotateV6(t *testing.T) {
@@ -149,7 +151,7 @@ func TestAnnotateV6(t *testing.T) {
 	// test bad IP error
 	geoData.Network = nil
 	err = ann.Annotate("2001:2b8:i3", &geoData)
-	assert.EqualError(t, err, "ErrInvalidIP")
+	assert.EqualError(t, err, iputils.ErrInvalidIP.Error())
 }
 
 func TestExtractTimeFromASNFileName(t *testing.T) {

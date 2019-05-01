@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/m-lab/go/logx"
+
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/iputils"
 )
@@ -21,7 +23,7 @@ var (
 	ErrorIllegalIPNodeType = errors.New("Illegal IPNode type found")
 )
 
-var lastLogTime = time.Time{}
+var annotateLogger = logx.NewLogEvery(nil, time.Second)
 
 // Annotate expects an IP string and an api.GeoData pointer to find the ASN
 // and populate the data into the GeoData.ASN struct
@@ -37,15 +39,16 @@ func (asn *ASNDataset) Annotate(ip string, ann *api.GeoData) error {
 		return &asn.IPList[idx]
 	}
 
-	node, err := iputils.SearchBinary(ip, len(asn.IPList), ipNodeGetter)
+	parsed, err := iputils.ParseIPWithMetrics(ip)
+	if err != nil {
+		return err
+	}
+	node, err := iputils.SearchBinary(parsed, len(asn.IPList), ipNodeGetter)
 	if err != nil {
 		// ErrNodeNotFound is super spammy - 10% of requests, so suppress those.
 		if err != iputils.ErrNodeNotFound {
-			// Horribly noisy now.
-			if time.Since(lastLogTime) > time.Minute {
-				log.Println(err, ip)
-				lastLogTime = time.Now()
-			}
+			// TODO - might be better since we no longer test unknown ipv6 addresses.
+			annotateLogger.Println(err, ip)
 		}
 		//TODO metric here
 		return err

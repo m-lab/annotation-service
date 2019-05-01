@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/m-lab/go/logx"
+
 	"github.com/m-lab/annotation-service/api"
 	v2 "github.com/m-lab/annotation-service/api/v2"
 	"github.com/m-lab/annotation-service/geoloader"
@@ -158,6 +160,8 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 	return responseMap, time.Time{}, nil
 }
 
+var v2errorLogger = logx.NewLogEvery(nil, time.Second)
+
 // AnnotateV2 finds an appropriate Annotator based on the requested Date, and creates a
 // response with annotations for all parseable IPs.
 func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
@@ -185,6 +189,9 @@ func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 				// This collapses all other error types into a single error, to avoid excessive
 				// time serices if there are variable error strings.
 				metrics.ErrorTotal.WithLabelValues("Annotate Error").Inc()
+
+				// We are trying to debug error propogation.  So logging errors here to help with that.
+				v2errorLogger.Println(err)
 			}
 			continue
 		}

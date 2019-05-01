@@ -20,6 +20,11 @@ var (
 
 	// ErrNodeNotFound raised when a node is not found during SearchBinary
 	ErrNodeNotFound = errors.New("node not found")
+
+	// ErrEmptyIP is returned for IP address strings that are empty.
+	ErrEmptyIP = errors.New("Empty IP address")
+	// ErrInvalidIP is returned for non-empty IP address strings that cannot be parsed.
+	ErrInvalidIP = errors.New("Invalid IP address")
 )
 
 // BaseIPNode is a basic type for nodes to handle. This struct should be embedded in all the IP range related
@@ -86,14 +91,23 @@ func (n *BaseIPNode) SetHighIP(newHigh net.IP) {
 	n.IPAddressHigh = newHigh
 }
 
-// SearchBinary does a binary search for a list element in the specified list
-func SearchBinary(ipLookUp string, nodeListSize int, ipNodeGetter func(idx int) IPNode) (p IPNode, e error) {
-	ip := net.ParseIP(ipLookUp)
-	if ip == nil {
-		metrics.BadIPTotal.Inc()
-		return p, errors.New("ErrInvalidIP") // TODO
+// ParseIPWithMetrics parses an IP address string, returning a net.IP, or parse error.
+func ParseIPWithMetrics(ip string) (net.IP, error) {
+	if ip == "" {
+		metrics.BadIPTotal.WithLabelValues("Empty").Inc()
+		return nil, ErrEmptyIP
+	}
+	parsed := net.ParseIP(ip)
+	if parsed == nil {
+		metrics.BadIPTotal.WithLabelValues("Invalid").Inc()
+		return nil, ErrInvalidIP
 	}
 
+	return parsed, nil
+}
+
+// SearchBinary does a binary search for a list element in the specified list
+func SearchBinary(ip net.IP, nodeListSize int, ipNodeGetter func(idx int) IPNode) (p IPNode, e error) {
 	start := 0
 	end := nodeListSize - 1
 

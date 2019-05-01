@@ -5,14 +5,12 @@ import (
 	"context"
 	"errors"
 	"log"
-	"net"
 	"time"
 
 	"cloud.google.com/go/storage"
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/iputils"
 	"github.com/m-lab/annotation-service/loader"
-	"github.com/m-lab/annotation-service/metrics"
 )
 
 const (
@@ -120,18 +118,18 @@ func populateLocationData(ipNode iputils.IPNode, locationNodes []LocationNode, d
 }
 
 // SearchBinary does a binary search for a list element.
-func (ds *GeoDataset) SearchBinary(ipLookUp string) (p iputils.IPNode, e error) {
-	parsedIP := net.ParseIP(ipLookUp)
-	if parsedIP == nil {
-		metrics.BadIPTotal.Inc()
-		return nil, errors.New("ErrInvalidIP") // TODO
+func (ds *GeoDataset) SearchBinary(ipLookup string) (p iputils.IPNode, e error) {
+	parsed, err := iputils.ParseIPWithMetrics(ipLookup)
+	if err != nil {
+		return p, err
 	}
+
 	ipNodes := ds.IP6Nodes
-	if parsedIP.To4() != nil {
+	if parsed.To4() != nil {
 		ipNodes = ds.IP4Nodes
 	}
 
-	node, err := iputils.SearchBinary(ipLookUp,
+	node, err := iputils.SearchBinary(parsed,
 		len(ipNodes),
 		func(idx int) iputils.IPNode {
 			return &ipNodes[idx]

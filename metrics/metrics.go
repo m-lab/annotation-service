@@ -39,10 +39,10 @@ var (
 		Name: "annotator_Annotation_Lookups_total",
 		Help: "The total number of ip lookups.",
 	})
-	BadIPTotal = promauto.NewCounter(prometheus.CounterOpts{
+	BadIPTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "annotator_Bad_IP_Addresses_total",
 		Help: "The total number of ip parse failures.",
-	})
+	}, []string{"type"})
 	ErrorTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "annotator_Error_total",
 		Help: "The total number annotation errors.",
