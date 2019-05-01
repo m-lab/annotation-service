@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -185,6 +186,9 @@ func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 				// This collapses all other error types into a single error, to avoid excessive
 				// time serices if there are variable error strings.
 				metrics.ErrorTotal.WithLabelValues("Annotate Error").Inc()
+
+				// We are trying to debug error propogation.  So logging errors here to help with that.
+				log.Println(err)
 			}
 			continue
 		}
