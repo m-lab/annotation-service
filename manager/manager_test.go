@@ -49,15 +49,15 @@ func TestInitDataset(t *testing.T) {
 		res  string
 	}{
 		// This request needs a legacy binary dataset
-		//{"1.4.128.0", "1199145600", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"Network":{"Systems":[{"ASNs":[23969]}]}}`},
+		/*{"1.4.128.0", "1199145600", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"Network":{"Systems":[{"ASNs":[23969]}]}}`},
 		// This request needs another legacy binary dataset
-		//{"1.4.128.0", "1399145600",
+		{"1.4.128.0", "1399145600",
 			`{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"Network":{"Systems":[{"ASNs":[23969]}]}}`},
 		// This request needs a geolite2 dataset
 		{"1.9.128.0", "1512086400",
-			`{"Geo":{"continent_code":"AS","country_code":"MY","country_code3":"MYS","country_name":"Malaysia","region":"05","city":"Pantai","latitude":2.787,"longitude":101.995},"Network":{"Systems":[{"ASNs":[4788]}]}}`},
+			`{"Geo":{"continent_code":"AS","country_code":"MY","country_code3":"MYS","country_name":"Malaysia","region":"05","city":"Pantai","latitude":2.787,"longitude":101.995},"Network":{"Systems":[{"ASNs":[4788]}]}}`},*/
 		// This request needs the latest dataset in the memory.
-		{"184.191.153.92", "1556902708",
+		{"24.205.255.230", "1556902708",
 			`{"Geo":{"continent_code":"AS","country_code":"IN","country_name":"India","region":"HR","city":"Faridabad","latitude":28.4333,"longitude":77.3167},"Network":{"Systems":[{"ASNs":[45528]}]}}`},
 	}
 	for n, test := range tests {
