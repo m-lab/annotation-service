@@ -66,6 +66,16 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if result.Geo.Latitude != 0 {
+		metrics.ResponseWithLatitude.Inc()
+	}
+	if result.Geo.Longitude != 0 {
+		metrics.ResponseWithLongitude.Inc()
+	}
+	if len(result.Network.Systems) > 0 && len(result.Network.Systems[0].ASNs) > 0 && result.Network.Systems[0].ASNs[0] != 0 {
+		metrics.ResponseWithASN.Inc()
+	}
+
 	encodedResult, err := json.Marshal(result)
 	if checkError(err, w, 1, "single", tStart) {
 		return
@@ -275,7 +285,17 @@ func handleOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 	} else {
 		responseMap = make(map[string]*api.GeoData)
 	}
-
+	for _, geo := range responseMap {
+		if geo.Geo.Latitude != 0 {
+			metrics.ResponseWithLatitude.Inc()
+		}
+		if geo.Geo.Longitude != 0 {
+			metrics.ResponseWithLongitude.Inc()
+		}
+		if len(geo.Network.Systems) > 0 && len(geo.Network.Systems[0].ASNs) > 0 && geo.Network.Systems[0].ASNs[0] != 0 {
+			metrics.ResponseWithASN.Inc()
+		}
+	}
 	encodedResult, err := json.Marshal(responseMap)
 	if checkError(err, w, len(dataSlice), "old", tStart) {
 		return
@@ -311,8 +331,19 @@ func handleV2(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 			return
 		}
 	}
-
+	for _, geo := range response.Annotations {
+		if geo.Geo.Latitude != 0 {
+			metrics.ResponseWithLatitude.Inc()
+		}
+		if geo.Geo.Longitude != 0 {
+			metrics.ResponseWithLongitude.Inc()
+		}
+		if len(geo.Network.Systems) > 0 && len(geo.Network.Systems[0].ASNs) > 0 && geo.Network.Systems[0].ASNs[0] != 0 {
+			metrics.ResponseWithASN.Inc()
+		}
+	}
 	encodedResult, err := json.Marshal(response)
+
 	if checkError(err, w, len(request.IPs), "v2", tStart) {
 		return
 	}

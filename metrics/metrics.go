@@ -31,9 +31,22 @@ var (
 			},
 		},
 		[]string{"type", "detail"})
+	// Note the batch annotate request counted as 1 as well.
 	TotalRequests = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "annotator_Annotation_Requests_total",
 		Help: "The total number of annotation service requests.",
+	})
+	ResponseWithLatitude = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "annotator_Annotation_Response_with_latitude_total",
+		Help: "The total number of annotation responses with not-null latitude field.",
+	})
+	ResponseWithLongitude = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "annotator_Annotation_Response_with_Longitude_total",
+		Help: "The total number of annotation responses with not-null Longitude field.",
+	})
+	ResponseWithASN = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "annotator_Annotation_Response_with_Asn_total",
+		Help: "The total number of annotation responses with asn field.",
 	})
 	TotalLookups = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "annotator_Annotation_Lookups_total",
