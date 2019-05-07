@@ -71,7 +71,7 @@ func TestLoad(t *testing.T) {
 		t.Error(err)
 	}
 	g2 := g2loader.Fetch()
-	if len(g2) != 36 {
+	if len(g2) != 76 {
 		t.Error(len(g2))
 	}
 }
