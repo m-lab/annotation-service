@@ -36,18 +36,13 @@ var (
 		Name: "annotator_Annotation_Requests_total",
 		Help: "The total number of annotation service requests.",
 	})
-	ResponseWithLatitude = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "annotator_Annotation_Response_with_latitude_total",
-		Help: "The total number of annotation responses with not-null latitude field.",
-	})
-	ResponseWithLongitude = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "annotator_Annotation_Response_with_Longitude_total",
-		Help: "The total number of annotation responses with not-null Longitude field.",
-	})
-	ResponseWithASN = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "annotator_Annotation_Response_with_Asn_total",
-		Help: "The total number of annotation responses with asn field.",
-	})
+	// Measure the number of IPs w/ missing anottaion fields. missing type
+	// could be "geo", "asn", "both".
+	ResponseMissingAnnotation = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "annotator_Annotation_Response_Missing_Annotation_total",
+		Help: "The total number of annotation responses with missing annotation field.",
+	}, []string{"missing_type"})
+
 	TotalLookups = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "annotator_Annotation_Lookups_total",
 		Help: "The total number of ip lookups.",
