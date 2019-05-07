@@ -72,7 +72,7 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 	if result.Geo.Longitude != 0 {
 		metrics.ResponseWithLongitude.Inc()
 	}
-	if len(result.Network.Systems) > 0 && len(result.Network.Systems[0].ASNs) > 0 && result.Network.Systems[0].ASNs[0] != 0 {
+	if result.Network != nil && len(result.Network.Systems) > 0 && len(result.Network.Systems[0].ASNs) > 0 && result.Network.Systems[0].ASNs[0] != 0 {
 		metrics.ResponseWithASN.Inc()
 	}
 
@@ -285,14 +285,14 @@ func handleOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 	} else {
 		responseMap = make(map[string]*api.GeoData)
 	}
-	for _, geo := range responseMap {
-		if geo.Geo.Latitude != 0 {
+	for _, anno := range responseMap {
+		if anno.Geo.Latitude != 0 {
 			metrics.ResponseWithLatitude.Inc()
 		}
-		if geo.Geo.Longitude != 0 {
+		if anno.Geo.Longitude != 0 {
 			metrics.ResponseWithLongitude.Inc()
 		}
-		if len(geo.Network.Systems) > 0 && len(geo.Network.Systems[0].ASNs) > 0 && geo.Network.Systems[0].ASNs[0] != 0 {
+		if anno.Network != nil && len(anno.Network.Systems) > 0 && len(anno.Network.Systems[0].ASNs) > 0 && anno.Network.Systems[0].ASNs[0] != 0 {
 			metrics.ResponseWithASN.Inc()
 		}
 	}
@@ -331,14 +331,14 @@ func handleV2(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 			return
 		}
 	}
-	for _, geo := range response.Annotations {
-		if geo.Geo.Latitude != 0 {
+	for _, anno := range response.Annotations {
+		if anno.Geo.Latitude != 0 {
 			metrics.ResponseWithLatitude.Inc()
 		}
-		if geo.Geo.Longitude != 0 {
+		if anno.Geo.Longitude != 0 {
 			metrics.ResponseWithLongitude.Inc()
 		}
-		if len(geo.Network.Systems) > 0 && len(geo.Network.Systems[0].ASNs) > 0 && geo.Network.Systems[0].ASNs[0] != 0 {
+		if anno.Network != nil && len(anno.Network.Systems) > 0 && len(anno.Network.Systems[0].ASNs) > 0 && anno.Network.Systems[0].ASNs[0] != 0 {
 			metrics.ResponseWithASN.Inc()
 		}
 	}
