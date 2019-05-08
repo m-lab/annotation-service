@@ -31,10 +31,18 @@ var (
 			},
 		},
 		[]string{"type", "detail"})
+	// Note the batch annotate request counted as 1 as well.
 	TotalRequests = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "annotator_Annotation_Requests_total",
 		Help: "The total number of annotation service requests.",
 	})
+	// Measure the number of IPs w/ missing anottaion fields. missing type
+	// could be "geo", "asn", "both".
+	ResponseMissingAnnotation = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "annotator_Annotation_Response_Missing_Annotation_total",
+		Help: "The total number of annotation responses with missing annotation field.",
+	}, []string{"missing_type"})
+
 	TotalLookups = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "annotator_Annotation_Lookups_total",
 		Help: "The total number of ip lookups.",

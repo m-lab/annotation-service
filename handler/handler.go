@@ -66,6 +66,18 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if result.Network != nil && len(result.Network.Systems) > 0 && len(result.Network.Systems[0].ASNs) > 0 && result.Network.Systems[0].ASNs[0] != 0 {
+		if result.Geo.Latitude == 0 || result.Geo.Longitude == 0 {
+			metrics.ResponseMissingAnnotation.WithLabelValues("geo").Inc()
+		}
+	} else {
+		if result.Geo.Latitude == 0 || result.Geo.Longitude == 0 {
+			metrics.ResponseMissingAnnotation.WithLabelValues("both").Inc()
+		} else {
+			metrics.ResponseMissingAnnotation.WithLabelValues("asn").Inc()
+		}
+	}
+
 	encodedResult, err := json.Marshal(result)
 	if checkError(err, w, 1, "single", tStart) {
 		return
@@ -275,7 +287,19 @@ func handleOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 	} else {
 		responseMap = make(map[string]*api.GeoData)
 	}
-
+	for _, anno := range responseMap {
+		if anno.Network != nil && len(anno.Network.Systems) > 0 && len(anno.Network.Systems[0].ASNs) > 0 && anno.Network.Systems[0].ASNs[0] != 0 {
+			if anno.Geo.Latitude == 0 || anno.Geo.Longitude == 0 {
+				metrics.ResponseMissingAnnotation.WithLabelValues("geo").Inc()
+			}
+		} else {
+			if anno.Geo.Latitude == 0 || anno.Geo.Longitude == 0 {
+				metrics.ResponseMissingAnnotation.WithLabelValues("both").Inc()
+			} else {
+				metrics.ResponseMissingAnnotation.WithLabelValues("asn").Inc()
+			}
+		}
+	}
 	encodedResult, err := json.Marshal(responseMap)
 	if checkError(err, w, len(dataSlice), "old", tStart) {
 		return
@@ -311,8 +335,21 @@ func handleV2(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 			return
 		}
 	}
-
+	for _, anno := range response.Annotations {
+		if anno.Network != nil && len(anno.Network.Systems) > 0 && len(anno.Network.Systems[0].ASNs) > 0 && anno.Network.Systems[0].ASNs[0] != 0 {
+			if anno.Geo.Latitude == 0 || anno.Geo.Longitude == 0 {
+				metrics.ResponseMissingAnnotation.WithLabelValues("geo").Inc()
+			}
+		} else {
+			if anno.Geo.Latitude == 0 || anno.Geo.Longitude == 0 {
+				metrics.ResponseMissingAnnotation.WithLabelValues("both").Inc()
+			} else {
+				metrics.ResponseMissingAnnotation.WithLabelValues("asn").Inc()
+			}
+		}
+	}
 	encodedResult, err := json.Marshal(response)
+
 	if checkError(err, w, len(request.IPs), "v2", tStart) {
 		return
 	}
