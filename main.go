@@ -33,7 +33,7 @@ func Status(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<p>NOTE: This is just one of potentially many instances.</p>\n")
 	commit := os.Getenv("COMMIT_HASH")
 	if len(commit) >= 8 {
-		fmt.Fprintf(w, "Release: %s <br>  Commit: <a href=\"https://github.com/m-lab/etl/tree/%s\">%s</a><br>\n",
+		fmt.Fprintf(w, "Release: %s <br>  Commit: <a href=\"https://github.com/m-lab/annotation-service/tree/%s\">%s</a><br>\n",
 			os.Getenv("RELEASE_TAG"), os.Getenv("COMMIT_HASH"), os.Getenv("COMMIT_HASH")[0:7])
 	} else {
 		fmt.Fprintf(w, "Release: %s   Commit: unknown\n", os.Getenv("RELEASE_TAG"))
