@@ -66,17 +66,7 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if result.Network != nil && len(result.Network.Systems) > 0 && len(result.Network.Systems[0].ASNs) > 0 && result.Network.Systems[0].ASNs[0] != 0 {
-		if result.Geo.Latitude == 0 || result.Geo.Longitude == 0 {
-			metrics.ResponseMissingAnnotation.WithLabelValues("geo").Inc()
-		}
-	} else {
-		if result.Geo.Latitude == 0 || result.Geo.Longitude == 0 {
-			metrics.ResponseMissingAnnotation.WithLabelValues("both").Inc()
-		} else {
-			metrics.ResponseMissingAnnotation.WithLabelValues("asn").Inc()
-		}
-	}
+	trackMissingResponses(&result)
 
 	encodedResult, err := json.Marshal(result)
 	if checkError(err, w, 1, "single", tStart) {
@@ -288,17 +278,7 @@ func handleOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 		responseMap = make(map[string]*api.GeoData)
 	}
 	for _, anno := range responseMap {
-		if anno.Network != nil && len(anno.Network.Systems) > 0 && len(anno.Network.Systems[0].ASNs) > 0 && anno.Network.Systems[0].ASNs[0] != 0 {
-			if anno.Geo.Latitude == 0 || anno.Geo.Longitude == 0 {
-				metrics.ResponseMissingAnnotation.WithLabelValues("geo").Inc()
-			}
-		} else {
-			if anno.Geo.Latitude == 0 || anno.Geo.Longitude == 0 {
-				metrics.ResponseMissingAnnotation.WithLabelValues("both").Inc()
-			} else {
-				metrics.ResponseMissingAnnotation.WithLabelValues("asn").Inc()
-			}
-		}
+		trackMissingResponses(anno)
 	}
 	encodedResult, err := json.Marshal(responseMap)
 	if checkError(err, w, len(dataSlice), "old", tStart) {
@@ -315,6 +295,35 @@ func handleOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 	} else {
 		// Label this old (api) and geolite2 (dataset)
 		latencyStats("old-geolite2", len(dataSlice), tStart)
+	}
+}
+
+func trackMissingResponses(anno *api.GeoData) {
+	if anno == nil {
+		metrics.ResponseMissingAnnotation.WithLabelValues("nil-response").Inc()
+		return
+	}
+
+	netOk := anno.Network != nil && len(anno.Network.Systems) > 0 && len(anno.Network.Systems[0].ASNs) > 0 && anno.Network.Systems[0].ASNs[0] != 0
+	geoOk := anno.Geo != nil && anno.Geo.Latitude != 0 && anno.Geo.Longitude != 0
+
+	if netOk && geoOk {
+		return
+	}
+	if netOk {
+		if anno.Geo == nil {
+			metrics.ResponseMissingAnnotation.WithLabelValues("nil-geo").Inc()
+		} else {
+			metrics.ResponseMissingAnnotation.WithLabelValues("empty-geo").Inc()
+		}
+	} else if geoOk {
+		if anno.Network == nil {
+			metrics.ResponseMissingAnnotation.WithLabelValues("nil-asn").Inc()
+		} else {
+			metrics.ResponseMissingAnnotation.WithLabelValues("empty-asn").Inc()
+		}
+	} else {
+		metrics.ResponseMissingAnnotation.WithLabelValues("both").Inc()
 	}
 }
 
@@ -336,17 +345,7 @@ func handleV2(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 		}
 	}
 	for _, anno := range response.Annotations {
-		if anno.Network != nil && len(anno.Network.Systems) > 0 && len(anno.Network.Systems[0].ASNs) > 0 && anno.Network.Systems[0].ASNs[0] != 0 {
-			if anno.Geo.Latitude == 0 || anno.Geo.Longitude == 0 {
-				metrics.ResponseMissingAnnotation.WithLabelValues("geo").Inc()
-			}
-		} else {
-			if anno.Geo.Latitude == 0 || anno.Geo.Longitude == 0 {
-				metrics.ResponseMissingAnnotation.WithLabelValues("both").Inc()
-			} else {
-				metrics.ResponseMissingAnnotation.WithLabelValues("asn").Inc()
-			}
-		}
+		trackMissingResponses(anno)
 	}
 	encodedResult, err := json.Marshal(response)
 
