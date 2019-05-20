@@ -118,8 +118,13 @@ func (as *ASData) BestASN() (int64, error) {
 // GeoData is the main struct for the geo metadata, which holds pointers to the
 // Geolocation data and the IP/ASN data. This is what we parse the JSON
 // response from the annotator into.
-// TODO - replace this with type Annotations struct.
-type GeoData struct {
+// Deprecated - please use api.Annotations
+type GeoData = Annotations
+
+// Annotations is the main struct for annotation metadata, which holds pointers to the
+// Geolocation data and the IP/ASN data. This is what we parse the JSON
+// response from the annotator into.
+type Annotations struct {
 	Geo     *GeolocationIP // Holds the geolocation data
 	Network *ASData        // Holds the associated network Autonomous System data.
 }
@@ -152,7 +157,7 @@ type RequestWrapper struct {
 type Annotator interface {
 	// Annotate populates one or more annotation fields in the GeoData object.
 	// If it fails, it will return a non-nil error and will leave the target unmodified.
-	Annotate(ip string, ann *GeoData) error
+	Annotate(ip string, ann *Annotations) error
 
 	// The date associated with the dataset.
 	AnnotatorDate() time.Time
