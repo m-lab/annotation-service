@@ -46,8 +46,13 @@ func NewRequest(date time.Time, ips []string) Request {
 // Response describes data returned in V2 responses (json encoded).
 type Response struct {
 	// TODO should we include additional metadata about the annotator sources?  Perhaps map of filenames?
-	AnnotatorDate time.Time               // The publication date(s) of the dataset used for the annotation
-	Annotations   map[string]*api.GeoData // Map from human readable IP address to GeoData
+	AnnotatorDate time.Time                   // The publication date(s) of the dataset used for the annotation
+	Annotations   map[string]*api.Annotations // Map from human readable IP address to GeoData
+}
+
+// Annotator defines the GetAnnotations method used for annotating.
+type Annotator interface {
+	GetAnnotations(ctx context.Context, date time.Time, ips []string) (*Response, error)
 }
 
 /*************************************************************************
@@ -130,7 +135,7 @@ var ErrMoreJSON = errors.New("JSON body not completely consumed")
 var decodeLogEvery = logx.NewLogEvery(nil, 30*time.Second)
 
 // GetAnnotations takes a url, and Request, makes remote call, and returns parsed ResponseV2
-// TODO(gfr) Should pass the annotator's request context through and use it here.
+// TODO make this unexported once we have migrated all code to use GetAnnotator()
 func GetAnnotations(ctx context.Context, url string, date time.Time, ips []string) (*Response, error) {
 	req := NewRequest(date, ips)
 	encodedData, err := json.Marshal(req)
@@ -192,4 +197,17 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 		decodeLogEvery.Println("Decode error:", ErrMoreJSON)
 	}
 	return &resp, nil
+}
+
+type annotator struct {
+	url string
+}
+
+func (ann annotator) GetAnnotations(ctx context.Context, date time.Time, ips []string) (*Response, error) {
+	return GetAnnotations(ctx, ann.url, date, ips)
+}
+
+// GetAnnotator returns a v2.Annotator that uses the provided url to make v2 api requests.
+func GetAnnotator(url string) Annotator {
+	return &annotator{url: url}
 }
