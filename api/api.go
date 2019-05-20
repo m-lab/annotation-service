@@ -118,7 +118,7 @@ func (as *ASData) BestASN() (int64, error) {
 // GeoData is the main struct for the geo metadata, which holds pointers to the
 // Geolocation data and the IP/ASN data. This is what we parse the JSON
 // response from the annotator into.
-// Deprecated - please use api.Annotations
+// Deprecated: please use api.Annotations
 type GeoData = Annotations
 
 // Annotations is the main struct for annotation metadata, which holds pointers to the

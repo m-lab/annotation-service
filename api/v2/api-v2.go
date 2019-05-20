@@ -52,7 +52,6 @@ type Response struct {
 
 // Annotator defines the GetAnnotations method used for annotating.
 type Annotator interface {
-	// TODO - this function name is identical to the package function below.
 	GetAnnotations(ctx context.Context, date time.Time, ips []string) (*Response, error)
 }
 
