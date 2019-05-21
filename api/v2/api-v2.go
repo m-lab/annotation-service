@@ -74,8 +74,8 @@ var (
 )
 
 func post(ctx context.Context, url string, encodedData []byte) (*http.Response, error) {
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-	defer cancel()
+	postCtx, postCancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer postCancel()
 
 	httpReq, err := http.NewRequest("POST", url, bytes.NewReader(encodedData))
 	if err != nil {
@@ -83,7 +83,7 @@ func post(ctx context.Context, url string, encodedData []byte) (*http.Response, 
 	}
 
 	// Make the actual request
-	return http.DefaultClient.Do(httpReq.WithContext(ctx))
+	return http.DefaultClient.Do(httpReq.WithContext(postCtx))
 }
 
 // ErrStatusNotOK is returned from GetAnnotation if http status is other than OK.  Response body may have more info.
