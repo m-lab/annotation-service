@@ -30,7 +30,7 @@ var (
 				10000000,
 			},
 		},
-		[]string{"type", "detail"})
+		[]string{"source", "type", "detail"})
 	// Note the batch annotate request counted as 1 as well.
 	TotalRequests = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "annotator_Annotation_Requests_total",

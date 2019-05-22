@@ -51,8 +51,10 @@ type Response struct {
 }
 
 // Annotator defines the GetAnnotations method used for annotating.
+// info is an optional string to populate Request.RequestInfo
 type Annotator interface {
-	GetAnnotations(ctx context.Context, date time.Time, ips []string) (*Response, error)
+	// TODO - make info an regular parameter instead of vararg.
+	GetAnnotations(ctx context.Context, date time.Time, ips []string, info ...string) (*Response, error)
 }
 
 /*************************************************************************
@@ -136,8 +138,11 @@ var decodeLogEvery = logx.NewLogEvery(nil, 30*time.Second)
 
 // GetAnnotations takes a url, and Request, makes remote call, and returns parsed ResponseV2
 // TODO make this unexported once we have migrated all code to use GetAnnotator()
-func GetAnnotations(ctx context.Context, url string, date time.Time, ips []string) (*Response, error) {
+func GetAnnotations(ctx context.Context, url string, date time.Time, ips []string, info ...string) (*Response, error) {
 	req := NewRequest(date, ips)
+	if len(info) > 0 {
+		req.RequestInfo = info[0]
+	}
 	encodedData, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
@@ -203,8 +208,8 @@ type annotator struct {
 	url string
 }
 
-func (ann annotator) GetAnnotations(ctx context.Context, date time.Time, ips []string) (*Response, error) {
-	return GetAnnotations(ctx, ann.url, date, ips)
+func (ann annotator) GetAnnotations(ctx context.Context, date time.Time, ips []string, info ...string) (*Response, error) {
+	return GetAnnotations(ctx, ann.url, date, ips, info...)
 }
 
 // GetAnnotator returns a v2.Annotator that uses the provided url to make v2 api requests.
