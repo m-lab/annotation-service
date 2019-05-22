@@ -13,7 +13,7 @@ import (
 // through the linter.
 func TestPrometheusMetrics(t *testing.T) {
 	api.RequestTimeHistogram.WithLabelValues("x")
-	metrics.RequestTimeHistogramUsec.WithLabelValues("x", "x")
+	metrics.RequestTimeHistogramUsec.WithLabelValues("x", "y", "z")
 	metrics.ErrorTotal.WithLabelValues("x")
 	metrics.RejectionCount.WithLabelValues("x")
 	promtest.LintMetrics(t)
