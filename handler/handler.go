@@ -249,7 +249,7 @@ func checkError(err error, w http.ResponseWriter, reqInfo string, ipCount int, l
 		default:
 			// If it isn't loading, client should probably give up instead of retrying.
 			w.WriteHeader(http.StatusInternalServerError)
-			metrics.RequestTimeHistogramUsec.WithLabelValues("", label, err.Error()).Observe(float64(time.Since(tStart).Nanoseconds()) / 1000)
+			metrics.RequestTimeHistogramUsec.WithLabelValues(reqInfo, label, err.Error()).Observe(float64(time.Since(tStart).Nanoseconds()) / 1000)
 		}
 		fmt.Fprintf(w, err.Error())
 		return true
