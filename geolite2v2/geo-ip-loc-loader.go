@@ -27,14 +27,15 @@ var (
 
 // LocationNode defines Location databases
 type LocationNode struct {
-	GeonameID     int
-	ContinentCode string
-	CountryCode   string
-	CountryName   string
-	RegionCode    string
-	RegionName    string
-	MetroCode     int64
-	CityName      string
+	GeonameID        int
+	ContinentCode    string
+	CountryCode      string
+	CountryName      string
+	RegionCode       string
+	RegionName       string
+	MetroCode        int64
+	CityName         string
+	AccuracyRadiusKm int64
 }
 
 type locationCsvConsumer struct {
@@ -117,6 +118,15 @@ func (l *locationCsvConsumer) Consume(record []string) error {
 		}
 	}
 	lNode.CityName = record[10]
+	if len(record) > 13 {
+		lNode.AccuracyRadiusKm, err = strconv.ParseInt(record[13], 10, 64)
+		if err != nil {
+			if len(record[13]) > 0 {
+				log.Println("AccuracyRadius should be an integer:", record[13])
+				return err
+			}
+		}
+	}
 	l.locationList = append(l.locationList, lNode)
 	l.locationMap[lNode.GeonameID] = len(l.locationList) - 1
 	return nil
