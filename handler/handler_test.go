@@ -31,12 +31,12 @@ func init() {
 func TestIp6to4(t *testing.T) {
 	ss := handler.Ip6to4("2002:dced:117c::dced:117c")
 	if ss != "220.237.17.124" {
-		t.Errorf("ip6to4 not done correctly: " + ss)
+		t.Errorf("ip6to4 not done correctly: expect 220.237.17.124 actually " + ss)
 	}
 
 	es := handler.Ip6to4("2002:dced")
 	if es != "" {
-		t.Errorf("ip6to4 not done correctly: " + ss)
+		t.Errorf("ip6to4 not done correctly: expect empty string actually " + es)
 	}
 }
 
