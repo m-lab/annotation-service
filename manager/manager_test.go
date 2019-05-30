@@ -56,8 +56,10 @@ func TestInitDataset(t *testing.T) {
 		{"1.9.128.0", "1512086400",
 			`{"Geo":{"continent_code":"AS","country_code":"MY","country_code3":"MYS","country_name":"Malaysia","region":"05","city":"Pantai","latitude":2.787,"longitude":101.995},"Network":{"Systems":[{"ASNs":[4788]}]}}`},
 		// This request needs the latest dataset in the memory.
-		{"220.237.17.124", "1559227976",
+		{"1.22.128.0", "1544400000",
 			`{"Geo":{"continent_code":"AS","country_code":"IN","country_name":"India","region":"HR","city":"Faridabad","latitude":28.4333,"longitude":77.3167},"Network":{"Systems":[{"ASNs":[45528]}]}}`},
+		{"2002:dced:117c::dced:117c", "1559227976",
+			`{"Geo":{"continent_code":"OC","country_code":"AU","country_name":"Australia","region":"VIC","city":"East Malvern","postal_code":"3145","latitude":-37.8833,"longitude":145.05},"Network":{"Systems":[{"ASNs":[4804]}]}}`},
 	}
 	for n, test := range tests {
 		w := httptest.NewRecorder()
