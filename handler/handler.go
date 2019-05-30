@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/m-lab/go/logx"
@@ -148,7 +149,11 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 		request := ips[i]
 		metrics.TotalLookups.Inc()
 		data := api.GeoData{}
-		err := ann.Annotate(request.IP, &data)
+		requestIP := request.IP
+		if strings.HasPrefix(request.IP, "2002:") {
+			requestIP = Ip6to4(request.IP)
+		}
+		err := ann.Annotate(requestIP, &data)
 		if err != nil {
 			// TODO need better error handling.
 			continue
@@ -163,6 +168,22 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 }
 
 var v2errorLogger = logx.NewLogEvery(nil, time.Second)
+
+// Ip6to4 converts "2002:" ipv6 address back to ipv4.
+func Ip6to4(ipv6 string) string {
+	split := strings.Split(ipv6, ":")
+	if len(split) < 3 || split[0] != "2002" || len(split[1]) != 4 || len(split[2]) != 4 {
+		return ""
+	}
+	num1, err1 := strconv.ParseInt(split[1][0:2], 16, 64)
+	num2, err2 := strconv.ParseInt(split[1][2:4], 16, 64)
+	num3, err3 := strconv.ParseInt(split[2][0:2], 16, 64)
+	num4, err4 := strconv.ParseInt(split[2][2:4], 16, 64)
+	if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
+		return ""
+	}
+	return fmt.Sprintf("%d.%d.%d.%d", num1, num2, num3, num4)
+}
 
 // AnnotateV2 finds an appropriate Annotator based on the requested Date, and creates a
 // response with annotations for all parseable IPs.
@@ -182,7 +203,12 @@ func AnnotateV2(date time.Time, ips []string, reqInfo string) (v2.Response, erro
 		metrics.TotalLookups.Inc()
 
 		annotation := api.GeoData{}
-		err := ann.Annotate(ips[i], &annotation)
+		// special handling of "2002:" ip address
+		requestIP := ips[i]
+		if strings.HasPrefix(ips[i], "2002:") {
+			requestIP = Ip6to4(ips[i])
+		}
+		err := ann.Annotate(requestIP, &annotation)
 		if err != nil {
 			switch err.Error {
 			// TODO - enumerate interesting error types here...
@@ -418,7 +444,10 @@ func GetMetadataForSingleIP(request *api.RequestData) (result api.GeoData, err e
 	if err != nil {
 		return
 	}
-
-	err = ann.Annotate(request.IP, &result)
+	requestIP := request.IP
+	if strings.HasPrefix(request.IP, "2002:") {
+		requestIP = Ip6to4(request.IP)
+	}
+	err = ann.Annotate(requestIP, &result)
 	return
 }

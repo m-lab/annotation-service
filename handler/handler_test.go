@@ -28,6 +28,18 @@ func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 }
 
+func TestIp6to4(t *testing.T) {
+	ss := handler.Ip6to4("2002:dced:117c::dced:117c")
+	if ss != "220.237.17.124" {
+		t.Errorf("ip6to4 not done correctly: " + ss)
+	}
+
+	es := handler.Ip6to4("2002:dced")
+	if es != "" {
+		t.Errorf("ip6to4 not done correctly: " + ss)
+	}
+}
+
 func TestAnnotate(t *testing.T) {
 	tests := []struct {
 		ip   string
