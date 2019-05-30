@@ -365,7 +365,14 @@ func handleV2(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 	response := v2.Response{}
 
 	if len(request.IPs) > 0 {
-		response, err = AnnotateV2(request.Date, request.IPs, request.RequestInfo)
+		requestIPs := make([]string, len(request.IPs))
+		for i := range request.IPs {
+			requestIPs[i] = request.IPs[i]
+			if strings.HasPrefix(request.IPs[i], "2002:") {
+				requestIPs[i] = Ip6to4(request.IPs[i])
+			}
+		}
+		response, err = AnnotateV2(request.Date, requestIPs, request.RequestInfo)
 		if checkError(err, w, request.RequestInfo, len(request.IPs), "v2", tStart) {
 			return
 		}
