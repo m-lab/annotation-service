@@ -43,3 +43,9 @@ env_variables:
     # These should be substituted in the travis deployment script.
   RELEASE_TAG: ${TRAVIS_TAG}
   COMMIT_HASH: ${TRAVIS_COMMIT}
+
+liveness_check:
+  path: "/live"
+
+readiness_check:
+  path: "/ready"
