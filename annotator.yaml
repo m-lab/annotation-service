@@ -26,6 +26,7 @@ automatic_scaling:
   cool_down_period_sec: 1800
   cpu_utilization:
     target_utilization: 0.60
+  max_concurrent_requests: 80
 
 # Note: add a public port for GCE auto discovery by prometheus.
 # TODO(dev): are any values redundant or irrelevant?
