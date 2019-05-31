@@ -130,6 +130,7 @@ func (bldr *listBuilder) update() error {
 
 	var errV4, errV6, errG2, errAsnV4, errAsnV6 error
 
+	log.Println("Updating dataset directory")
 	wg := sync.WaitGroup{}
 	wg.Add(5)
 	go func() {
@@ -153,6 +154,8 @@ func (bldr *listBuilder) update() error {
 		wg.Done()
 	}()
 	wg.Wait()
+
+	log.Println("Dataset update complete.")
 
 	if errV4 != nil {
 		return errV4
