@@ -53,6 +53,19 @@ func updateMaxmindDatasets(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
 
+func live(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+}
+
+func ready(w http.ResponseWriter, r *http.Request) {
+	ann, _ := manager.GetAnnotator(time.Now())
+	if ann == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
 func init() {
 	// Always prepend the filename and line number.
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
@@ -72,6 +85,8 @@ func main() {
 
 	http.HandleFunc("/status", Status)
 	http.HandleFunc("/updateDatasets", updateMaxmindDatasets)
+	http.HandleFunc("/ready", ready)
+	http.HandleFunc("/live", live)
 
 	handler.InitHandler()
 	log.Print("Listening on port 8080")
