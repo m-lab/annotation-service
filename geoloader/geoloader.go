@@ -101,6 +101,9 @@ func bucketIterator(withPrefix string) (*storage.ObjectIterator, error) {
 
 type Filename string
 
+// tokens is used to control number of concurrent dataset loads.
+var tokens = make(chan struct{}, 50)
+
 // loadAll loads all datasets from the source that match the filter.
 func loadAll(
 	cache map[Filename]api.Annotator,
@@ -121,6 +124,9 @@ func loadAll(
 	wg := sync.WaitGroup{}
 
 	for file, err := source.Next(); err != iterator.Done; file, err = source.Next() {
+		// wait for a token
+		tokens <- struct{}{}
+
 		// TODO - should we retry here?
 		if err != nil {
 			return nil, err
@@ -157,6 +163,7 @@ func loadAll(
 			resultLock.Unlock()
 			metrics.DatasetCount.Inc()
 			log.Println("Loaded", filename)
+			<-tokens // release token
 		}(file)
 	}
 	wg.Wait()
