@@ -124,9 +124,6 @@ func loadAll(
 	wg := sync.WaitGroup{}
 
 	for file, err := source.Next(); err != iterator.Done; file, err = source.Next() {
-		// wait for a token
-		tokens <- struct{}{}
-
 		// TODO - should we retry here?
 		if err != nil {
 			return nil, err
@@ -147,7 +144,10 @@ func loadAll(
 		_, _, callerLine, _ := runtime.Caller(1)
 		log.Println("Loading", filename, "from line", callerLine)
 		wg.Add(1)
+		// wait for a token
+		tokens <- struct{}{}
 		go func(file *storage.ObjectAttrs) {
+			defer func() { <-tokens }() // release token
 			defer wg.Done()
 			ann, err := loader(file)
 			if err != nil {
@@ -163,7 +163,6 @@ func loadAll(
 			resultLock.Unlock()
 			metrics.DatasetCount.Inc()
 			log.Println("Loaded", filename)
-			<-tokens // release token
 		}(file)
 	}
 	wg.Wait()
