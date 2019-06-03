@@ -84,6 +84,7 @@ func main() {
 		memoryless.Config{Expected: *updateInterval, Min: *minInterval, Max: *maxInterval})
 
 	http.HandleFunc("/status", Status)
+	http.HandleFunc("/", Status)
 	http.HandleFunc("/updateDatasets", updateMaxmindDatasets)
 	http.HandleFunc("/ready", ready)
 	http.HandleFunc("/live", live)
