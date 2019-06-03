@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/m-lab/go/logx"
@@ -140,7 +141,11 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 		request := ips[i]
 		metrics.TotalLookups.Inc()
 		data := api.GeoData{}
-		err := ann.Annotate(request.IP, &data)
+		requestIP := request.IP
+		if strings.HasPrefix(request.IP, "2002:") {
+			requestIP = Ip6to4(request.IP)
+		}
+		err := ann.Annotate(requestIP, &data)
 		if err != nil {
 			// TODO need better error handling.
 			continue
@@ -155,6 +160,20 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 }
 
 var v2errorLogger = logx.NewLogEvery(nil, time.Second)
+
+// Ip6to4 converts "2002:" ipv6 address back to ipv4.
+func Ip6to4(ipv6 string) string {
+	ipnet := &net.IPNet{
+		Mask: net.CIDRMask(16, 128),
+		IP:   net.ParseIP("2002::"),
+	}
+	ip := net.ParseIP(ipv6)
+	if ip == nil || !ipnet.Contains(ip) {
+		return ""
+	}
+
+	return fmt.Sprintf("%d.%d.%d.%d", ip[2], ip[3], ip[4], ip[5])
+}
 
 // AnnotateV2 finds an appropriate Annotator based on the requested Date, and creates a
 // response with annotations for all parseable IPs.
@@ -174,7 +193,12 @@ func AnnotateV2(date time.Time, ips []string, reqInfo string) (v2.Response, erro
 		metrics.TotalLookups.Inc()
 
 		annotation := api.GeoData{}
-		err := ann.Annotate(ips[i], &annotation)
+		// special handling of "2002:" ip address
+		requestIP := ips[i]
+		if strings.HasPrefix(ips[i], "2002:") {
+			requestIP = Ip6to4(ips[i])
+		}
+		err := ann.Annotate(requestIP, &annotation)
 		if err != nil {
 			switch err.Error {
 			// TODO - enumerate interesting error types here...
@@ -331,7 +355,14 @@ func handleV2(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 	response := v2.Response{}
 
 	if len(request.IPs) > 0 {
-		response, err = AnnotateV2(request.Date, request.IPs, request.RequestInfo)
+		requestIPs := make([]string, len(request.IPs))
+		for i := range request.IPs {
+			requestIPs[i] = request.IPs[i]
+			if strings.HasPrefix(request.IPs[i], "2002:") {
+				requestIPs[i] = Ip6to4(request.IPs[i])
+			}
+		}
+		response, err = AnnotateV2(request.Date, requestIPs, request.RequestInfo)
 		if checkError(err, w, request.RequestInfo, len(request.IPs), "v2", tStart) {
 			return
 		}
@@ -410,7 +441,10 @@ func GetMetadataForSingleIP(request *api.RequestData) (result api.GeoData, err e
 	if err != nil {
 		return
 	}
-
-	err = ann.Annotate(request.IP, &result)
+	requestIP := request.IP
+	if strings.HasPrefix(request.IP, "2002:") {
+		requestIP = Ip6to4(request.IP)
+	}
+	err = ann.Annotate(requestIP, &result)
 	return
 }
