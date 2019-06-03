@@ -180,16 +180,7 @@ func Ip6to4(ipv6 string) string {
 		return ""
 	}
 
-	split := strings.Split(ipv6, ":")
-
-	num1, err1 := strconv.ParseInt(split[1][0:2], 16, 64)
-	num2, err2 := strconv.ParseInt(split[1][2:4], 16, 64)
-	num3, err3 := strconv.ParseInt(split[2][0:2], 16, 64)
-	num4, err4 := strconv.ParseInt(split[2][2:4], 16, 64)
-	if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
-		return ""
-	}
-	return fmt.Sprintf("%d.%d.%d.%d", num1, num2, num3, num4)
+	return fmt.Sprintf("%d.%d.%d.%d", ip[2], ip[3], ip[4], ip[5])
 }
 
 // AnnotateV2 finds an appropriate Annotator based on the requested Date, and creates a
