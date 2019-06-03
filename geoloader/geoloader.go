@@ -101,8 +101,10 @@ func bucketIterator(withPrefix string) (*storage.ObjectIterator, error) {
 
 type Filename string
 
-// tokens is used to control number of concurrent dataset loads.
-var tokens = make(chan struct{}, 50)
+// loadSemaphore is used to control number of concurrent dataset loads.
+// It is shared across all loaders (that use loadAll), so it will limit
+// concurrency across all datatypes.
+var loadSemaphore = make(chan struct{}, 20)
 
 // loadAll loads all datasets from the source that match the filter.
 func loadAll(
@@ -144,10 +146,10 @@ func loadAll(
 		_, _, callerLine, _ := runtime.Caller(1)
 		log.Println("Loading", filename, "from line", callerLine)
 		wg.Add(1)
-		// wait for a token
-		tokens <- struct{}{}
+		// wait for a semaphore to limit concurrency
+		loadSemaphore <- struct{}{}
 		go func(file *storage.ObjectAttrs) {
-			defer func() { <-tokens }() // release token
+			defer func() { <-loadSemaphore }() // release semaphore on func exit.
 			defer wg.Done()
 			ann, err := loader(file)
 			if err != nil {
