@@ -182,7 +182,7 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 	defer httpResp.Body.Close()
 	// Handle other status codes
 	if httpResp.StatusCode != http.StatusOK {
-		log.Println("http statuscode not OK")
+		log.Println("http status code is ", httpResp.StatusCode)
 		metrics.ClientErrorTotal.WithLabelValues("http statuscode not OK").Inc()
 		return nil, errors.New(httpResp.Status)
 	}
