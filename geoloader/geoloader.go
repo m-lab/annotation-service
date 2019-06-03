@@ -102,6 +102,8 @@ func bucketIterator(withPrefix string) (*storage.ObjectIterator, error) {
 type Filename string
 
 // loadSemaphore is used to control number of concurrent dataset loads.
+// Spaces in the buffer act as tokens.  Loader adds a token to the
+// channel on entry, and removes the token when it completes.
 // It is shared across all loaders (that use loadAll), so it will limit
 // concurrency across all datatypes.
 var loadSemaphore = make(chan struct{}, 20)
@@ -138,11 +140,15 @@ func loadAll(
 			continue
 		}
 		filename := Filename(file.Name)
+
+		// If the dataset is already loaded, skip to next one.
 		ann, ok := cache[filename]
 		if ok {
 			result[filename] = ann
 			continue
 		}
+
+		// If it has not yet been loaded, then load it now.
 		_, _, callerLine, _ := runtime.Caller(1)
 		log.Println("Loading", filename, "from line", callerLine)
 		wg.Add(1)
