@@ -87,8 +87,8 @@ func main() {
 	http.HandleFunc("/updateDatasets", updateMaxmindDatasets)
 	http.HandleFunc("/ready", ready)
 	http.HandleFunc("/live", live)
-
-	handler.InitHandler()
 	log.Print("Listening on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
+
+	handler.InitHandler()
 }
