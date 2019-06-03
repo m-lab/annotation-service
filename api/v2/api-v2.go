@@ -155,8 +155,8 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 	httpResp, err := postWithRetry(ctx, url, encodedData)
 	if err != nil {
 		if httpResp == nil || httpResp.Body == nil {
-			log.Println("http empty response error")
-			metrics.ErrorTotal.WithLabelValues("http empty response error").Inc()
+			log.Println("http empty response")
+			metrics.ErrorTotal.WithLabelValues("http empty response").Inc()
 			return nil, err
 		}
 		defer httpResp.Body.Close()
@@ -186,8 +186,8 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 	// Copy response into a byte slice
 	body, err := ioutil.ReadAll(httpResp.Body)
 	if err != nil {
-		log.Println("cannot read http response error")
-		metrics.ErrorTotal.WithLabelValues("cannot read http response error").Inc()
+		log.Println("cannot read http response")
+		metrics.ErrorTotal.WithLabelValues("cannot read http response").Inc()
 		return nil, err
 	}
 
@@ -207,8 +207,8 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 		err = decoder.Decode(&resp)
 		if err != nil {
 			// This is a more serious error.
-			log.Println("cannot read http response error")
-			metrics.ErrorTotal.WithLabelValues("json decode Error").Inc()
+			log.Println("json decode error")
+			metrics.ErrorTotal.WithLabelValues("json decode error").Inc()
 			return nil, err
 		}
 	}
