@@ -130,29 +130,37 @@ func (bldr *listBuilder) update() error {
 
 	var errV4, errV6, errG2, errAsnV4, errAsnV6 error
 
+	log.Println("Updating dataset directory")
 	wg := sync.WaitGroup{}
 	wg.Add(5)
 	go func() {
 		errV4 = bldr.legacyV4.UpdateCache()
+		log.Println("Legacy V4 loading done.")
 		wg.Done()
 	}()
 	go func() {
 		errV6 = bldr.legacyV6.UpdateCache()
+		log.Println("Legacy V6 loading done.")
 		wg.Done()
 	}()
 	go func() {
 		errG2 = bldr.geolite2.UpdateCache()
+		log.Println("Geolite2 loading done.")
 		wg.Done()
 	}()
 	go func() {
 		errAsnV4 = bldr.asnV4.UpdateCache()
+		log.Println("ASN V4 loading done.")
 		wg.Done()
 	}()
 	go func() {
 		errAsnV6 = bldr.asnV6.UpdateCache()
+		log.Println("ASN V6 loading done.")
 		wg.Done()
 	}()
 	wg.Wait()
+
+	log.Println("Dataset update complete.")
 
 	if errV4 != nil {
 		return errV4

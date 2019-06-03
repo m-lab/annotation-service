@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/m-lab/annotation-service/api"
+	"github.com/m-lab/annotation-service/metrics"
 	"github.com/m-lab/go/logx"
 )
 
@@ -81,6 +83,7 @@ func post(ctx context.Context, url string, encodedData []byte) (*http.Response, 
 
 	httpReq, err := http.NewRequest("POST", url, bytes.NewReader(encodedData))
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
@@ -107,6 +110,7 @@ func postWithRetry(ctx context.Context, url string, encodedData []byte) (*http.R
 		start := time.Now()
 		resp, err := post(ctx, url, encodedData)
 		if err != nil {
+			log.Println(err)
 			RequestTimeHistogram.WithLabelValues(err.Error()).Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
 			return nil, err
 		}
@@ -119,6 +123,7 @@ func postWithRetry(ctx context.Context, url string, encodedData []byte) (*http.R
 			return resp, ErrStatusNotOK
 		}
 		if ctx.Err() != nil {
+			log.Println(ctx.Err())
 			RequestTimeHistogram.WithLabelValues("timeout").Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
 			return nil, ctx.Err()
 		}
@@ -126,6 +131,7 @@ func postWithRetry(ctx context.Context, url string, encodedData []byte) (*http.R
 		RequestTimeHistogram.WithLabelValues("retry").Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
 		err = waitOneSecond(ctx)
 		if err != nil {
+			log.Println(err)
 			return nil, err
 		}
 	}
@@ -145,16 +151,21 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 	}
 	encodedData, err := json.Marshal(req)
 	if err != nil {
+		log.Println(err)
+		metrics.ClientErrorTotal.WithLabelValues("request encoding error").Inc()
 		return nil, err
 	}
 
 	httpResp, err := postWithRetry(ctx, url, encodedData)
 	if err != nil {
+		log.Println(err)
 		if httpResp == nil || httpResp.Body == nil {
+			metrics.ClientErrorTotal.WithLabelValues("http empty response").Inc()
 			return nil, err
 		}
 		defer httpResp.Body.Close()
 		if err == ErrStatusNotOK {
+			metrics.ClientErrorTotal.WithLabelValues("http status not OK").Inc()
 			body, ioutilErr := ioutil.ReadAll(httpResp.Body)
 			if ioutilErr != nil {
 				return nil, ioutilErr
@@ -171,11 +182,15 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 	defer httpResp.Body.Close()
 	// Handle other status codes
 	if httpResp.StatusCode != http.StatusOK {
+		log.Println("http status code is ", httpResp.StatusCode)
+		metrics.ClientErrorTotal.WithLabelValues("http statuscode not OK").Inc()
 		return nil, errors.New(httpResp.Status)
 	}
 	// Copy response into a byte slice
 	body, err := ioutil.ReadAll(httpResp.Body)
 	if err != nil {
+		log.Println(err)
+		metrics.ClientErrorTotal.WithLabelValues("cannot read http response").Inc()
 		return nil, err
 	}
 
@@ -195,6 +210,8 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 		err = decoder.Decode(&resp)
 		if err != nil {
 			// This is a more serious error.
+			log.Println(err)
+			metrics.ClientErrorTotal.WithLabelValues("json decode error").Inc()
 			return nil, err
 		}
 	}
