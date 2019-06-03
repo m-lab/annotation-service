@@ -171,10 +171,17 @@ var v2errorLogger = logx.NewLogEvery(nil, time.Second)
 
 // Ip6to4 converts "2002:" ipv6 address back to ipv4.
 func Ip6to4(ipv6 string) string {
-	split := strings.Split(ipv6, ":")
-	if len(split) < 3 || split[0] != "2002" || len(split[1]) != 4 || len(split[2]) != 4 {
+	ipnet := &net.IPNet{
+		Mask: net.CIDRMask(16, 128),
+		IP:   net.ParseIP("2002::"),
+	}
+	ip := net.ParseIP(ipv6)
+	if ip == nil || !ipnet.Contains(ip) {
 		return ""
 	}
+
+	split := strings.Split(ipv6, ":")
+
 	num1, err1 := strconv.ParseInt(split[1][0:2], 16, 64)
 	num2, err2 := strconv.ParseInt(split[1][2:4], 16, 64)
 	num3, err3 := strconv.ParseInt(split[2][0:2], 16, 64)
