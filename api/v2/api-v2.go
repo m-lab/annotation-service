@@ -182,8 +182,8 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 	defer httpResp.Body.Close()
 	// Handle other status codes
 	if httpResp.StatusCode != http.StatusOK {
-		log.Println("http status not OK")
-		metrics.ClientErrorTotal.WithLabelValues("http Status not OK").Inc()
+		log.Println("http statuscode not OK")
+		metrics.ClientErrorTotal.WithLabelValues("http statuscode not OK").Inc()
 		return nil, errors.New(httpResp.Status)
 	}
 	// Copy response into a byte slice
