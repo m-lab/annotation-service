@@ -55,7 +55,11 @@ var (
 		Name: "annotator_Error_total",
 		Help: "The total number annotation errors.",
 	}, []string{"type"})
-
+	// ClientErrorTotal measures the different type of RPC client errors.
+	ClientErrorTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "annotator_client_error_total",
+		Help: "The total number client annotation RPC errors.",
+	}, []string{"type"})
 	// TODO make this an integer gauge
 	DatasetCount = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "annotator_num_datasets",
