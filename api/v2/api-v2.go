@@ -147,21 +147,20 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 	}
 	encodedData, err := json.Marshal(req)
 	if err != nil {
-		log.Println("request encoding error")
+		log.Println(err)
 		metrics.ErrorTotal.WithLabelValues("request encoding error").Inc()
 		return nil, err
 	}
 
 	httpResp, err := postWithRetry(ctx, url, encodedData)
 	if err != nil {
+		log.Println(err)
 		if httpResp == nil || httpResp.Body == nil {
-			log.Println("http empty response")
 			metrics.ErrorTotal.WithLabelValues("http empty response").Inc()
 			return nil, err
 		}
 		defer httpResp.Body.Close()
 		if err == ErrStatusNotOK {
-			log.Println("http status not OK")
 			metrics.ErrorTotal.WithLabelValues("http status not OK").Inc()
 			body, ioutilErr := ioutil.ReadAll(httpResp.Body)
 			if ioutilErr != nil {
@@ -186,7 +185,7 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 	// Copy response into a byte slice
 	body, err := ioutil.ReadAll(httpResp.Body)
 	if err != nil {
-		log.Println("cannot read http response")
+		log.Println(err)
 		metrics.ErrorTotal.WithLabelValues("cannot read http response").Inc()
 		return nil, err
 	}
@@ -207,7 +206,7 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 		err = decoder.Decode(&resp)
 		if err != nil {
 			// This is a more serious error.
-			log.Println("json decode error")
+			log.Println(err)
 			metrics.ErrorTotal.WithLabelValues("json decode error").Inc()
 			return nil, err
 		}
