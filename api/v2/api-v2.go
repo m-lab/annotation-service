@@ -14,6 +14,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/m-lab/annotation-service/api"
+	"github.com/m-lab/annotation-service/metrics"
 	"github.com/m-lab/go/logx"
 )
 
@@ -145,16 +146,19 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 	}
 	encodedData, err := json.Marshal(req)
 	if err != nil {
+		metrics.ErrorTotal.WithLabelValues("Request encoding Error").Inc()
 		return nil, err
 	}
 
 	httpResp, err := postWithRetry(ctx, url, encodedData)
 	if err != nil {
 		if httpResp == nil || httpResp.Body == nil {
+			metrics.ErrorTotal.WithLabelValues("http Empty Response Error").Inc()
 			return nil, err
 		}
 		defer httpResp.Body.Close()
 		if err == ErrStatusNotOK {
+			metrics.ErrorTotal.WithLabelValues("http Status not OK").Inc()
 			body, ioutilErr := ioutil.ReadAll(httpResp.Body)
 			if ioutilErr != nil {
 				return nil, ioutilErr
@@ -171,11 +175,13 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 	defer httpResp.Body.Close()
 	// Handle other status codes
 	if httpResp.StatusCode != http.StatusOK {
+		metrics.ErrorTotal.WithLabelValues("http Status not OK").Inc()
 		return nil, errors.New(httpResp.Status)
 	}
 	// Copy response into a byte slice
 	body, err := ioutil.ReadAll(httpResp.Body)
 	if err != nil {
+		metrics.ErrorTotal.WithLabelValues("Cannot read http Responce Error").Inc()
 		return nil, err
 	}
 
@@ -195,6 +201,7 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 		err = decoder.Decode(&resp)
 		if err != nil {
 			// This is a more serious error.
+			metrics.ErrorTotal.WithLabelValues("json decode Error").Inc()
 			return nil, err
 		}
 	}
