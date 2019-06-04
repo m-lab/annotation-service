@@ -78,9 +78,6 @@ var (
 )
 
 func post(ctx context.Context, url string, encodedData []byte) (*http.Response, error) {
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-	defer cancel()
-
 	httpReq, err := http.NewRequest("POST", url, bytes.NewReader(encodedData))
 	if err != nil {
 		log.Println(err)
@@ -157,10 +154,12 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 		return nil, err
 	}
 
-	localCtx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
-	defer cancel()
+	//localCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	//defer cancel()
 
-	httpResp, err := postWithRetry(localCtx, url, encodedData)
+	//httpResp, err := postWithRetry(localCtx, url, encodedData)
+	httpResp, err := postWithRetry(ctx, url, encodedData)
+	log.Println(err)
 	if err != nil {
 		log.Println(err)
 		if httpResp == nil || httpResp.Body == nil {
