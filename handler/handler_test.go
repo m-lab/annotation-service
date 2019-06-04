@@ -29,8 +29,8 @@ func init() {
 }
 
 func TestIp6to4(t *testing.T) {
-	ss := handler.Ip6to4("2002:dced:117c::dced:117c")
-	if ss != "220.237.17.124" {
+	ss := handler.Ip6to4("2002:0C9B:A665:0001:0000:0000:0C9B:A665")
+	if ss != "12.155.166.10" {
 		t.Errorf("ip6to4 not done correctly: expect 220.237.17.124 actually " + ss)
 	}
 
