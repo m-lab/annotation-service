@@ -154,7 +154,7 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 		return nil, err
 	}
 
-	localCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	localCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	httpResp, err := postWithRetry(localCtx, url, encodedData)
