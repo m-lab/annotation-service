@@ -78,9 +78,6 @@ var (
 )
 
 func post(ctx context.Context, url string, encodedData []byte) (*http.Response, error) {
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-	defer cancel()
-
 	httpReq, err := http.NewRequest("POST", url, bytes.NewReader(encodedData))
 	if err != nil {
 		log.Println(err)
@@ -119,6 +116,7 @@ func postWithRetry(ctx context.Context, url string, encodedData []byte) (*http.R
 			return resp, err
 		}
 		if resp.StatusCode != http.StatusServiceUnavailable {
+			log.Println("Statuscode: ", resp.StatusCode)
 			RequestTimeHistogram.WithLabelValues(resp.Status).Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
 			return resp, ErrStatusNotOK
 		}
@@ -156,7 +154,10 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 		return nil, err
 	}
 
-	httpResp, err := postWithRetry(ctx, url, encodedData)
+	localCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	httpResp, err := postWithRetry(localCtx, url, encodedData)
 	if err != nil {
 		log.Println(err)
 		if httpResp == nil || httpResp.Body == nil {
