@@ -100,6 +100,9 @@ func waitOneSecond(ctx context.Context) error {
 	}
 }
 
+// Rate limit these errors to avoid bad spam.
+var retryLogger = logx.NewLogEvery(nil, 1*time.Second)
+
 // postWithRetry will retry for some error conditions, up to the deadline in the provided context.
 // Returns if http status is OK, error is not nil, http status is not ServiceUnavailable or timeout.
 func postWithRetry(ctx context.Context, url string, encodedData []byte) (*http.Response, error) {
@@ -107,29 +110,38 @@ func postWithRetry(ctx context.Context, url string, encodedData []byte) (*http.R
 		start := time.Now()
 		resp, err := post(ctx, url, encodedData)
 		if err != nil {
-			log.Println(err)
+			retryLogger.Println(err)
 			RequestTimeHistogram.WithLabelValues(err.Error()).Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
 			return nil, err
 		}
-		if resp.StatusCode == http.StatusOK {
+
+		switch resp.StatusCode {
+		case http.StatusOK:
 			RequestTimeHistogram.WithLabelValues("success").Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
-			return resp, err
-		}
-		if resp.StatusCode != http.StatusServiceUnavailable {
-			log.Println("Statuscode: ", resp.StatusCode)
+			return resp, nil
+		case http.StatusServiceUnavailable:
+			// do nothing
+		case http.StatusNotFound:
+			// This is likely a bad batch URL.
+			retryLogger.Println("StatusNotFound:", url)
 			RequestTimeHistogram.WithLabelValues(resp.Status).Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
 			return resp, ErrStatusNotOK
+		default:
+			log.Println("Statuscode: ", resp.StatusCode)
+			RequestTimeHistogram.WithLabelValues(resp.Status).Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
+			// Continue and possibly retry.
 		}
+
 		if ctx.Err() != nil {
-			log.Println(ctx.Err())
+			retryLogger.Println(ctx.Err())
 			RequestTimeHistogram.WithLabelValues("timeout").Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
 			return nil, ctx.Err()
 		}
-		// This is a recoverable error, so we should retry.
+		// This may be a recoverable error, so we should retry.
 		RequestTimeHistogram.WithLabelValues("retry").Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
 		err = waitOneSecond(ctx)
 		if err != nil {
-			log.Println(err)
+			retryLogger.Println(err)
 			return nil, err
 		}
 	}
