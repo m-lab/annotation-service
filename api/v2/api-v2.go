@@ -127,9 +127,10 @@ func postWithRetry(ctx context.Context, url string, encodedData []byte) (*http.R
 			RequestTimeHistogram.WithLabelValues(resp.Status).Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
 			return resp, ErrStatusNotOK
 		default:
-			log.Println("Statuscode: ", resp.StatusCode)
+			log.Println("Statuscode: ", resp.StatusCode, "url:", url)
 			RequestTimeHistogram.WithLabelValues(resp.Status).Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
-			// Continue and possibly retry.
+			// TODO: Probably should continue and possibly retry, instead of returning.
+			return resp, ErrStatusNotOK
 		}
 
 		if ctx.Err() != nil {
