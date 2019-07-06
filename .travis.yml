@@ -77,6 +77,10 @@ script:
  # Run benchmarks
  - go test -bench . ./geolite2v2/...
 
+ # Check dependent projects
+ - go get github.com/m-lab/etl/...
+ - go vet github.com/m-lab/etl/...
+
  # Build and prepare for deployment
  - go build
  - $TRAVIS_BUILD_DIR/travis/install_gcloud.sh
