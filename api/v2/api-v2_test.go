@@ -81,7 +81,7 @@ func TestSomeErrors(t *testing.T) {
 	defer cancel()
 	_, err := api.GetAnnotations(ctx, url, time.Now(), ips, "reqInfo")
 	if callCount != 1 {
-		t.Error("Should have been two calls to server.")
+		t.Errorf("Should have been 1 call to server: %d", callCount)
 	}
 	if err == nil {
 		t.Fatal("Should have produced an error")
