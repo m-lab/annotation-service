@@ -118,6 +118,9 @@ func (d *Directory) GetAnnotator(date time.Time) (api.Annotator, error) {
 		log.Printf("Using (%s) for %s\n", ann.AnnotatorDate().Format("20060102"), date.Format("20060102"))
 		lastLogTime = time.Now()
 	}
+	if time.Since(lastLogTime) > 10*time.Minute {
+		d.PrintAll()
+	}
 	return ann, nil
 }
 
@@ -228,4 +231,10 @@ func (d *Directory) lastEarlierThan(date time.Time) api.Annotator {
 		return d.annotators[index]
 	}
 	return d.annotators[index-1]
+}
+
+func (d *Directory) PrintAll() {
+	for _, ann := range d.annotators {
+		log.Println(ann.AnnotatorDate().Format("20060102"))
+	}
 }
