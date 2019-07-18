@@ -234,7 +234,9 @@ func (d *Directory) lastEarlierThan(date time.Time) api.Annotator {
 }
 
 func (d *Directory) PrintAll() {
+	log.Println("here are all datasets in dir currently:")
 	for _, ann := range d.annotators {
 		log.Println(ann.AnnotatorDate().Format("20060102"))
 	}
+	log.Println("end of dir dataset list")
 }
