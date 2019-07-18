@@ -49,12 +49,14 @@ func TestBuild(t *testing.T) {
 	input = append(input, &fakeAnn{startDate: start.Add(478 * week)})
 	dir := directory.Build(input)
 
+	dir.PrintAll()
 	tests := []struct {
 		testDate string // date
 		want     string // date
 	}{
 		{"20170101", "20140608"},
 		{"20110101", "20100124"},
+		{"20180501", "20180408"},
 		// TODO: Add test cases.
 	}
 	for _, tt := range tests {

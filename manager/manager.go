@@ -188,18 +188,18 @@ func (bldr *listBuilder) build() []api.Annotator {
 
 	// merge the legacy V4 & V6 annotators
 	legacy := mergeV4V6(bldr.legacyV4.Fetch(), bldr.legacyV6.Fetch(), "legacy")
-
+	logAnnotatorDates("legacy", legacy)
 	// Now append the Geolite2 annotators
 	g2 := directory.SortSlice(bldr.geolite2.Fetch())
-
+	logAnnotatorDates("g2", g2)
 	geo := make([]api.Annotator, 0, len(g2)+len(legacy))
 	geo = append(geo, legacy...)
 	geo = append(geo, g2...)
-
+	logAnnotatorDates("geo", geo)
 	// here we have all the geo annotators in the ordered list.
 	// now merge the ASN V4 & V6 annotators
 	asn := mergeV4V6(bldr.asnV4.Fetch(), bldr.asnV6.Fetch(), "ASN")
-
+	logAnnotatorDates("asn", asn)
 	// and now we need to create the composite annotators. First list is the
 	// geo annotators, the second is the ASN
 	combo := directory.MergeAnnotators(geo, asn)
