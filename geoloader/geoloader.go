@@ -1,12 +1,14 @@
 // Package geoloader provides the interface between manager and dataset handling
 // packages (geolite2 and legacy). manager only depends on geoloader and api.
 // geoloader only depends on geolite2, legacy and api.
+// TODO:  This package is now used only by the manager package.  Should we consolidate them?
 package geoloader
 
 import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"regexp"
 	"runtime"
@@ -17,6 +19,11 @@ import (
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/metrics"
 	"google.golang.org/api/iterator"
+)
+
+const (
+	// Folder containing the maxmind files
+	maxmindPrefix = "Maxmind/"
 )
 
 var (
@@ -42,6 +49,30 @@ var (
 	errNoMatch = errors.New("Doesn't match") // TODO
 )
 
+// UseSpecificGeolite2DateForTesting is for unit tests to narrow the datasets to load from GCS to date that can be matched to the date part regexes.
+// The parameters are string pointers. If a parameter is nil, no filter will be used for that date part.
+func UseSpecificGeolite2DateForTesting(yearRegex, monthRegex, dayRegex *string) {
+	yearStr := `\d{4}`
+	monthStr := `\d{2}`
+	dayStr := monthStr
+
+	if yearRegex != nil {
+		yearStr = *yearRegex
+	}
+	if monthRegex != nil {
+		monthStr = *monthRegex
+	}
+	if dayRegex != nil {
+		dayStr = *dayRegex
+	}
+
+	geoLite2Regex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/%s/%s/%s%s%sT\d{6}Z-GeoLite2-City-CSV\.zip`, yearStr, monthStr, dayStr, yearStr, monthStr, dayStr))
+	geoLegacyRegex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/%s/%s/%s%s%sT.*-GeoLiteCity.dat.*`, yearStr, monthStr, dayStr, yearStr, monthStr, dayStr))
+	geoLegacyv6Regex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/%s/%s/%s%s%sT.*-GeoLiteCityv6.dat.*`, yearStr, monthStr, dayStr, yearStr, monthStr, dayStr))
+	_, file, line, _ := runtime.Caller(1)
+	log.Printf("Date filter is set to %s%s%s by %s:%d", yearStr, monthStr, dayStr, file, line)
+}
+
 // UseOnlyMarchForTest hacks the regular expressions to reduce the number of datasets for testing.
 func UseOnlyMarchForTest() {
 	if flag.Lookup("test.v") == nil {
@@ -58,30 +89,34 @@ func UseOnlyMarchForTest() {
 *****************************************************************************/
 
 // Returns the normal iterator for objects in the appropriate GCS bucket.
-func bucketIterator() (*storage.ObjectIterator, error) {
+func bucketIterator(withPrefix string) (*storage.ObjectIterator, error) {
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-	prospectiveFiles := client.Bucket(api.MaxmindBucketName).Objects(ctx, &storage.Query{Prefix: api.MaxmindPrefix})
+	prospectiveFiles := client.Bucket(api.MaxmindBucketName).Objects(ctx, &storage.Query{Prefix: withPrefix})
 	return prospectiveFiles, nil
 }
 
+type Filename string
+
 // loadAll loads all datasets from the source that match the filter.
 func loadAll(
+	cache map[Filename]api.Annotator,
 	filter func(file *storage.ObjectAttrs) error,
-	loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
+	loader func(*storage.ObjectAttrs) (api.Annotator, error),
+	gcsPrefix string) (map[Filename]api.Annotator, error) {
 	if loader == nil {
 		return nil, ErrNoLoader
 	}
-	source, err := bucketIterator()
+	source, err := bucketIterator(gcsPrefix)
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO - maybe use a channel and single threaded append instead.
-	result := make([]api.Annotator, 0, 100)
+	result := make(map[Filename]api.Annotator, len(cache)+2)
 	resultLock := sync.Mutex{}
 	wg := sync.WaitGroup{}
 
@@ -97,25 +132,31 @@ func loadAll(
 		if filter != nil && filter(file) != nil {
 			continue
 		}
+		filename := Filename(file.Name)
+		ann, ok := cache[filename]
+		if ok {
+			result[filename] = ann
+			continue
+		}
 		_, _, callerLine, _ := runtime.Caller(1)
-		log.Println("Loading", file.Name, "from line", callerLine)
+		log.Println("Loading", filename, "from line", callerLine)
 		wg.Add(1)
 		go func(file *storage.ObjectAttrs) {
 			defer wg.Done()
 			ann, err := loader(file)
 			if err != nil {
-				log.Println("Retrying", file.Name, "after", err)
+				log.Println("Retrying", filename, "after", err)
 				ann, err = loader(file)
 				if err != nil {
-					log.Println("Failed trying to load", file.Name, "with", err)
+					log.Println("Failed trying to load", filename, "with", err)
 					return
 				}
 			}
 			resultLock.Lock()
-			result = append(result, ann)
+			result[filename] = ann
 			resultLock.Unlock()
 			metrics.DatasetCount.Inc()
-			log.Println("Loaded", file.Name)
+			log.Println("Loaded", filename)
 		}(file)
 	}
 	wg.Wait()
@@ -142,34 +183,92 @@ func filter(file *storage.ObjectAttrs, r *regexp.Regexp, before time.Time) error
 	return nil
 }
 
-// LoadAllLegacyV4 loads all v4 legacy datasets from the appropriate GCS bucket.
+// cachingLoader implements api.CachingLoader for legacy and geolite2 geolocation.
+type cachingLoader struct {
+	lock       sync.Mutex
+	gcsPrefix  string
+	annotators map[Filename]api.Annotator
+	filter     func(*storage.ObjectAttrs) error
+	loader     func(*storage.ObjectAttrs) (api.Annotator, error)
+}
+
+// UpdateCache causes the loader to load any new annotators and add them to the cached list.
+func (cl *cachingLoader) UpdateCache() error {
+	newMap, err :=
+		loadAll(cl.annotators,
+			func(file *storage.ObjectAttrs) error {
+				return cl.filter(file)
+			},
+			cl.loader,
+			cl.gcsPrefix)
+	if err != nil {
+		return err
+	}
+	cl.lock.Lock()
+	defer cl.lock.Unlock()
+
+	cl.annotators = newMap
+	return nil
+}
+
+// Fetch returns a copy of the current list of annotators.
+// The returned slice of Annotators is NOT sorted.
+func (cl *cachingLoader) Fetch() []api.Annotator {
+	cl.lock.Lock()
+	defer cl.lock.Unlock()
+	result := make([]api.Annotator, 0, len(cl.annotators))
+	for _, v := range cl.annotators {
+		result = append(result, v)
+	}
+	return result
+}
+
+// NewCachingLoader creates a CachingLoader with the provided filter and loader.
+func newCachingLoader(
+	filter func(*storage.ObjectAttrs) error,
+	loader func(*storage.ObjectAttrs) (api.Annotator, error),
+	gcsPrefix string) api.CachingLoader {
+	return &cachingLoader{filter: filter, loader: loader, annotators: make(map[Filename]api.Annotator, 100), gcsPrefix: gcsPrefix}
+}
+
+// LegacyV4Loader returns a CachingLoader that loads all v4 legacy datasets.
 // The loader is injected, to allow for efficient unit testing.
-func LoadAllLegacyV4(loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
-	return loadAll(
+func LegacyV4Loader(
+	loader func(*storage.ObjectAttrs) (api.Annotator, error)) api.CachingLoader {
+	return newCachingLoader(
 		func(file *storage.ObjectAttrs) error {
 			// We archived but do not use legacy datasets after GeoLite2StartDate.
 			return filter(file, geoLegacyRegex, geoLite2StartDate)
 		},
-		loader)
+		loader,
+		maxmindPrefix)
 }
 
-// LoadAllLegacyV6 loads all v6 legacy datasets from the appropriate GCS bucket.
+// LegacyV6Loader returns a CachingLoader that loads all v6 legacy datasets.
 // The loader is injected, to allow for efficient unit testing.
-func LoadAllLegacyV6(loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
-	return loadAll(
+func LegacyV6Loader(
+	loader func(*storage.ObjectAttrs) (api.Annotator, error)) api.CachingLoader {
+	return newCachingLoader(
 		func(file *storage.ObjectAttrs) error {
 			// We archived but do not use legacy datasets after GeoLite2StartDate.
 			return filter(file, geoLegacyv6Regex, geoLite2StartDate)
 		},
-		loader)
+		loader,
+		maxmindPrefix)
 }
 
-// LoadAllGeolite2 loads all geolite2 datasets from the appropriate GCS bucket.
+// Geolite2Loader returns a CachingLoader that loads all geolite2 datasets.
 // The loader is injected, to allow for efficient unit testing.
-func LoadAllGeolite2(loader func(*storage.ObjectAttrs) (api.Annotator, error)) ([]api.Annotator, error) {
-	return loadAll(
+func Geolite2Loader(
+	loader func(*storage.ObjectAttrs) (api.Annotator, error)) api.CachingLoader {
+	return newCachingLoader(
 		func(file *storage.ObjectAttrs) error {
 			return filter(file, geoLite2Regex, time.Time{})
 		},
-		loader)
+		loader,
+		maxmindPrefix)
+}
+
+func IsLegacy(date time.Time) bool {
+	return date.Before(geoLite2StartDate)
 }

@@ -88,17 +88,15 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"net"
 	"os"
-	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
 
 	"cloud.google.com/go/storage"
 	"github.com/m-lab/annotation-service/api"
+	"github.com/m-lab/annotation-service/iputils"
 	"github.com/m-lab/annotation-service/loader"
-	"github.com/m-lab/annotation-service/metrics"
 )
 
 var (
@@ -134,10 +132,9 @@ func (gi *Annotator) Annotate(IP string, data *api.GeoData) error {
 	if gi.dataset == nil {
 		return ErrDatasetNotLoaded
 	}
-	ip := net.ParseIP(IP)
-	if ip == nil {
-		metrics.BadIPTotal.Inc()
-		return errors.New("ErrInvalidIP") // TODO
+	ip, err := iputils.ParseIPWithMetrics(IP)
+	if err != nil {
+		return err
 	}
 	var record *GeoIPRecord
 	if ip.To4() != nil {
@@ -185,19 +182,12 @@ func LoadLegacyDataset(filename string, bucketname string) (*Annotator, error) {
 	return &Annotator{dataset: ann, startDate: date}, nil
 }
 
-// getGzBase extracts basename, such as "20140307T160000Z-GeoLiteCity.dat"
-// from "Maxmind/2014/03/07/20140307T160000Z-GeoLiteCity.dat.gz"
-func getGzBase(filename string) string {
-	base := filepath.Base(filename)
-	return base[0 : len(base)-3]
-}
-
 // LoadGeoliteDataset will check GCS for the matching dataset, download
 // it, process it, and load it into memory so that it can be easily
 // searched, then it will return a pointer to that GeoDataset or an error.
 func LoadGeoliteDataset(filename string, bucketname string) (*GeoIP, error) {
 	// load the legacy binary dataset
-	dataFileName := getGzBase(filename)
+	dataFileName := loader.GetGzBase(filename)
 	err := loader.UncompressGzFile(context.Background(), bucketname, filename, dataFileName)
 	if err != nil {
 		return nil, err

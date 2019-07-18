@@ -11,10 +11,14 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/m-lab/go/logx"
 
 	"github.com/m-lab/annotation-service/api"
 	v2 "github.com/m-lab/annotation-service/api/v2"
+	"github.com/m-lab/annotation-service/geoloader"
 	"github.com/m-lab/annotation-service/manager"
 	"github.com/m-lab/annotation-service/metrics"
 )
@@ -26,19 +30,11 @@ const (
 )
 
 func InitHandler() {
-	manager.InitDataset()
+	manager.MustUpdateDirectory()
 
-	// sets up any handlers that are needed, including url
-	// handlers and pubsub handlers
+	// sets up any handlers that are needed
 	http.HandleFunc("/annotate", Annotate)
 	http.HandleFunc("/batch_annotate", BatchAnnotate)
-
-	// DEPRECATED
-	// This code is disabled, to deal with a confusing pubsub subscription quota.
-	// It is no longer needed because Ya implemented an external cron trigger.
-	// This listens for pubsub messages about new downloader files, and loads them
-	// when they become available.
-	// go waitForDownloaderMessages()
 }
 
 // Annotate is a URL handler that looks up IP address and puts
@@ -54,22 +50,24 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 	defer metrics.ActiveRequests.Dec()
 
 	data, err := ValidateAndParse(r)
-	if checkError(err, w, 1, "single", tStart) {
+	if checkError(err, w, "", 1, "single", tStart) {
 		return
 	}
 
 	result, err := GetMetadataForSingleIP(data)
-	if checkError(err, w, 1, "single", tStart) {
+	if checkError(err, w, "", 1, "single", tStart) {
 		return
 	}
 
+	trackMissingResponses(&result)
+
 	encodedResult, err := json.Marshal(result)
-	if checkError(err, w, 1, "single", tStart) {
+	if checkError(err, w, "", 1, "single", tStart) {
 		return
 	}
 
 	fmt.Fprint(w, string(encodedResult))
-	metrics.RequestTimeHistogramUsec.WithLabelValues("single", "success").Observe(float64(time.Since(tStart).Nanoseconds()) / 1000)
+	metrics.RequestTimeHistogramUsec.WithLabelValues("unknown", "single", "success").Observe(float64(time.Since(tStart).Nanoseconds()) / 1000)
 }
 
 // ValidateAndParse takes a request and validates the URL parameters,
@@ -143,7 +141,11 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 		request := ips[i]
 		metrics.TotalLookups.Inc()
 		data := api.GeoData{}
-		err := ann.Annotate(request.IP, &data)
+		requestIP := request.IP
+		if strings.HasPrefix(request.IP, "2002:") {
+			requestIP = Ip6to4(request.IP)
+		}
+		err := ann.Annotate(requestIP, &data)
 		if err != nil {
 			// TODO need better error handling.
 			continue
@@ -157,9 +159,25 @@ func AnnotateLegacy(date time.Time, ips []api.RequestData) (map[string]*api.GeoD
 	return responseMap, time.Time{}, nil
 }
 
+var v2errorLogger = logx.NewLogEvery(nil, time.Second)
+
+// Ip6to4 converts "2002:" ipv6 address back to ipv4.
+func Ip6to4(ipv6 string) string {
+	ipnet := &net.IPNet{
+		Mask: net.CIDRMask(16, 128),
+		IP:   net.ParseIP("2002::"),
+	}
+	ip := net.ParseIP(ipv6)
+	if ip == nil || !ipnet.Contains(ip) {
+		return ""
+	}
+
+	return fmt.Sprintf("%d.%d.%d.%d", ip[2], ip[3], ip[4], ip[5])
+}
+
 // AnnotateV2 finds an appropriate Annotator based on the requested Date, and creates a
 // response with annotations for all parseable IPs.
-func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
+func AnnotateV2(date time.Time, ips []string, reqInfo string) (v2.Response, error) {
 	responseMap := make(map[string]*api.GeoData, len(ips))
 
 	ann, err := manager.GetAnnotator(date)
@@ -175,7 +193,12 @@ func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 		metrics.TotalLookups.Inc()
 
 		annotation := api.GeoData{}
-		err := ann.Annotate(ips[i], &annotation)
+		// special handling of "2002:" ip address
+		requestIP := ips[i]
+		if strings.HasPrefix(ips[i], "2002:") {
+			requestIP = Ip6to4(ips[i])
+		}
+		err := ann.Annotate(requestIP, &annotation)
 		if err != nil {
 			switch err.Error {
 			// TODO - enumerate interesting error types here...
@@ -184,6 +207,9 @@ func AnnotateV2(date time.Time, ips []string) (v2.Response, error) {
 				// This collapses all other error types into a single error, to avoid excessive
 				// time serices if there are variable error strings.
 				metrics.ErrorTotal.WithLabelValues("Annotate Error").Inc()
+
+				// We are trying to debug error propogation.  So logging errors here to help with that.
+				v2errorLogger.Println(err)
 			}
 			continue
 		}
@@ -209,7 +235,7 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	defer metrics.ActiveRequests.Dec()
 
 	jsonBuffer, err := ioutil.ReadAll(r.Body)
-	if checkError(err, w, 0, "batch", tStart) {
+	if checkError(err, w, "batch-error", 0, "", tStart) {
 		return
 	}
 	r.Body.Close()
@@ -217,29 +243,29 @@ func BatchAnnotate(w http.ResponseWriter, r *http.Request) {
 	handleNewOrOld(w, tStart, jsonBuffer)
 }
 
-func latencyStats(label string, count int, tStart time.Time) {
+func latencyStats(source string, label string, count int, tStart time.Time) {
 	switch {
 	case count >= 400:
-		metrics.RequestTimeHistogramUsec.WithLabelValues(label, "400+").Observe(float64(time.Since(tStart).Nanoseconds()) / 1000)
+		metrics.RequestTimeHistogramUsec.WithLabelValues(source, label, "400+").Observe(float64(time.Since(tStart).Nanoseconds()) / 1000)
 	case count >= 100:
-		metrics.RequestTimeHistogramUsec.WithLabelValues(label, "100+").Observe(float64(time.Since(tStart).Nanoseconds()) / 1000)
+		metrics.RequestTimeHistogramUsec.WithLabelValues(source, label, "100+").Observe(float64(time.Since(tStart).Nanoseconds()) / 1000)
 	case count >= 20:
-		metrics.RequestTimeHistogramUsec.WithLabelValues(label, "20+").Observe(float64(time.Since(tStart).Nanoseconds()) / 1000)
+		metrics.RequestTimeHistogramUsec.WithLabelValues(source, label, "20+").Observe(float64(time.Since(tStart).Nanoseconds()) / 1000)
 	case count >= 5:
-		metrics.RequestTimeHistogramUsec.WithLabelValues(label, "5+").Observe(float64(time.Since(tStart).Nanoseconds()) / 1000)
+		metrics.RequestTimeHistogramUsec.WithLabelValues(source, label, "5+").Observe(float64(time.Since(tStart).Nanoseconds()) / 1000)
 	default:
-		metrics.RequestTimeHistogramUsec.WithLabelValues(label, "<5").Observe(float64(time.Since(tStart).Nanoseconds()) / 1000)
+		metrics.RequestTimeHistogramUsec.WithLabelValues(source, label, "<5").Observe(float64(time.Since(tStart).Nanoseconds()) / 1000)
 	}
 }
 
 // TODO - is this now obsolete?
-func checkError(err error, w http.ResponseWriter, ipCount int, label string, tStart time.Time) bool {
+func checkError(err error, w http.ResponseWriter, reqInfo string, ipCount int, label string, tStart time.Time) bool {
 	if err != nil {
 		switch err {
 		default:
 			// If it isn't loading, client should probably give up instead of retrying.
 			w.WriteHeader(http.StatusInternalServerError)
-			metrics.RequestTimeHistogramUsec.WithLabelValues(label, err.Error()).Observe(float64(time.Since(tStart).Nanoseconds()) / 1000)
+			metrics.RequestTimeHistogramUsec.WithLabelValues(reqInfo, label, err.Error()).Observe(float64(time.Since(tStart).Nanoseconds()) / 1000)
 		}
 		fmt.Fprintf(w, err.Error())
 		return true
@@ -250,7 +276,7 @@ func checkError(err error, w http.ResponseWriter, ipCount int, label string, tSt
 // TODO Leave this here for now to make review easier, rearrange later.
 func handleOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 	dataSlice, err := BatchValidateAndParse(jsonBuffer)
-	if checkError(err, w, 0, "old", tStart) {
+	if checkError(err, w, "old", 0, "", tStart) {
 		return
 	}
 
@@ -261,26 +287,67 @@ func handleOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 		// For old request format, we use the date of the first RequestData
 		date := dataSlice[0].Timestamp
 		responseMap, _, err = AnnotateLegacy(date, dataSlice)
-		if checkError(err, w, len(dataSlice), "old", tStart) {
+		if checkError(err, w, "old", len(dataSlice), "", tStart) {
 			return
 		}
 	} else {
 		responseMap = make(map[string]*api.GeoData)
 	}
-
+	for _, anno := range responseMap {
+		trackMissingResponses(anno)
+	}
 	encodedResult, err := json.Marshal(responseMap)
-	if checkError(err, w, len(dataSlice), "old", tStart) {
+	if checkError(err, w, "old", len(dataSlice), "", tStart) {
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
-	latencyStats("old", len(dataSlice), tStart)
+
+	if len(dataSlice) == 0 {
+		// Don't know if this was legacy or geolite2, so just label it "old"
+		latencyStats("old", "unknown", len(dataSlice), tStart)
+	} else if geoloader.IsLegacy(dataSlice[0].Timestamp) {
+		// Label this old (api) and legacy (dataset)
+		latencyStats("old", "legacy", len(dataSlice), tStart)
+	} else {
+		// Label this old (api) and geolite2 (dataset)
+		latencyStats("old", "geolite2", len(dataSlice), tStart)
+	}
+}
+
+func trackMissingResponses(anno *api.GeoData) {
+	if anno == nil {
+		metrics.ResponseMissingAnnotation.WithLabelValues("nil-response").Inc()
+		return
+	}
+
+	netOk := anno.Network != nil && len(anno.Network.Systems) > 0 && len(anno.Network.Systems[0].ASNs) > 0 && anno.Network.Systems[0].ASNs[0] != 0
+	geoOk := anno.Geo != nil && anno.Geo.Latitude != 0 && anno.Geo.Longitude != 0
+
+	if netOk && geoOk {
+		return
+	}
+	if netOk {
+		if anno.Geo == nil {
+			metrics.ResponseMissingAnnotation.WithLabelValues("nil-geo").Inc()
+		} else {
+			metrics.ResponseMissingAnnotation.WithLabelValues("empty-geo").Inc()
+		}
+	} else if geoOk {
+		if anno.Network == nil {
+			metrics.ResponseMissingAnnotation.WithLabelValues("nil-asn").Inc()
+		} else {
+			metrics.ResponseMissingAnnotation.WithLabelValues("empty-asn").Inc()
+		}
+	} else {
+		metrics.ResponseMissingAnnotation.WithLabelValues("both").Inc()
+	}
 }
 
 func handleV2(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 	request := v2.Request{}
 
 	err := json.Unmarshal(jsonBuffer, &request)
-	if checkError(err, w, 0, "v2", tStart) {
+	if checkError(err, w, request.RequestInfo, 0, "v2", tStart) {
 		return
 	}
 
@@ -288,18 +355,34 @@ func handleV2(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 	response := v2.Response{}
 
 	if len(request.IPs) > 0 {
-		response, err = AnnotateV2(request.Date, request.IPs)
-		if checkError(err, w, len(request.IPs), "v2", tStart) {
+		requestIPs := make([]string, len(request.IPs))
+		for i := range request.IPs {
+			requestIPs[i] = request.IPs[i]
+			if strings.HasPrefix(request.IPs[i], "2002:") {
+				requestIPs[i] = Ip6to4(request.IPs[i])
+			}
+		}
+		response, err = AnnotateV2(request.Date, requestIPs, request.RequestInfo)
+		if checkError(err, w, request.RequestInfo, len(request.IPs), "v2", tStart) {
 			return
 		}
 	}
-
+	for _, anno := range response.Annotations {
+		trackMissingResponses(anno)
+	}
 	encodedResult, err := json.Marshal(response)
-	if checkError(err, w, len(request.IPs), "v2", tStart) {
+
+	if checkError(err, w, request.RequestInfo, len(request.IPs), "v2", tStart) {
 		return
 	}
 	fmt.Fprint(w, string(encodedResult))
-	latencyStats("v2", len(request.IPs), tStart)
+	if geoloader.IsLegacy(request.Date) {
+		// Label this v2 (api) and legacy (dataset)
+		latencyStats(request.RequestInfo, "v2-legacy", len(request.IPs), tStart)
+	} else {
+		// Label this v2 (api) and geolite2 (dataset)
+		latencyStats(request.RequestInfo, "v2-geolite2", len(request.IPs), tStart)
+	}
 }
 
 func handleNewOrOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
@@ -313,7 +396,7 @@ func handleNewOrOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) 
 		case v2.RequestTag:
 			handleV2(w, tStart, jsonBuffer)
 		default:
-			if checkError(errors.New("Unknown Request Type"), w, 0, "newOrOld", tStart) {
+			if checkError(errors.New("Unknown Request Type"), w, "newOrOld", 0, "", tStart) {
 				return
 			}
 		}
@@ -358,7 +441,10 @@ func GetMetadataForSingleIP(request *api.RequestData) (result api.GeoData, err e
 	if err != nil {
 		return
 	}
-
-	err = ann.Annotate(request.IP, &result)
+	requestIP := request.IP
+	if strings.HasPrefix(request.IP, "2002:") {
+		requestIP = Ip6to4(request.IP)
+	}
+	err = ann.Annotate(requestIP, &result)
 	return
 }

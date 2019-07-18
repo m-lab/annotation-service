@@ -21,7 +21,7 @@ func init() {
 }
 
 func TestDoRequest(t *testing.T) {
-	expectedJson := `{"AnnotatorDate":"2018-12-05T00:00:00Z","Annotations":{"147.1.2.3":{"Geo":{"continent_code":"NA","country_code":"US","country_name":"United States","latitude":37.751,"longitude":-97.822},"ASN":{}},"8.8.8.8":{"Geo":{"continent_code":"NA","country_code":"US","country_name":"United States","latitude":37.751,"longitude":-97.822},"ASN":null}}}`
+	expectedJson := `{"AnnotatorDate":"2018-12-05T00:00:00Z","Annotations":{"147.1.2.3":{"Geo":{"continent_code":"NA","country_code":"US","country_name":"United States","latitude":37.751,"longitude":-97.822},"Network":{}},"8.8.8.8":{"Geo":{"continent_code":"NA","country_code":"US","country_name":"United States","latitude":37.751,"longitude":-97.822},"Network":{}}}}`
 	callCount := 0
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -38,13 +38,13 @@ func TestDoRequest(t *testing.T) {
 	ips := []string{"8.8.8.8", "147.1.2.3"}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	resp, err := api.GetAnnotations(ctx, url, time.Now(), ips)
+	resp, err := api.GetAnnotations(ctx, url, time.Now(), ips, "reqInfo")
 	if err == nil {
 		t.Fatal("Should have timed out")
 	}
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	resp, err = api.GetAnnotations(ctx, url, time.Now(), ips)
+	resp, err = api.GetAnnotations(ctx, url, time.Now(), ips, "reqInfo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,9 +79,9 @@ func TestSomeErrors(t *testing.T) {
 	ips := []string{"8.8.8.8", "147.1.2.3"}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	_, err := api.GetAnnotations(ctx, url, time.Now(), ips)
+	_, err := api.GetAnnotations(ctx, url, time.Now(), ips, "reqInfo")
 	if callCount != 1 {
-		t.Error("Should have been two calls to server.")
+		t.Errorf("Should have been 1 call to server: %d", callCount)
 	}
 	if err == nil {
 		t.Fatal("Should have produced an error")

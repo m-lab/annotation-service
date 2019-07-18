@@ -7,12 +7,16 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/m-lab/annotation-service/api"
+	"github.com/m-lab/annotation-service/metrics"
+	"github.com/m-lab/go/logx"
 )
 
 /*************************************************************************
@@ -44,15 +48,22 @@ func NewRequest(date time.Time, ips []string) Request {
 // Response describes data returned in V2 responses (json encoded).
 type Response struct {
 	// TODO should we include additional metadata about the annotator sources?  Perhaps map of filenames?
-	AnnotatorDate time.Time               // The publication date(s) of the dataset used for the annotation
-	Annotations   map[string]*api.GeoData // Map from human readable IP address to GeoData
+	AnnotatorDate time.Time                   // The publication date(s) of the dataset used for the annotation
+	Annotations   map[string]*api.Annotations // Map from human readable IP address to GeoData
+}
+
+// Annotator defines the GetAnnotations method used for annotating.
+// info is an optional string to populate Request.RequestInfo
+type Annotator interface {
+	// TODO - make info an regular parameter instead of vararg.
+	GetAnnotations(ctx context.Context, date time.Time, ips []string, info ...string) (*Response, error)
 }
 
 /*************************************************************************
 *                           Remote Annotator API                          *
 *************************************************************************/
 var (
-	RequestTimeHistogram = prometheus.NewHistogramVec(
+	RequestTimeHistogram = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name: "annotator_external_latency_hist_msec",
 			Help: "annotator latency distributions.",
@@ -66,16 +77,10 @@ var (
 		[]string{"detail"})
 )
 
-func init() {
-	prometheus.MustRegister(RequestTimeHistogram)
-}
-
 func post(ctx context.Context, url string, encodedData []byte) (*http.Response, error) {
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-	defer cancel()
-
 	httpReq, err := http.NewRequest("POST", url, bytes.NewReader(encodedData))
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
@@ -95,6 +100,9 @@ func waitOneSecond(ctx context.Context) error {
 	}
 }
 
+// Rate limit these errors to avoid bad spam.
+var retryLogger = logx.NewLogEvery(nil, 1*time.Second)
+
 // postWithRetry will retry for some error conditions, up to the deadline in the provided context.
 // Returns if http status is OK, error is not nil, http status is not ServiceUnavailable or timeout.
 func postWithRetry(ctx context.Context, url string, encodedData []byte) (*http.Response, error) {
@@ -102,46 +110,76 @@ func postWithRetry(ctx context.Context, url string, encodedData []byte) (*http.R
 		start := time.Now()
 		resp, err := post(ctx, url, encodedData)
 		if err != nil {
+			retryLogger.Println(err)
 			RequestTimeHistogram.WithLabelValues(err.Error()).Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
 			return nil, err
 		}
-		if resp.StatusCode == http.StatusOK {
+
+		switch resp.StatusCode {
+		case http.StatusOK:
 			RequestTimeHistogram.WithLabelValues("success").Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
-			return resp, err
-		}
-		if resp.StatusCode != http.StatusServiceUnavailable {
+			return resp, nil
+		case http.StatusServiceUnavailable:
+			// do nothing
+		case http.StatusNotFound:
+			// This is likely a bad batch URL.
+			retryLogger.Println("StatusNotFound:", url)
 			RequestTimeHistogram.WithLabelValues(resp.Status).Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
 			return resp, ErrStatusNotOK
+		default:
+			log.Println("Statuscode: ", resp.StatusCode, "url:", url)
+			RequestTimeHistogram.WithLabelValues(resp.Status).Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
+			// TODO: Probably should continue and possibly retry, instead of returning.
+			return resp, ErrStatusNotOK
 		}
+
 		if ctx.Err() != nil {
+			retryLogger.Println(ctx.Err())
 			RequestTimeHistogram.WithLabelValues("timeout").Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
 			return nil, ctx.Err()
 		}
-		// This is a recoverable error, so we should retry.
+		// This may be a recoverable error, so we should retry.
 		RequestTimeHistogram.WithLabelValues("retry").Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
 		err = waitOneSecond(ctx)
 		if err != nil {
+			retryLogger.Println(err)
 			return nil, err
 		}
 	}
 }
 
+// ErrMoreJSON is returned if the message body was not completely consumed by decoder.
+var ErrMoreJSON = errors.New("JSON body not completely consumed")
+
+var decodeLogEvery = logx.NewLogEvery(nil, 30*time.Second)
+
 // GetAnnotations takes a url, and Request, makes remote call, and returns parsed ResponseV2
-// TODO(gfr) Should pass the annotator's request context through and use it here.
-func GetAnnotations(ctx context.Context, url string, date time.Time, ips []string) (*Response, error) {
+// TODO make this unexported once we have migrated all code to use GetAnnotator()
+func GetAnnotations(ctx context.Context, url string, date time.Time, ips []string, info ...string) (*Response, error) {
 	req := NewRequest(date, ips)
+	if len(info) > 0 {
+		req.RequestInfo = info[0]
+	}
 	encodedData, err := json.Marshal(req)
 	if err != nil {
+		log.Println(err)
+		metrics.ClientErrorTotal.WithLabelValues("request encoding error").Inc()
 		return nil, err
 	}
 
-	httpResp, err := postWithRetry(ctx, url, encodedData)
+	localCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	httpResp, err := postWithRetry(localCtx, url, encodedData)
 	if err != nil {
+		log.Println(err)
 		if httpResp == nil || httpResp.Body == nil {
+			metrics.ClientErrorTotal.WithLabelValues("http empty response").Inc()
 			return nil, err
 		}
 		defer httpResp.Body.Close()
 		if err == ErrStatusNotOK {
+			metrics.ClientErrorTotal.WithLabelValues("http status not OK").Inc()
 			body, ioutilErr := ioutil.ReadAll(httpResp.Body)
 			if ioutilErr != nil {
 				return nil, ioutilErr
@@ -158,19 +196,54 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 	defer httpResp.Body.Close()
 	// Handle other status codes
 	if httpResp.StatusCode != http.StatusOK {
+		log.Println("http status code is ", httpResp.StatusCode)
+		metrics.ClientErrorTotal.WithLabelValues("http statuscode not OK").Inc()
 		return nil, errors.New(httpResp.Status)
 	}
 	// Copy response into a byte slice
 	body, err := ioutil.ReadAll(httpResp.Body)
 	if err != nil {
+		log.Println(err)
+		metrics.ClientErrorTotal.WithLabelValues("cannot read http response").Inc()
 		return nil, err
 	}
 
 	resp := Response{}
 
-	err = json.Unmarshal(body, &resp)
+	decoder := json.NewDecoder(bytes.NewReader(body))
+	decoder.DisallowUnknownFields()
+
+	err = decoder.Decode(&resp)
 	if err != nil {
-		return nil, err
+		// TODO add metric, but in the correct namespace???
+		// When this happens, it is likely to be very spammy.
+		decodeLogEvery.Println("Decode error:", err)
+
+		// Try again but ignore unknown fields.
+		decoder := json.NewDecoder(bytes.NewReader(body))
+		err = decoder.Decode(&resp)
+		if err != nil {
+			// This is a more serious error.
+			log.Println(err)
+			metrics.ClientErrorTotal.WithLabelValues("json decode error").Inc()
+			return nil, err
+		}
+	}
+	if decoder.More() {
+		decodeLogEvery.Println("Decode error:", ErrMoreJSON)
 	}
 	return &resp, nil
+}
+
+type annotator struct {
+	url string
+}
+
+func (ann annotator) GetAnnotations(ctx context.Context, date time.Time, ips []string, info ...string) (*Response, error) {
+	return GetAnnotations(ctx, ann.url, date, ips, info...)
+}
+
+// GetAnnotator returns a v2.Annotator that uses the provided url to make v2 api requests.
+func GetAnnotator(url string) Annotator {
+	return &annotator{url: url}
 }
