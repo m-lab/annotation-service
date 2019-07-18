@@ -76,7 +76,7 @@ func computeLatestDate(annotators []api.Annotator) time.Time {
 }
 
 func computerEarliestDate(annotators []api.Annotator) time.Time {
-	t := time.Time{}
+	t := time.Now()
 	for i := range annotators {
 		at := annotators[i].AnnotatorDate()
 		if at.Before(t) {
