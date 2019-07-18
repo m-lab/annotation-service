@@ -107,7 +107,7 @@ func TestMergeAnnotators(t *testing.T) {
 				{newFake("20100203"), newFake("20110405")},
 				{newFake("20100101"), newFake("20110101")}},
 			// Here are the three expected CAs.
-			want: "([20100101])([20100203])([20110101])([20110405])",
+			want: "([20100203][20100101])([20100203][20110101])([20110405][20110101])",
 			// TODO: Add test cases.
 		},
 	}

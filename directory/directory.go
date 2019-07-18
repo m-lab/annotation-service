@@ -38,8 +38,8 @@ var (
 
 // CompositeAnnotator wraps several annotators, and calls to Annotate() are forwarded to all of them.
 type CompositeAnnotator struct {
-	// latest date of the component annotators.  This is precomputed, and returned by AnnotatorDate()
-	latestDate time.Time
+	// date of the component annotators.  This is precomputed, and returned by AnnotatorDate()
+	date       time.Time
 	annotators []api.Annotator
 }
 
@@ -60,7 +60,7 @@ func (ca CompositeAnnotator) Annotate(ip string, ann *api.GeoData) error {
 // as we try to apply the most recent annotators that predate the test we are annotating.  So the
 // most recent of all the annotators is the date that should be compared to the test date.
 func (ca CompositeAnnotator) AnnotatorDate() time.Time {
-	return ca.latestDate
+	return ca.date
 }
 
 // Compute the latest AnnotatorDate() value from a slice of annotators.
@@ -69,6 +69,17 @@ func computeLatestDate(annotators []api.Annotator) time.Time {
 	for i := range annotators {
 		at := annotators[i].AnnotatorDate()
 		if at.After(t) {
+			t = at
+		}
+	}
+	return t
+}
+
+func computerEarliestDate(annotators []api.Annotator) time.Time {
+	t := time.Time{}
+	for i := range annotators {
+		at := annotators[i].AnnotatorDate()
+		if at.Before(t) {
 			t = at
 		}
 	}
@@ -95,7 +106,7 @@ func NewCompositeAnnotator(annotators []api.Annotator) api.Annotator {
 	if annotators == nil {
 		return nil
 	}
-	ca := CompositeAnnotator{latestDate: computeLatestDate(annotators), annotators: annotators}
+	ca := CompositeAnnotator{date: computerEarliestDate(annotators), annotators: annotators}
 	return ca
 }
 
@@ -158,6 +169,41 @@ func advance(lists [][]api.Annotator) ([][]api.Annotator, bool) {
 	return lists, true
 }
 
+func MergeAnnotators(lists ...[]api.Annotator) []api.Annotator {
+	listCount := len(lists)
+	if listCount == 0 {
+		return nil
+	}
+	if listCount == 1 {
+		return lists[0]
+	}
+
+	// This is an arbitrary size, sufficient to reduce number of reallocations.
+	groups := make([][]api.Annotator, 0, 100)
+
+	// For each step, add a group, then advance the list(s) with earliest dates at second index.
+	for more := true; more; {
+		// Create and add group with first annotator from each list
+		group := make([]api.Annotator, len(lists))
+		for l, list := range lists {
+			if len(list) == 0 {
+				return nil
+			}
+			group[l] = list[0]
+		}
+		groups = append(groups, group)
+		// Advance the lists that have earliest next elements.
+		lists, more = advance(lists)
+	}
+
+	result := make([]api.Annotator, len(groups))
+	for i, group := range groups {
+		result[i] = NewCompositeAnnotator(group)
+	}
+	return result
+}
+
+/*
 // MergeAnnotators merges two lists of annotators, and returns a list of CompositeAnnotators.
 // Result will include a separate CompositeAnnotator for each unique date in any list, and each
 // CA will include the annotator from each list, equal to the CA date.
@@ -172,43 +218,31 @@ func MergeAnnotators(list1 []api.Annotator, list2 []api.Annotator) []api.Annotat
 	index1 := 0
 	index2 := 0
 	result := make([]api.Annotator, 0)
-	for index1 < len(list1) && index2 < len(list2) {
-		if list1[index1].AnnotatorDate().Before(list2[index2].AnnotatorDate()) {
-			// Advance list1
-			group := make([]api.Annotator, 1)
+	for index1 < len(list1) || index2 < len(list2) {
+		group := make([]api.Annotator, 2)
+		if index1 >= len(list1) {
+			group[0] = list1[len(list1)-1]
+		} else {
 			group[0] = list1[index1]
-			result = append(result, NewCompositeAnnotator(group))
+		}
+		if index2 >= len(list2) {
+			group[1] = list2[len(list2)-1]
+		} else {
+			group[1] = list2[index2]
+		}
+		result = append(result, NewCompositeAnnotator(group))
+		if list1[index1].AnnotatorDate().Before(list2[index2].AnnotatorDate()) || index2 >= len(list2) {
 			index1++
-		} else if list2[index2].AnnotatorDate().Before(list1[index1].AnnotatorDate()) {
-			group := make([]api.Annotator, 1)
-			group[0] = list2[index2]
-			result = append(result, NewCompositeAnnotator(group))
+		} else if list2[index2].AnnotatorDate().Before(list1[index1].AnnotatorDate()) || index1 >= len(list1) {
 			index2++
 		} else {
-			group := make([]api.Annotator, 2)
-			group[0] = list1[index1]
-			group[1] = list2[index2]
-			result = append(result, NewCompositeAnnotator(group))
 			index1++
 			index2++
 		}
 	}
-
-	for index1 < len(list1) {
-		group := make([]api.Annotator, 1)
-		group[0] = list1[index1]
-		result = append(result, NewCompositeAnnotator(group))
-		index1++
-	}
-	for index2 < len(list2) {
-		group := make([]api.Annotator, 1)
-		group[0] = list2[index2]
-		result = append(result, NewCompositeAnnotator(group))
-		index2++
-	}
 	return result
 }
-
+*/
 // TODO move all of this to geoloader.
 func lessFunc(s []api.Annotator) func(i, j int) bool {
 	return func(i, j int) bool {
