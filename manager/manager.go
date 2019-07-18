@@ -216,14 +216,16 @@ func (bldr *listBuilder) build() []api.Annotator {
 // The purpose of the merge is to fallback to IPv6 lookup if IPv4 lookup was unsuccessful.
 func mergeV4V6(v4Annotators, v6Annotators []api.Annotator, discriminator string) []api.Annotator {
 	v4 := directory.SortSlice(v4Annotators)
+	logAnnotatorDates("asn_v4", v4)
 	v6 := directory.SortSlice(v6Annotators)
-
+	logAnnotatorDates("asn_v6", v6)
 	var merged []api.Annotator
 	if len(v4)*len(v6) < 1 {
 		log.Printf("empty v4 or v6 annotator list for %s data, skipping", discriminator)
 		merged = make([]api.Annotator, 0)
 	} else {
 		merged = directory.MergeAnnotators(v4, v6)
+		logAnnotatorDates("asn_merged", merged)
 	}
 	return merged
 }
