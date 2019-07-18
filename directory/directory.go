@@ -158,39 +158,53 @@ func advance(lists [][]api.Annotator) ([][]api.Annotator, bool) {
 	return lists, true
 }
 
-// MergeAnnotators merges multiple lists of annotators, and returns a list of CompositeAnnotators.
+// MergeAnnotators merges two lists of annotators, and returns a list of CompositeAnnotators.
 // Result will include a separate CompositeAnnotator for each unique date in any list, and each
-// CA will include the most recent annotator from each list, prior to or equal to the CA date.
-func MergeAnnotators(lists ...[]api.Annotator) []api.Annotator {
-	listCount := len(lists)
-	if listCount == 0 {
-		return nil
+// CA will include the annotator from each list, equal to the CA date.
+func MergeAnnotators(list1 []api.Annotator, list2 []api.Annotator) []api.Annotator {
+	if len(list1) == 0 {
+		return list2
 	}
-	if listCount == 1 {
-		return lists[0]
+	if len(list2) == 0 {
+		return list1
 	}
 
-	// This is an arbitrary size, sufficient to reduce number of reallocations.
-	groups := make([][]api.Annotator, 0, 100)
-
-	// For each step, add a group, then advance the list(s) with earliest dates at second index.
-	for more := true; more; {
-		// Create and add group with first annotator from each list
-		group := make([]api.Annotator, len(lists))
-		for l, list := range lists {
-			if len(list) == 0 {
-				return nil
-			}
-			group[l] = list[0]
+	index1 := 0
+	index2 := 0
+	result := make([]api.Annotator, 0)
+	for index1 < len(list1) && index2 < len(list2) {
+		if list1[index1].AnnotatorDate().Before(list2[index2].AnnotatorDate()) {
+			// Advance list1
+			group := make([]api.Annotator, 1)
+			group[0] = list1[index1]
+			result = append(result, NewCompositeAnnotator(group))
+			index1++
+		} else if list2[index2].AnnotatorDate().Before(list1[index1].AnnotatorDate()) {
+			group := make([]api.Annotator, 1)
+			group[0] = list2[index2]
+			result = append(result, NewCompositeAnnotator(group))
+			index2++
+		} else {
+			group := make([]api.Annotator, 2)
+			group[0] = list1[index1]
+			group[1] = list2[index2]
+			result = append(result, NewCompositeAnnotator(group))
+			index1++
+			index2++
 		}
-		groups = append(groups, group)
-		// Advance the lists that have earliest next elements.
-		lists, more = advance(lists)
 	}
 
-	result := make([]api.Annotator, len(groups))
-	for i, group := range groups {
-		result[i] = NewCompositeAnnotator(group)
+	for index1 < len(list1) {
+		group := make([]api.Annotator, 1)
+		group[0] = list1[index1]
+		result = append(result, NewCompositeAnnotator(group))
+		index1++
+	}
+	for index2 < len(list2) {
+		group := make([]api.Annotator, 1)
+		group[0] = list2[index2]
+		result = append(result, NewCompositeAnnotator(group))
+		index2++
 	}
 	return result
 }
