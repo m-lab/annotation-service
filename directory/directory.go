@@ -129,9 +129,6 @@ func (d *Directory) GetAnnotator(date time.Time) (api.Annotator, error) {
 		log.Printf("Using (%s) for %s\n", ann.AnnotatorDate().Format("20060102"), date.Format("20060102"))
 		lastLogTime = time.Now()
 	}
-	if time.Since(lastLogTime) > 10*time.Minute {
-		d.PrintAll()
-	}
 	return ann, nil
 }
 
@@ -169,6 +166,9 @@ func advance(lists [][]api.Annotator) ([][]api.Annotator, bool) {
 	return lists, true
 }
 
+// MergeAnnotators merges multiple lists of annotators, and returns a list of CompositeAnnotators.
+// Result will include a separate CompositeAnnotator for each unique date in any list, and each
+// CA will include annotator of different types, that was the earlist available one after the CA date.
 func MergeAnnotators(lists ...[]api.Annotator) []api.Annotator {
 	listCount := len(lists)
 	if listCount == 0 {
@@ -203,46 +203,6 @@ func MergeAnnotators(lists ...[]api.Annotator) []api.Annotator {
 	return result
 }
 
-/*
-// MergeAnnotators merges two lists of annotators, and returns a list of CompositeAnnotators.
-// Result will include a separate CompositeAnnotator for each unique date in any list, and each
-// CA will include the annotator from each list, equal to the CA date.
-func MergeAnnotators(list1 []api.Annotator, list2 []api.Annotator) []api.Annotator {
-	if len(list1) == 0 {
-		return list2
-	}
-	if len(list2) == 0 {
-		return list1
-	}
-
-	index1 := 0
-	index2 := 0
-	result := make([]api.Annotator, 0)
-	for index1 < len(list1) || index2 < len(list2) {
-		group := make([]api.Annotator, 2)
-		if index1 >= len(list1) {
-			group[0] = list1[len(list1)-1]
-		} else {
-			group[0] = list1[index1]
-		}
-		if index2 >= len(list2) {
-			group[1] = list2[len(list2)-1]
-		} else {
-			group[1] = list2[index2]
-		}
-		result = append(result, NewCompositeAnnotator(group))
-		if list1[index1].AnnotatorDate().Before(list2[index2].AnnotatorDate()) || index2 >= len(list2) {
-			index1++
-		} else if list2[index2].AnnotatorDate().Before(list1[index1].AnnotatorDate()) || index1 >= len(list1) {
-			index2++
-		} else {
-			index1++
-			index2++
-		}
-	}
-	return result
-}
-*/
 // TODO move all of this to geoloader.
 func lessFunc(s []api.Annotator) func(i, j int) bool {
 	return func(i, j int) bool {
@@ -284,7 +244,7 @@ func (d *Directory) lastEarlierThan(date time.Time) api.Annotator {
 func (d *Directory) PrintAll() {
 	log.Println("here are all datasets in dir currently:")
 	for _, ann := range d.annotators {
-		log.Println(ann.AnnotatorDate().Format("20060102"))
+		log.Println(ann.AnnotatorDate().Format("[20060102]"))
 	}
 	log.Println("end of dir dataset list")
 }

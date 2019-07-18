@@ -188,18 +188,14 @@ func (bldr *listBuilder) build() []api.Annotator {
 
 	// merge the legacy V4 & V6 annotators
 	legacy := mergeV4V6(bldr.legacyV4.Fetch(), bldr.legacyV6.Fetch(), "legacy")
-	logAnnotatorDates("legacy", legacy)
 	// Now append the Geolite2 annotators
 	g2 := directory.SortSlice(bldr.geolite2.Fetch())
-	logAnnotatorDates("g2", g2)
 	geo := make([]api.Annotator, 0, len(g2)+len(legacy))
 	geo = append(geo, legacy...)
 	geo = append(geo, g2...)
-	logAnnotatorDates("geo", geo)
 	// here we have all the geo annotators in the ordered list.
 	// now merge the ASN V4 & V6 annotators
 	asn := mergeV4V6(bldr.asnV4.Fetch(), bldr.asnV6.Fetch(), "ASN")
-	logAnnotatorDates("asn", asn)
 	// and now we need to create the composite annotators. First list is the
 	// geo annotators, the second is the ASN
 	combo := directory.MergeAnnotators(geo, asn)
@@ -216,16 +212,13 @@ func (bldr *listBuilder) build() []api.Annotator {
 // The purpose of the merge is to fallback to IPv6 lookup if IPv4 lookup was unsuccessful.
 func mergeV4V6(v4Annotators, v6Annotators []api.Annotator, discriminator string) []api.Annotator {
 	v4 := directory.SortSlice(v4Annotators)
-	logAnnotatorDates("asn_v4", v4)
 	v6 := directory.SortSlice(v6Annotators)
-	logAnnotatorDates("asn_v6", v6)
 	var merged []api.Annotator
 	if len(v4)*len(v6) < 1 {
 		log.Printf("empty v4 or v6 annotator list for %s data, skipping", discriminator)
 		merged = make([]api.Annotator, 0)
 	} else {
 		merged = directory.MergeAnnotators(v4, v6)
-		logAnnotatorDates("asn_merged", merged)
 	}
 	return merged
 }

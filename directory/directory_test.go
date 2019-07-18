@@ -1,7 +1,6 @@
 package directory_test
 
 import (
-	"fmt"
 	"log"
 	"testing"
 	"time"
@@ -118,8 +117,14 @@ func TestMergeAnnotators(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := directory.MergeAnnotators(tt.lists[0], tt.lists[1])
 			// This is just a hack to allow us to create a useful signature.
-			for _, ann := range got {
-				fmt.Println(ann.AnnotatorDate().Format("[20060102]"))
+			expectedDate := make([]string, 3)
+			expectedDate[0] = "[20100101]"
+			expectedDate[1] = "[20100203]"
+			expectedDate[2] = "[20110101]"
+			for i, ann := range got {
+				if expectedDate[i] != ann.AnnotatorDate().Format("[20060102]") {
+					t.Errorf("Expect AnnotateDate %s got %s", expectedDate[i], ann.AnnotatorDate().Format("[20060102]"))
+				}
 			}
 			gotString := directory.NewCompositeAnnotator(got).(directory.CompositeAnnotator).String()
 			if gotString != tt.want {
