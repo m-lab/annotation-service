@@ -49,7 +49,6 @@ func TestBuild(t *testing.T) {
 	input = append(input, &fakeAnn{startDate: start.Add(478 * week)})
 	dir := directory.Build(input)
 
-	dir.PrintAll()
 	tests := []struct {
 		testDate string // date
 		want     string // date
