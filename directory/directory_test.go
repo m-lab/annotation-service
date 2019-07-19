@@ -55,6 +55,7 @@ func TestBuild(t *testing.T) {
 	}{
 		{"20170101", "20140608"},
 		{"20110101", "20100124"},
+		{"20180501", "20180408"},
 		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
@@ -115,6 +116,15 @@ func TestMergeAnnotators(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := directory.MergeAnnotators(tt.lists[0], tt.lists[1])
 			// This is just a hack to allow us to create a useful signature.
+			expectedDate := make([]string, 3)
+			expectedDate[0] = "[20100101]"
+			expectedDate[1] = "[20100203]"
+			expectedDate[2] = "[20110101]"
+			for i, ann := range got {
+				if expectedDate[i] != ann.AnnotatorDate().Format("[20060102]") {
+					t.Errorf("Expect AnnotateDate %s got %s", expectedDate[i], ann.AnnotatorDate().Format("[20060102]"))
+				}
+			}
 			gotString := directory.NewCompositeAnnotator(got).(directory.CompositeAnnotator).String()
 			if gotString != tt.want {
 				t.Errorf("MergeAnnotators() =\n %v want:\n %v", gotString, tt.want)

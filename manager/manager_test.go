@@ -54,7 +54,7 @@ func TestInitDataset(t *testing.T) {
 			`{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"Network":{"Systems":[{"ASNs":[23969]}]}}`},
 		// This request needs a geolite2 dataset
 		{"1.9.128.0", "1512086400",
-			`{"Geo":{"continent_code":"AS","country_code":"MY","country_code3":"MYS","country_name":"Malaysia","region":"05","city":"Pantai","latitude":2.787,"longitude":101.995},"Network":{"Systems":[{"ASNs":[4788]}]}}`},
+			`{"Geo":{"continent_code":"AS","country_code":"MY","country_code3":"MYS","country_name":"Malaysia","region":"14","city":"Kuala Lumpur","postal_code":"50586","latitude":3.167,"longitude":101.7},"Network":{"Systems":[{"ASNs":[4788]}]}}`},
 		// This request needs the latest dataset in the memory.
 		{"1.22.128.0", "1544400000",
 			`{"Geo":{"continent_code":"AS","country_code":"IN","country_name":"India","region":"HR","city":"Faridabad","latitude":28.4333,"longitude":77.3167},"Network":{"Systems":[{"ASNs":[45528]}]}}`},

@@ -38,8 +38,9 @@ var (
 
 // CompositeAnnotator wraps several annotators, and calls to Annotate() are forwarded to all of them.
 type CompositeAnnotator struct {
-	// latest date of the component annotators.  This is precomputed, and returned by AnnotatorDate()
-	latestDate time.Time
+	// date of CompositeAnnotator is the earliest date of anntators inside this CA. 
+	// It is precomputed, and returned by AnnotatorDate()
+	date       time.Time
 	annotators []api.Annotator
 }
 
@@ -56,11 +57,19 @@ func (ca CompositeAnnotator) Annotate(ip string, ann *api.GeoData) error {
 	return nil
 }
 
+// PrintALl prints all dates inside this CompositeAnnotator
+func (ca CompositeAnnotator) PrintAll() {
+	log.Println("Date of this CA: ", ca.date.Format("20160102"))
+	log.Println("contains anntators with the following dates:")
+	for i := range ca.annotators {
+		log.Println(ca.annotators[i].AnnotatorDate().Format("20160102"))
+	}
+}
 // AnnotatorDate returns the date of the most recent wrapped annotator.  Most recent is returned
 // as we try to apply the most recent annotators that predate the test we are annotating.  So the
 // most recent of all the annotators is the date that should be compared to the test date.
 func (ca CompositeAnnotator) AnnotatorDate() time.Time {
-	return ca.latestDate
+	return ca.date
 }
 
 // Compute the latest AnnotatorDate() value from a slice of annotators.
@@ -69,6 +78,17 @@ func computeLatestDate(annotators []api.Annotator) time.Time {
 	for i := range annotators {
 		at := annotators[i].AnnotatorDate()
 		if at.After(t) {
+			t = at
+		}
+	}
+	return t
+}
+
+func computerEarliestDate(annotators []api.Annotator) time.Time {
+	t := time.Now()
+	for i := range annotators {
+		at := annotators[i].AnnotatorDate()
+		if at.Before(t) {
 			t = at
 		}
 	}
@@ -95,7 +115,7 @@ func NewCompositeAnnotator(annotators []api.Annotator) api.Annotator {
 	if annotators == nil {
 		return nil
 	}
-	ca := CompositeAnnotator{latestDate: computeLatestDate(annotators), annotators: annotators}
+	ca := CompositeAnnotator{date: computerEarliestDate(annotators), annotators: annotators}
 	return ca
 }
 
@@ -157,7 +177,7 @@ func advance(lists [][]api.Annotator) ([][]api.Annotator, bool) {
 
 // MergeAnnotators merges multiple lists of annotators, and returns a list of CompositeAnnotators.
 // Result will include a separate CompositeAnnotator for each unique date in any list, and each
-// CA will include the most recent annotator from each list, prior to or equal to the CA date.
+// CA will include annotator of different types, that was the earlist available one after the CA date.
 func MergeAnnotators(lists ...[]api.Annotator) []api.Annotator {
 	listCount := len(lists)
 	if listCount == 0 {
@@ -228,4 +248,12 @@ func (d *Directory) lastEarlierThan(date time.Time) api.Annotator {
 		return d.annotators[index]
 	}
 	return d.annotators[index-1]
+}
+
+func (d *Directory) PrintAll() {
+	log.Println("Here are all datasets in dir currently:")
+	for _, ann := range d.annotators {
+		ann.(CompositeAnnotator).PrintAll()
+	}
+	log.Println("end of dir dataset list")
 }
