@@ -56,6 +56,14 @@ func (ca CompositeAnnotator) Annotate(ip string, ann *api.GeoData) error {
 	return nil
 }
 
+// PrintALl prints all dates inside this CompositeAnnotator
+func (ca CompositeAnnotator) PrintAll() {
+	log.Println("Date of this CA: ", ca.date.Format("20160102"))
+	log.Println("contains anntators with the following dates:")
+	for i := range ca.annotators {
+		log.Println(ca.annotators[i].AnnotatorDate().Format("20160102"))
+	}
+}
 // AnnotatorDate returns the date of the most recent wrapped annotator.  Most recent is returned
 // as we try to apply the most recent annotators that predate the test we are annotating.  So the
 // most recent of all the annotators is the date that should be compared to the test date.
@@ -244,10 +252,7 @@ func (d *Directory) lastEarlierThan(date time.Time) api.Annotator {
 func (d *Directory) PrintAll() {
 	log.Println("Here are all datasets in dir currently:")
 	for _, ann := range d.annotators {
-		log.Println("Date for CA: ", ann.AnnotatorDate().Format("[20060102]"), " contains annotators with date")
-		for _, each := range ann.annotators {
-			log.Println(each.AnnotatorDate().Format("20060102"))
-		}
+		ann.(CompositeAnnotator).PrintAll()
 	}
 	log.Println("end of dir dataset list")
 }
