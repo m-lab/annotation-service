@@ -38,7 +38,8 @@ var (
 
 // CompositeAnnotator wraps several annotators, and calls to Annotate() are forwarded to all of them.
 type CompositeAnnotator struct {
-	// date of the component annotators.  This is precomputed, and returned by AnnotatorDate()
+	// date of CompositeAnnotator is the earliest date of anntators inside this CA. 
+	// It is precomputed, and returned by AnnotatorDate()
 	date       time.Time
 	annotators []api.Annotator
 }
