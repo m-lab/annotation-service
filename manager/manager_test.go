@@ -60,6 +60,8 @@ func TestInitDataset(t *testing.T) {
 			`{"Geo":{"continent_code":"AS","country_code":"IN","country_name":"India","region":"HR","city":"Faridabad","latitude":28.4333,"longitude":77.3167},"Network":{"Systems":[{"ASNs":[45528]}]}}`},
 		{"2002:dced:117c::dced:117c", "1559227976",
 			`{"Geo":{"continent_code":"OC","country_code":"AU","country_name":"Australia","region":"VIC","city":"East Malvern","postal_code":"3145","latitude":-37.8833,"longitude":145.05},"Network":{"Systems":[{"ASNs":[4804]}]}}`},
+		{"64.233.174.109", "1559227976",
+			`{"Geo":{"continent_code":"NA","country_code":"US","country_name":"United States","region":"CA","latitude":34.0544,"longitude":-118.244},"Network":{"Systems":[{"ASNs":[15169]}]}}`},
 	}
 	for n, test := range tests {
 		w := httptest.NewRecorder()
