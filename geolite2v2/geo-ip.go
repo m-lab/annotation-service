@@ -46,7 +46,7 @@ func LoadG2Dataset(filename string, bucketname string) (*GeoDataset, error) {
 	if err != nil {
 		return nil, err
 	}
-	dataset, err := loadGeoLite2(zip)
+	dataset, err := DatasetFromZip(zip)
 	if err != nil {
 		return nil, err
 	}
@@ -59,8 +59,9 @@ func LoadG2Dataset(filename string, bucketname string) (*GeoDataset, error) {
 	return dataset, nil
 }
 
-// loadGeoLite2 composes the result of location and IPv4, IPv6 IPNode lists
-func loadGeoLite2(zip *zip.Reader) (*GeoDataset, error) {
+// DatasetFromZip composes the location, IPv4, and IPv6 lists within a zipfile
+// containing those elements.  The returned dataset has no start date set.
+func DatasetFromZip(zip *zip.Reader) (*GeoDataset, error) {
 	locations, err := loader.FindFile(geoLite2LocationsFilename, zip)
 	if err != nil {
 		return nil, err
