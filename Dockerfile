@@ -1,4 +1,4 @@
-FROM golang:alpine as build
+FROM golang:1.13-alpine as build
 
 RUN apk add --no-cache git pkgconfig geoip-dev geoip gcc libc-dev
 ADD . /go/src/github.com/m-lab/annotation-service
