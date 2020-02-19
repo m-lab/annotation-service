@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/csv"
 	"errors"
+	"io"
 	"log"
 	"os"
 	"strconv"
@@ -131,6 +132,16 @@ func LoadASNDataset(file *storage.ObjectAttrs) (api.Annotator, error) {
 		return nil, err
 	}
 	return &ASNDataset{IPList: nodes, Start: *time}, nil
+}
+
+// LoadASNDatasetFromReader produces a new ASN api.Annotator.
+func LoadASNDatasetFromReader(file io.Reader) (api.Annotator, error) {
+	parser := createAsnNodeParser()
+	err := iputils.BuildIPNodeList(file, parser)
+	if err != nil {
+		return nil, err
+	}
+	return &ASNDataset{IPList: parser.list}, nil
 }
 
 // loadData loads the data into an ASNIPNode list
