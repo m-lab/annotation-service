@@ -30,18 +30,26 @@ var (
 // are not.
 // This is in common because it is used by the etl repository.
 type GeolocationIP struct {
-	ContinentCode    string  `json:"continent_code,,omitempty" bigquery:"continent_code"` // Gives a shorthand for the continent
-	CountryCode      string  `json:"country_code,,omitempty"   bigquery:"country_code"`   // Gives a shorthand for the country
-	CountryCode3     string  `json:"country_code3,,omitempty"  bigquery:"country_code3"`  // Gives a shorthand for the country
-	CountryName      string  `json:"country_name,,omitempty"   bigquery:"country_name"`   // Name of the country
-	Region           string  `json:"region,,omitempty"         bigquery:"region"`         // Region or State within the country
-	MetroCode        int64   `json:"metro_code,,omitempty"     bigquery:"metro_code"`     // Metro code within the country
-	City             string  `json:"city,,omitempty"           bigquery:"city"`           // City within the region
-	AreaCode         int64   `json:"area_code,,omitempty"      bigquery:"area_code"`      // Area code, similar to metro code
-	PostalCode       string  `json:"postal_code,,omitempty"    bigquery:"postal_code"`    // Postal code, again similar to metro
-	Latitude         float64 `json:"latitude,,omitempty"       bigquery:"latitude"`       // Latitude
-	Longitude        float64 `json:"longitude,,omitempty"      bigquery:"longitude"`      // Longitude
-	AccuracyRadiusKm int64   `json:"radius,,omitempty"         bigquery:"radius"`         // Accuracy Radius (geolite2 from 2018)
+	ContinentCode string `json:,omitempty bigquery:"continent_code"` // Gives a shorthand for the continent
+	CountryCode   string `json:,omitempty bigquery:"country_code"`   // Gives a shorthand for the country
+	CountryCode3  string `json:,omitempty bigquery:"country_code3"`  // Gives a shorthand for the country
+	CountryName   string `json:,omitempty bigquery:"country_name"`   // Name of the country
+	Region        string `json:,omitempty bigquery:"region"`         // Region or State within the country (MaxMind Geo1 format)
+
+	// Subdivision fields are provided by MaxMind Geo2 format and used by uuid-annotator.
+	// TODO: include fields in bigquery schemas after migrating all datatypes to uuid-annotations.
+	Subdivision1ISOCode string `json:,omitempty bigquery:"-"`
+	Subdivision1Name    string `json:,omitempty bigquery:"-"`
+	Subdivision2ISOCode string `json:,omitempty bigquery:"-"`
+	Subdivision2Name    string `json:,omitempty bigquery:"-"`
+
+	MetroCode        int64   `json:,omitempty bigquery:"metro_code"`  // Metro code within the country
+	City             string  `json:,omitempty bigquery:"city"`        // City within the region
+	AreaCode         int64   `json:,omitempty bigquery:"area_code"`   // Area code, similar to metro code
+	PostalCode       string  `json:,omitempty bigquery:"postal_code"` // Postal code, again similar to metro
+	Latitude         float64 `json:,omitempty bigquery:"latitude"`    // Latitude
+	Longitude        float64 `json:,omitempty bigquery:"longitude"`   // Longitude
+	AccuracyRadiusKm int64   `json:,omitempty bigquery:"radius"`      // Accuracy Radius (geolite2 from 2018)
 }
 
 /************************************************************************
@@ -129,6 +137,17 @@ type Annotations struct {
 	Geo     *GeolocationIP // Holds the geolocation data
 	Network *ASData        // Holds the associated network Autonomous System data.
 }
+
+// ServerAnnotations are server-specific fields populated by the uuid-annotator.
+type ServerAnnotations struct {
+	Site    string         // M-Lab site, i.e. lga01, yyz02, etc.
+	Machine string         // Specific M-Lab machine at a site, i.e. "mlab1", "mlab2", etc.
+	Geo     *GeolocationIP // Holds the Server geolocation data.
+	Network *ASData        // Holds the Autonomous System data.
+}
+
+// ClientAnnotations are client-specific fields populated by the uuid-annotator.
+type ClientAnnotations = Annotations
 
 /*************************************************************************
 *                       Request/Response Structs                         *
