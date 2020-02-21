@@ -51,7 +51,7 @@ func TestAnnotate(t *testing.T) {
 		time string
 		res  string
 	}{
-		{"1.4.128.0", "625600", `{"Geo":{"Region":"ME","City":"Not A Real City","PostalCode":"10583","Latitude":42.1,"Longitude":-73.1},"Network":null}`},
+		{"1.4.128.0", "625600", `{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":42.1,"longitude":-73.1},"Network":null}`},
 		{"This will be an error.", "1000", "invalid IP address"},
 	}
 	// TODO - make and use an annotator generator
@@ -227,7 +227,9 @@ func TestBatchAnnotate(t *testing.T) {
 		{
 			body: `[{"ip": "127.0.0.1", "timestamp": "2017-08-25T13:31:12.149678161-04:00"},
                     {"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "timestamp": "2017-08-25T14:32:13.149678161-04:00"}]`,
-			res: `{"127.0.0.1ov94o0":{"Geo":{"Region":"ME","City":"Not A Real City","PostalCode":"10583"},"Network":null},"2620:0:1003:1008:5179:57e3:3c75:1886ov97hp":{"Geo":{"Region":"ME","City":"Not A Real City","PostalCode":"10583"},"Network":null}}`,
+			res: `{"127.0.0.1ov94o0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583"},"Network":null},"2620:0:1003:1008:5179:57e3:3c75:1886ov97hp":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583"},"Network":null}}`,
+			// TODO - remove alt after updating json annotations to omitempty.
+			alt: `{"127.0.0.1ov94o0":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"Network":null},"2620:0:1003:1008:5179:57e3:3c75:1886ov97hp":{"Geo":{"region":"ME","city":"Not A Real City","postal_code":"10583","latitude":0,"longitude":0},"Network":null}}`,
 		},
 	}
 	// TODO - make a test utility in geolite2 package.
