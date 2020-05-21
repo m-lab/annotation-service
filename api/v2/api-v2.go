@@ -111,7 +111,8 @@ func postWithRetry(ctx context.Context, url string, encodedData []byte) (*http.R
 		resp, err := post(ctx, url, encodedData)
 		if err != nil {
 			retryLogger.Println(err)
-			RequestTimeHistogram.WithLabelValues(err.Error()).Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
+			// These were spamming metrics with "read tcp" errors with IP address and port.
+			RequestTimeHistogram.WithLabelValues("post failed").Observe(float64(time.Since(start).Nanoseconds()) / 1e6)
 			return nil, err
 		}
 
