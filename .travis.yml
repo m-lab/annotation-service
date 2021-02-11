@@ -15,7 +15,7 @@
 
 # CGO broken in go 1.12.2 with trusty, so this forces xenial, which should work.
 # https://github.com/golang/go/issues/31293
-dist: xenial
+dist: bionic
 
 language: go
 go:
