@@ -104,18 +104,21 @@ func populateLocationData(ipNode iputils.IPNode, locationNodes []LocationNode, d
 		locNode = locationNodes[geoIPNode.LocationIndex]
 	}
 	data.Geo = &api.GeolocationIP{
-		ContinentCode:    locNode.ContinentCode,
-		CountryCode:      locNode.CountryCode,
-		CountryCode3:     "", // missing from geoLite2 ?
-		CountryName:      locNode.CountryName,
-		Region:           locNode.RegionCode,
-		MetroCode:        locNode.MetroCode,
-		City:             locNode.CityName,
-		AreaCode:         0, // new geoLite2 does not have area code.
-		PostalCode:       geoIPNode.PostalCode,
-		Latitude:         geoIPNode.Latitude,
-		Longitude:        geoIPNode.Longitude,
-		AccuracyRadiusKm: locNode.AccuracyRadiusKm,
+		ContinentCode:       locNode.ContinentCode,
+		CountryCode:         locNode.CountryCode,
+		CountryCode3:        "", // missing from geoLite2 ?
+		CountryName:         locNode.CountryName,
+		Subdivision1ISOCode: locNode.Subdivision1ISOCode,
+		Subdivision1Name:    locNode.Subdivision1Name,
+		Subdivision2ISOCode: locNode.Subdivision2ISOCode,
+		Subdivision2Name:    locNode.Subdivision2Name,
+		MetroCode:           locNode.MetroCode,
+		City:                locNode.CityName,
+		AreaCode:            0, // new geoLite2 does not have area code.
+		PostalCode:          geoIPNode.PostalCode,
+		Latitude:            geoIPNode.Latitude,
+		Longitude:           geoIPNode.Longitude,
+		AccuracyRadiusKm:    locNode.AccuracyRadiusKm,
 	}
 }
 

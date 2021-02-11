@@ -135,14 +135,14 @@ func TestIPListGLite2v6(t *testing.T) {
 func TestLocationListGLite2(t *testing.T) {
 	expectedLocList := []geolite2v2.LocationNode{
 		{
-			GeonameID:     32909,
-			ContinentCode: "AS",
-			CountryCode:   "IR",
-			CountryName:   "Iran",
-			RegionCode:    "07",
-			RegionName:    "Ostan-e Tehran",
-			MetroCode:     0,
-			CityName:      "Shahre Jadide Andisheh",
+			GeonameID:           32909,
+			ContinentCode:       "AS",
+			CountryCode:         "IR",
+			CountryName:         "Iran",
+			Subdivision1ISOCode: "07",
+			Subdivision1Name:    "Ostan-e Tehran",
+			MetroCode:           0,
+			CityName:            "Shahre Jadide Andisheh",
 		},
 		{
 			GeonameID:     49518,
@@ -157,14 +157,14 @@ func TestLocationListGLite2(t *testing.T) {
 			CountryName:   "Somalia",
 		},
 		{
-			GeonameID:     5127766,
-			ContinentCode: "NA",
-			CountryCode:   "US",
-			CountryName:   "United States",
-			RegionCode:    "NY",
-			RegionName:    "New York",
-			MetroCode:     538,
-			CityName:      "Mount Morris",
+			GeonameID:           5127766,
+			ContinentCode:       "NA",
+			CountryCode:         "US",
+			CountryName:         "United States",
+			Subdivision1ISOCode: "NY",
+			Subdivision1Name:    "New York",
+			MetroCode:           538,
+			CityName:            "Mount Morris",
 		},
 	}
 	expectedIDMap := map[int]int{

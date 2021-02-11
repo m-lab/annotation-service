@@ -30,18 +30,24 @@ var (
 // are not.
 // This is in common because it is used by the etl repository.
 type GeolocationIP struct {
-	ContinentCode    string  `json:"continent_code,,omitempty" bigquery:"continent_code"` // Gives a shorthand for the continent
-	CountryCode      string  `json:"country_code,,omitempty"   bigquery:"country_code"`   // Gives a shorthand for the country
-	CountryCode3     string  `json:"country_code3,,omitempty"  bigquery:"country_code3"`  // Gives a shorthand for the country
-	CountryName      string  `json:"country_name,,omitempty"   bigquery:"country_name"`   // Name of the country
-	Region           string  `json:"region,,omitempty"         bigquery:"region"`         // Region or State within the country
-	MetroCode        int64   `json:"metro_code,,omitempty"     bigquery:"metro_code"`     // Metro code within the country
-	City             string  `json:"city,,omitempty"           bigquery:"city"`           // City within the region
-	AreaCode         int64   `json:"area_code,,omitempty"      bigquery:"area_code"`      // Area code, similar to metro code
-	PostalCode       string  `json:"postal_code,,omitempty"    bigquery:"postal_code"`    // Postal code, again similar to metro
-	Latitude         float64 `json:"latitude,,omitempty"       bigquery:"latitude"`       // Latitude
-	Longitude        float64 `json:"longitude,,omitempty"      bigquery:"longitude"`      // Longitude
-	AccuracyRadiusKm int64   `json:"radius,,omitempty"         bigquery:"radius"`         // Accuracy Radius (geolite2 from 2018)
+	ContinentCode       string  `json:"continent_code,,omitempty" bigquery:"continent_code"` // Gives a shorthand for the continent
+	CountryCode         string  `json:"country_code,,omitempty"   bigquery:"country_code"`   // Gives a shorthand for the country
+	CountryCode3        string  `json:"country_code3,,omitempty"  bigquery:"country_code3"`  // Gives a shorthand for the country
+	CountryName         string  `json:"country_name,,omitempty"   bigquery:"country_name"`   // Name of the country
+	Region              string  `json:"region,,omitempty"         bigquery:"region"`         // Region or State within the country
+	Subdivision1ISOCode string  `json:",omitempty"`                                          // ISO3166-2 first-level country subdivision ISO code
+	Subdivision1Name    string  `json:",omitempty"`                                          // ISO3166-2 first-level country subdivision name
+	Subdivision2ISOCode string  `json:",omitempty"`                                          // ISO3166-2 second-level country subdivision ISO code
+	Subdivision2Name    string  `json:",omitempty"`                                          // ISO3166-2 second-level country subdivision name
+	MetroCode           int64   `json:"metro_code,,omitempty"     bigquery:"metro_code"`     // Metro code within the country
+	City                string  `json:"city,,omitempty"           bigquery:"city"`           // City within the region
+	AreaCode            int64   `json:"area_code,,omitempty"      bigquery:"area_code"`      // Area code, similar to metro code
+	PostalCode          string  `json:"postal_code,,omitempty"    bigquery:"postal_code"`    // Postal code, again similar to metro
+	Latitude            float64 `json:"latitude,,omitempty"       bigquery:"latitude"`       // Latitude
+	Longitude           float64 `json:"longitude,,omitempty"      bigquery:"longitude"`      // Longitude
+	AccuracyRadiusKm    int64   `json:"radius,,omitempty"         bigquery:"radius"`         // Accuracy Radius (geolite2 from 2018)
+
+	Missing bool `json:",omitempty"` // True when the Geolocation data is missing from MaxMind.
 }
 
 /************************************************************************
