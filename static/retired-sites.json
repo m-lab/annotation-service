@@ -1,0 +1,1249 @@
+[
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Accra",
+            "ContinentCode": "AF",
+            "CountryCode": "GH",
+            "Latitude": 5.6059999999999999,
+            "Longitude": -0.1681
+         },
+         "Network": {
+            "ASName": "Ghana Internet Exchange Association",
+            "ASNumber": 30997,
+            "Systems": [
+               {
+                  "ASNs": [
+                     30997
+                  ]
+               }
+            ]
+         },
+         "Site": "acc01"
+      },
+      "Name": "acc01",
+      "Network": {
+         "IPv4": "196.201.2.192/26",
+         "IPv6": ""
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Accra",
+            "ContinentCode": "AF",
+            "CountryCode": "GH",
+            "Latitude": 5.6059999999999999,
+            "Longitude": -0.1681
+         },
+         "Network": {
+            "ASName": "Ghana Internet Exchange Association",
+            "ASNumber": 30997,
+            "Systems": [
+               {
+                  "ASNs": [
+                     30997
+                  ]
+               }
+            ]
+         },
+         "Site": "acc02"
+      },
+      "Name": "acc02",
+      "Network": {
+         "IPv4": "196.49.14.192/26",
+         "IPv6": ""
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Amsterdam",
+            "ContinentCode": "EU",
+            "CountryCode": "NL",
+            "Latitude": 52.308599999999998,
+            "Longitude": 4.76389
+         },
+         "Network": {
+            "ASName": "Internap Holding LLC",
+            "ASNumber": 29791,
+            "Systems": [
+               {
+                  "ASNs": [
+                     29791
+                  ]
+               }
+            ]
+         },
+         "Site": "ams02"
+      },
+      "Name": "ams02",
+      "Network": {
+         "IPv4": "72.26.217.64/26",
+         "IPv6": "2001:48c8:7::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Amsterdam",
+            "ContinentCode": "EU",
+            "CountryCode": "NL",
+            "Latitude": 52.308599999999998,
+            "Longitude": 4.76389
+         },
+         "Network": {
+            "ASName": "LeaseWeb",
+            "ASNumber": 60781,
+            "Systems": [
+               {
+                  "ASNs": [
+                     60781
+                  ]
+               }
+            ]
+         },
+         "Site": "ams06"
+      },
+      "Name": "ams06",
+      "Network": {
+         "IPv4": "212.32.246.192/26",
+         "IPv6": "2001:1af8:4900:b070::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Amsterdam",
+            "ContinentCode": "EU",
+            "CountryCode": "NL",
+            "Latitude": 52.308599999999998,
+            "Longitude": 4.76389
+         },
+         "Network": {
+            "ASName": "Internap Holding LLC",
+            "ASNumber": 30282,
+            "Systems": [
+               {
+                  "ASNs": [
+                     30282
+                  ]
+               }
+            ]
+         },
+         "Site": "ams07"
+      },
+      "Name": "ams07",
+      "Network": {
+         "IPv4": "31.186.242.0/26",
+         "IPv6": "2a02:b50:4020:cfb1::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Stockholm",
+            "ContinentCode": "EU",
+            "CountryCode": "SE",
+            "Latitude": 59.651899999999998,
+            "Longitude": 17.918600000000001
+         },
+         "Network": {
+            "ASName": "Telia",
+            "ASNumber": 1299,
+            "Systems": [
+               {
+                  "ASNs": [
+                     1299
+                  ]
+               }
+            ]
+         },
+         "Site": "arn01"
+      },
+      "Name": "arn01",
+      "Network": {
+         "IPv4": "213.248.112.64/26",
+         "IPv6": "2001:2030:0:1b::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Athens",
+            "ContinentCode": "",
+            "CountryCode": "GR",
+            "Latitude": 37.936399999999999,
+            "Longitude": 23.944400000000002
+         },
+         "Network": {
+            "ASName": "National Infrastructures for Research and Technology",
+            "ASNumber": 5408,
+            "Systems": [
+               {
+                  "ASNs": [
+                     5408
+                  ]
+               }
+            ]
+         },
+         "Site": "ath01"
+      },
+      "Name": "ath01",
+      "Network": {
+         "IPv4": "83.212.4.0/26",
+         "IPv6": "2001:648:2ffc:2101::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Athens",
+            "ContinentCode": "",
+            "CountryCode": "GR",
+            "Latitude": 37.936399999999999,
+            "Longitude": 23.944400000000002
+         },
+         "Network": {
+            "ASName": "National Infrastructures for Research and Technology",
+            "ASNumber": 5408,
+            "Systems": [
+               {
+                  "ASNs": [
+                     5408
+                  ]
+               }
+            ]
+         },
+         "Site": "ath02"
+      },
+      "Name": "ath02",
+      "Network": {
+         "IPv4": "83.212.5.128/26",
+         "IPv6": "2001:648:2ffc:2102::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Atlanta",
+            "ContinentCode": "NA",
+            "CountryCode": "US",
+            "Latitude": 33.636699999999998,
+            "Longitude": -84.428100000000001,
+            "State": "GA"
+         },
+         "Network": {
+            "ASName": "XO Communications",
+            "ASNumber": 2828,
+            "Systems": [
+               {
+                  "ASNs": [
+                     2828
+                  ]
+               }
+            ]
+         },
+         "Site": "atl05"
+      },
+      "Name": "atl05",
+      "Network": {
+         "IPv4": "67.106.215.192/26",
+         "IPv6": "2610:18:111:c002::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Atlanta",
+            "ContinentCode": "NA",
+            "CountryCode": "US",
+            "Latitude": 33.636699999999998,
+            "Longitude": -84.428100000000001,
+            "State": "GA"
+         },
+         "Network": {
+            "ASName": "Internap Holding LLC",
+            "ASNumber": 14745,
+            "Systems": [
+               {
+                  "ASNs": [
+                     14745
+                  ]
+               }
+            ]
+         },
+         "Site": "atl06"
+      },
+      "Name": "atl06",
+      "Network": {
+         "IPv4": "70.42.177.64/26",
+         "IPv6": "2600:c0b:2002:5::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Bangkok",
+            "ContinentCode": "AS",
+            "CountryCode": "TH",
+            "Latitude": 13.6904,
+            "Longitude": 100.7501
+         },
+         "Network": {
+            "ASName": "The Communication Authoity of Thailand, CAT",
+            "ASNumber": 9931,
+            "Systems": [
+               {
+                  "ASNs": [
+                     9931
+                  ]
+               }
+            ]
+         },
+         "Site": "bkk01"
+      },
+      "Name": "bkk01",
+      "Network": {
+         "IPv4": "61.7.252.0/26",
+         "IPv6": "2001:c38:9041::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Bogota",
+            "ContinentCode": "SA",
+            "CountryCode": "CO",
+            "Latitude": 4.5833000000000004,
+            "Longitude": -74.066699999999997
+         },
+         "Network": {
+            "ASName": "Red Nacional Académica de Tecnología Avanzada - RENATA",
+            "ASNumber": 27817,
+            "Systems": [
+               {
+                  "ASNs": [
+                     27817
+                  ]
+               }
+            ]
+         },
+         "Site": "bog01"
+      },
+      "Name": "bog01",
+      "Network": {
+         "IPv4": "190.15.11.0/26",
+         "IPv6": ""
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Denver",
+            "ContinentCode": "NA",
+            "CountryCode": "US",
+            "Latitude": 39.856099999999998,
+            "Longitude": -104.6737,
+            "State": "CO"
+         },
+         "Network": {
+            "ASName": "Hurricane Electric LLC",
+            "ASNumber": 6939,
+            "Systems": [
+               {
+                  "ASNs": [
+                     6939
+                  ]
+               }
+            ]
+         },
+         "Site": "den01"
+      },
+      "Name": "den01",
+      "Network": {
+         "IPv4": "184.105.23.64/26",
+         "IPv6": "2001:470:1:250::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Denver",
+            "ContinentCode": "NA",
+            "CountryCode": "US",
+            "Latitude": 39.856099999999998,
+            "Longitude": -104.6737,
+            "State": "CO"
+         },
+         "Network": {
+            "ASName": "XO Communications",
+            "ASNumber": 2828,
+            "Systems": [
+               {
+                  "ASNs": [
+                     2828
+                  ]
+               }
+            ]
+         },
+         "Site": "den03"
+      },
+      "Name": "den03",
+      "Network": {
+         "IPv4": "65.46.46.128/26",
+         "IPv6": "2610:18:10e:8003::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Dallas",
+            "ContinentCode": "NA",
+            "CountryCode": "US",
+            "Latitude": 32.896900000000002,
+            "Longitude": -97.0381,
+            "State": "TX"
+         },
+         "Network": {
+            "ASName": "XO Communications",
+            "ASNumber": 2828,
+            "Systems": [
+               {
+                  "ASNs": [
+                     2828
+                  ]
+               }
+            ]
+         },
+         "Site": "dfw04"
+      },
+      "Name": "dfw04",
+      "Network": {
+         "IPv4": "208.177.76.64/26",
+         "IPv6": "2610:18:10e:2::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Dallas",
+            "ContinentCode": "NA",
+            "CountryCode": "US",
+            "Latitude": 32.896900000000002,
+            "Longitude": -97.0381,
+            "State": "TX"
+         },
+         "Network": {
+            "ASName": "Internap Holding LLC",
+            "ASNumber": 12179,
+            "Systems": [
+               {
+                  "ASNs": [
+                     12179
+                  ]
+               }
+            ]
+         },
+         "Site": "dfw06"
+      },
+      "Name": "dfw06",
+      "Network": {
+         "IPv4": "63.251.44.192/26",
+         "IPv6": "2600:c12:1002:4::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Tokyo",
+            "ContinentCode": "AS",
+            "CountryCode": "JP",
+            "Latitude": 35.552199999999999,
+            "Longitude": 139.78,
+            "State": ""
+         },
+         "Network": {
+            "ASName": "WIDE Project",
+            "ASNumber": 2500,
+            "Systems": [
+               {
+                  "ASNs": [
+                     2500
+                  ]
+               }
+            ]
+         },
+         "Site": "hnd01"
+      },
+      "Name": "hnd01",
+      "Network": {
+         "IPv4": "203.178.130.192/26",
+         "IPv6": "2001:200:0:b801::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Washington",
+            "ContinentCode": "NA",
+            "CountryCode": "US",
+            "Latitude": 38.944400000000002,
+            "Longitude": -77.455799999999996,
+            "State": "DC"
+         },
+         "Network": {
+            "ASName": "XO Communications",
+            "ASNumber": 2828,
+            "Systems": [
+               {
+                  "ASNs": [
+                     2828
+                  ]
+               }
+            ]
+         },
+         "Site": "iad01"
+      },
+      "Name": "iad01",
+      "Network": {
+         "IPv4": "216.156.197.128/26",
+         "IPv6": "2610:18:111:8001::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Leeds",
+            "ContinentCode": "EU",
+            "CountryCode": "GB",
+            "Latitude": 53.8658,
+            "Longitude": -1.6606000000000001
+         },
+         "Network": {
+            "ASName": "(aq) networks limited",
+            "ASNumber": 33920,
+            "Systems": [
+               {
+                  "ASNs": [
+                     33920
+                  ]
+               }
+            ]
+         },
+         "Site": "lba01"
+      },
+      "Name": "lba01",
+      "Network": {
+         "IPv4": "109.239.110.0/26",
+         "IPv6": "2a00:1a80:1:8::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Larnaca",
+            "ContinentCode": "AS",
+            "CountryCode": "CY",
+            "Latitude": 34.880899999999997,
+            "Longitude": 33.625999999999998
+         },
+         "Network": {
+            "ASName": "University of Cyprus",
+            "ASNumber": 3268,
+            "Systems": [
+               {
+                  "ASNs": [
+                     3268
+                  ]
+               }
+            ]
+         },
+         "Site": "lca01"
+      },
+      "Name": "lca01",
+      "Network": {
+         "IPv4": "82.116.199.0/26",
+         "IPv6": ""
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "New York",
+            "ContinentCode": "NA",
+            "CountryCode": "US",
+            "Latitude": 40.7667,
+            "Longitude": -73.866699999999994,
+            "State": "NY"
+         },
+         "Network": {
+            "ASName": "Internap Holding LLC",
+            "ASNumber": 29791,
+            "Systems": [
+               {
+                  "ASNs": [
+                     29791
+                  ]
+               }
+            ]
+         },
+         "Site": "lga01"
+      },
+      "Name": "lga01",
+      "Network": {
+         "IPv4": "74.63.50.0/26",
+         "IPv6": "2001:48c8:5:f::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "New York",
+            "ContinentCode": "NA",
+            "CountryCode": "US",
+            "Latitude": 40.7667,
+            "Longitude": -73.866699999999994,
+            "State": "NY"
+         },
+         "Network": {
+            "ASName": "Internap Holding LLC",
+            "ASNumber": 10910,
+            "Systems": [
+               {
+                  "ASNs": [
+                     10910
+                  ]
+               }
+            ]
+         },
+         "Site": "lga07"
+      },
+      "Name": "lga07",
+      "Network": {
+         "IPv4": "66.151.223.128/26",
+         "IPv6": "2600:c0f:2002::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "London",
+            "ContinentCode": "EU",
+            "CountryCode": "GB",
+            "Latitude": 51.469700000000003,
+            "Longitude": -0.45140000000000002
+         },
+         "Network": {
+            "ASName": "Level 3 Parent, LLC",
+            "ASNumber": 3356,
+            "Systems": [
+               {
+                  "ASNs": [
+                     3356
+                  ]
+               }
+            ]
+         },
+         "Site": "lhr01"
+      },
+      "Name": "lhr01",
+      "Network": {
+         "IPv4": "217.163.1.64/26",
+         "IPv6": "2001:4c08:2003:3::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "London",
+            "ContinentCode": "EU",
+            "CountryCode": "GB",
+            "Latitude": 51.469700000000003,
+            "Longitude": -0.45140000000000002
+         },
+         "Network": {
+            "ASName": "TATA COMMUNICATIONS (AMERICA) INC",
+            "ASNumber": 6453,
+            "Systems": [
+               {
+                  "ASNs": [
+                     6453
+                  ]
+               }
+            ]
+         },
+         "Site": "lhr06"
+      },
+      "Name": "lhr06",
+      "Network": {
+         "IPv4": "93.142.125.128/26",
+         "IPv6": "2a01:3e0:10:2002::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Lagos",
+            "ContinentCode": "AF",
+            "CountryCode": "NG",
+            "Latitude": 6.5820999999999996,
+            "Longitude": 3.3210999999999999
+         },
+         "Network": {
+            "ASName": "Internet Exchange Point of Nigeria",
+            "ASNumber": 36932,
+            "Systems": [
+               {
+                  "ASNs": [
+                     36932
+                  ]
+               }
+            ]
+         },
+         "Site": "los01"
+      },
+      "Name": "los01",
+      "Network": {
+         "IPv4": "196.216.149.64/26",
+         "IPv6": ""
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Madrid",
+            "ContinentCode": "EU",
+            "CountryCode": "ES",
+            "Latitude": 40.466700000000003,
+            "Longitude": -3.5667
+         },
+         "Network": {
+            "ASName": "GTT Communications",
+            "ASNumber": 3257,
+            "Systems": [
+               {
+                  "ASNs": [
+                     3257
+                  ]
+               }
+            ]
+         },
+         "Site": "mad01"
+      },
+      "Name": "mad01",
+      "Network": {
+         "IPv4": "213.200.103.128/26",
+         "IPv6": "2001:668:1f:16::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Madrid",
+            "ContinentCode": "EU",
+            "CountryCode": "ES",
+            "Latitude": 40.466700000000003,
+            "Longitude": -3.5667
+         },
+         "Network": {
+            "ASName": "TATA COMMUNICATIONS (AMERICA) INC",
+            "ASNumber": 6453,
+            "Systems": [
+               {
+                  "ASNs": [
+                     6453
+                  ]
+               }
+            ]
+         },
+         "Site": "mad05"
+      },
+      "Name": "mad05",
+      "Network": {
+         "IPv4": "93.142.125.192/26",
+         "IPv6": "2001:5a0:2a00:201::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Milan",
+            "ContinentCode": "EU",
+            "CountryCode": "IT",
+            "Latitude": 45.463999999999999,
+            "Longitude": 9.1915999999999993
+         },
+         "Network": {
+            "ASName": "GTT Communications",
+            "ASNumber": 3257,
+            "Systems": [
+               {
+                  "ASNs": [
+                     3257
+                  ]
+               }
+            ]
+         },
+         "Site": "mil01"
+      },
+      "Name": "mil01",
+      "Network": {
+         "IPv4": "213.200.99.192/26",
+         "IPv6": "2001:668:1f:17::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Maputo",
+            "ContinentCode": "AF",
+            "CountryCode": "MZ",
+            "Latitude": -25.9208,
+            "Longitude": 32.572499999999998
+         },
+         "Network": {
+            "ASName": "Mozambique Research & Education Network - MoRENet",
+            "ASNumber": 327700,
+            "Systems": [
+               {
+                  "ASNs": [
+                     327700
+                  ]
+               }
+            ]
+         },
+         "Site": "mpm01"
+      },
+      "Name": "mpm01",
+      "Network": {
+         "IPv4": "41.94.23.0/26",
+         "IPv6": ""
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "San Francisco",
+            "ContinentCode": "NA",
+            "CountryCode": "US",
+            "Latitude": 37.383299999999998,
+            "Longitude": -122.0667,
+            "State": "CA"
+         },
+         "Network": {
+            "ASName": "Google, LLC",
+            "ASNumber": 36492,
+            "Systems": [
+               {
+                  "ASNs": [
+                     36492
+                  ]
+               }
+            ]
+         },
+         "Site": "nuq01"
+      },
+      "Name": "nuq01",
+      "Network": {
+         "IPv4": "64.9.225.128/26",
+         "IPv6": "2604:ca00:f000::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "San Francisco",
+            "ContinentCode": "",
+            "CountryCode": "US",
+            "Latitude": 37.383299999999998,
+            "Longitude": -122.0667,
+            "State": "CA"
+         },
+         "Network": {
+            "ASName": "XO Communications",
+            "ASNumber": 2828,
+            "Systems": [
+               {
+                  "ASNs": [
+                     2828
+                  ]
+               }
+            ]
+         },
+         "Site": "nuq05"
+      },
+      "Name": "nuq05",
+      "Network": {
+         "IPv4": "216.156.85.192/26",
+         "IPv6": "2610:18:111:7::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Paris",
+            "ContinentCode": "EU",
+            "CountryCode": "FR",
+            "Latitude": 48.858400000000003,
+            "Longitude": 2.3490099999999998
+         },
+         "Network": {
+            "ASName": "Telia Company AB",
+            "ASNumber": 1299,
+            "Systems": [
+               {
+                  "ASNs": [
+                     1299
+                  ]
+               }
+            ]
+         },
+         "Site": "par01"
+      },
+      "Name": "par01",
+      "Network": {
+         "IPv4": "80.239.168.192/26",
+         "IPv6": "2001:2030:0:1a::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Prague",
+            "ContinentCode": "EU",
+            "CountryCode": "CZ",
+            "Latitude": 50.083300000000001,
+            "Longitude": 14.416700000000001
+         },
+         "Network": {
+            "ASName": "Level 3 Parent, LLC",
+            "ASNumber": 3356,
+            "Systems": [
+               {
+                  "ASNs": [
+                     3356
+                  ]
+               }
+            ]
+         },
+         "Site": "prg01"
+      },
+      "Name": "prg01",
+      "Network": {
+         "IPv4": "212.162.51.64/26",
+         "IPv6": "2001:4c08:2003:4::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Seattle",
+            "ContinentCode": "NA",
+            "CountryCode": "US",
+            "Latitude": 47.448900000000002,
+            "Longitude": -122.3094,
+            "State": "WA"
+         },
+         "Network": {
+            "ASName": "XO Communications",
+            "ASNumber": 2828,
+            "Systems": [
+               {
+                  "ASNs": [
+                     2828
+                  ]
+               }
+            ]
+         },
+         "Site": "sea05"
+      },
+      "Name": "sea05",
+      "Network": {
+         "IPv4": "64.3.225.64/26",
+         "IPv6": "2610:18:114:4001::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Seattle",
+            "ContinentCode": "NA",
+            "CountryCode": "US",
+            "Latitude": 47.448900000000002,
+            "Longitude": -122.3094,
+            "State": "WA"
+         },
+         "Network": {
+            "ASName": "Internap Holding LLC",
+            "ASNumber": 14744,
+            "Systems": [
+               {
+                  "ASNs": [
+                     14744
+                  ]
+               }
+            ]
+         },
+         "Site": "sea06"
+      },
+      "Name": "sea06",
+      "Network": {
+         "IPv4": "64.74.15.192/26",
+         "IPv6": "2600:c00:0:202::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "San Francisco",
+            "ContinentCode": "NA",
+            "CountryCode": "US",
+            "Latitude": 37.383299999999998,
+            "Longitude": -122.0667,
+            "State": "CA"
+         },
+         "Network": {
+            "ASName": "Internap Holding LLC",
+            "ASNumber": 12182,
+            "Systems": [
+               {
+                  "ASNs": [
+                     12182
+                  ]
+               }
+            ]
+         },
+         "Site": "sjc01"
+      },
+      "Name": "sjc01",
+      "Network": {
+         "IPv4": "70.42.244.64/26",
+         "IPv6": "2600:c02:2:82::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Turin",
+            "ContinentCode": "EU",
+            "CountryCode": "IT",
+            "Latitude": 45.200800000000001,
+            "Longitude": 7.6497000000000002
+         },
+         "Network": {
+            "ASName": "CONSORZIO TOP IX - TORINO E PIEMONTE EXCHANGE POINT CC",
+            "ASNumber": 41364,
+            "Systems": [
+               {
+                  "ASNs": [
+                     41364
+                  ]
+               }
+            ]
+         },
+         "Site": "trn01"
+      },
+      "Name": "trn01",
+      "Network": {
+         "IPv4": "194.116.85.192/26",
+         "IPv6": "2001:7f8:23:307::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Vienna",
+            "ContinentCode": "EU",
+            "CountryCode": "AT",
+            "Latitude": 48.268999999999998,
+            "Longitude": 16.410699999999999
+         },
+         "Network": {
+            "ASName": "Next Layer Telekommunikationsdienstleistungs- und Beratungs GmbH",
+            "ASNumber": 1764,
+            "Systems": [
+               {
+                  "ASNs": [
+                     1764
+                  ]
+               }
+            ]
+         },
+         "Site": "vie01"
+      },
+      "Name": "vie01",
+      "Network": {
+         "IPv4": "213.208.152.0/26",
+         "IPv6": "2a01:190:1700:38::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Vienna",
+            "ContinentCode": "EU",
+            "CountryCode": "AT",
+            "Latitude": 48.268999999999998,
+            "Longitude": 16.410699999999999
+         },
+         "Network": {
+            "ASName": "Next Layer Telekommunikationsdienstleistungs- und Beratungs GmbH",
+            "ASNumber": 1764,
+            "Systems": [
+               {
+                  "ASNs": [
+                     1764
+                  ]
+               }
+            ]
+         },
+         "Site": "vie02"
+      },
+      "Name": "vie02",
+      "Network": {
+         "IPv4": "213.208.152.0/26",
+         "IPv6": "2a07:1ec0:775::/48"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Wellington",
+            "ContinentCode": "OC",
+            "CountryCode": "NZ",
+            "Latitude": -41.327199999999998,
+            "Longitude": 174.80500000000001
+         },
+         "Network": {
+            "ASName": "Network Research Lab",
+            "ASNumber": 132003,
+            "Systems": [
+               {
+                  "ASNs": [
+                     132003
+                  ]
+               }
+            ]
+         },
+         "Site": "wlg01"
+      },
+      "Name": "wlg01",
+      "Network": {
+         "IPv4": "103.10.233.0/26",
+         "IPv6": "2404:2000:3000::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Moncton",
+            "ContinentCode": "NA",
+            "CountryCode": "CA",
+            "Latitude": 46.107300000000002,
+            "Longitude": -64.6738
+         },
+         "Network": {
+            "ASName": "F6 Newtorks Inc",
+            "ASNumber": 3367,
+            "Systems": [
+               {
+                  "ASNs": [
+                     3367
+                  ]
+               }
+            ]
+         },
+         "Site": "yqm02"
+      },
+      "Name": "yqm02",
+      "Network": {
+         "IPv4": "98.143.249.192/26",
+         "IPv6": "2605:5080:1001:1::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Montreal",
+            "ContinentCode": "NA",
+            "CountryCode": "CA",
+            "Latitude": 45.457599999999999,
+            "Longitude": -73.749700000000004
+         },
+         "Network": {
+            "ASName": "Hurricane Electric LLC",
+            "ASNumber": 6939,
+            "Systems": [
+               {
+                  "ASNs": [
+                     6939
+                  ]
+               }
+            ]
+         },
+         "Site": "yul01"
+      },
+      "Name": "yul01",
+      "Network": {
+         "IPv4": "162.219.49.0/26",
+         "IPv6": "2620:10a:80fe::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Calgary",
+            "ContinentCode": "NA",
+            "CountryCode": "CA",
+            "Latitude": 51.131500000000003,
+            "Longitude": -114.0106
+         },
+         "Network": {
+            "ASName": "Hurricane Electric LLC",
+            "ASNumber": 6939,
+            "Systems": [
+               {
+                  "ASNs": [
+                     6939
+                  ]
+               }
+            ]
+         },
+         "Site": "yyc01"
+      },
+      "Name": "yyc01",
+      "Network": {
+         "IPv4": "162.219.50.0/26",
+         "IPv6": "2620:10a:80ff::/64"
+      }
+   },
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "Toronto",
+            "ContinentCode": "NA",
+            "CountryCode": "CA",
+            "Latitude": 43.676699999999997,
+            "Longitude": -79.630600000000001
+         },
+         "Network": {
+            "ASName": "Hurricane Electric LLC",
+            "ASNumber": 6939,
+            "Systems": [
+               {
+                  "ASNs": [
+                     6939
+                  ]
+               }
+            ]
+         },
+         "Site": "yyz01"
+      },
+      "Name": "yyz01",
+      "Network": {
+         "IPv4": "162.219.48.0/26",
+         "IPv6": "2620:10a:80fd::/64"
+      }
+   }
+]
