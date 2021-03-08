@@ -34,6 +34,7 @@ func TestPopulateLocationData(t *testing.T) {
 			node: geolite2v2.GeoIPNode{LocationIndex: 0, PostalCode: "10583"},
 			locs: []geolite2v2.LocationNode{{
 				CityName:            "Not A Real City",
+				RegionCode:          "ME",
 				Subdivision1ISOCode: "ME",
 				AccuracyRadiusKm:    3,
 			}},
@@ -41,6 +42,7 @@ func TestPopulateLocationData(t *testing.T) {
 				Geo: &api.GeolocationIP{
 					City:                "Not A Real City",
 					PostalCode:          "10583",
+					Region:              "ME",
 					Subdivision1ISOCode: "ME",
 					AccuracyRadiusKm:    3,
 				},

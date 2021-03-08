@@ -31,6 +31,10 @@ type LocationNode struct {
 	ContinentCode string
 	CountryCode   string
 	CountryName   string
+	// TODO: remove RegionCode and RegionName once the parsers have been
+	// updated to work with the Subdivisions below.
+	RegionCode string
+	RegionName string
 
 	// Subdivision fields are provided by MaxMind Geo2 format.
 	Subdivision1ISOCode string
@@ -112,7 +116,11 @@ func (l *locationCsvConsumer) Consume(record []string) error {
 		log.Println("Country name should be letters only : ", record[5])
 		return ErrBadCountryName
 	}
-	// TODO - should probably do some validation.
+	// TODO: remove these once the parser has been updated to work with the
+	// Subdivision codes.
+	lNode.RegionCode = record[6]
+	lNode.RegionName = record[7]
+
 	lNode.Subdivision1ISOCode = record[6]
 	lNode.Subdivision1Name = record[7]
 	lNode.Subdivision2ISOCode = record[8]

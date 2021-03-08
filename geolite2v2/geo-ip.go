@@ -104,10 +104,12 @@ func populateLocationData(ipNode iputils.IPNode, locationNodes []LocationNode, d
 		locNode = locationNodes[geoIPNode.LocationIndex]
 	}
 	data.Geo = &api.GeolocationIP{
-		ContinentCode:       locNode.ContinentCode,
-		CountryCode:         locNode.CountryCode,
-		CountryCode3:        "", // missing from geoLite2 ?
-		CountryName:         locNode.CountryName,
+		ContinentCode: locNode.ContinentCode,
+		CountryCode:   locNode.CountryCode,
+		CountryCode3:  "", // missing from geoLite2 ?
+		CountryName:   locNode.CountryName,
+		// TODO: remove Region once the parser has been updated.
+		Region:              locNode.RegionCode,
 		Subdivision1ISOCode: locNode.Subdivision1ISOCode,
 		Subdivision1Name:    locNode.Subdivision1Name,
 		Subdivision2ISOCode: locNode.Subdivision2ISOCode,
