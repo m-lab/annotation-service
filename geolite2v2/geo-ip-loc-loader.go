@@ -27,12 +27,21 @@ var (
 
 // LocationNode defines Location databases
 type LocationNode struct {
-	GeonameID        int
-	ContinentCode    string
-	CountryCode      string
-	CountryName      string
-	RegionCode       string
-	RegionName       string
+	GeonameID     int
+	ContinentCode string
+	CountryCode   string
+	CountryName   string
+	// TODO: remove RegionCode and RegionName once the parsers have been
+	// updated to work with the Subdivisions below.
+	RegionCode string
+	RegionName string
+
+	// Subdivision fields are provided by MaxMind Geo2 format.
+	Subdivision1ISOCode string
+	Subdivision1Name    string
+	Subdivision2ISOCode string
+	Subdivision2Name    string
+
 	MetroCode        int64
 	CityName         string
 	AccuracyRadiusKm int64
@@ -107,9 +116,16 @@ func (l *locationCsvConsumer) Consume(record []string) error {
 		log.Println("Country name should be letters only : ", record[5])
 		return ErrBadCountryName
 	}
-	// TODO - should probably do some validation.
+	// TODO: remove these once the parser has been updated to work with the
+	// Subdivision codes.
 	lNode.RegionCode = record[6]
 	lNode.RegionName = record[7]
+
+	lNode.Subdivision1ISOCode = record[6]
+	lNode.Subdivision1Name = record[7]
+	lNode.Subdivision2ISOCode = record[8]
+	lNode.Subdivision2Name = record[9]
+
 	lNode.MetroCode, err = strconv.ParseInt(record[11], 10, 64)
 	if err != nil {
 		if len(record[11]) > 0 {

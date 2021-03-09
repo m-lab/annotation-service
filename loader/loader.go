@@ -27,7 +27,6 @@ func GetGzBase(filename string) string {
 
 // CreateZipReader reads a file from GCS and wraps it in a zip.Reader.
 func CreateZipReader(ctx context.Context, bucket string, bucketObj string) (*zip.Reader, error) {
-	ctx = context.Background()
 	client, err := storage.NewClient(ctx)
 	if err != nil {
 		log.Println(err)
