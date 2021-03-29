@@ -34,11 +34,11 @@ var (
 	geoLite2StartDate = time.Unix(1502755200, 0) //"August 15, 2017"
 
 	// geoLite2Regex is used to filter which geolite2 dataset files we consider acceptable.
-	geoLite2Regex = regexp.MustCompile(`Maxmind/\d{4}/\d{2}/\d{2}/\d{8}T\d{6}Z-GeoLite2-City-CSV\.zip`)
+	geoLite2Regex = regexp.MustCompile(`Maxmind/2021/03/23/20210323T155212Z-GeoLite2-City-CSV.zip`)
 
 	// GeoLegacy??Regex are used to filter which legacy dataset files we consider acceptable.
-	geoLegacyRegex   = regexp.MustCompile(`.*-GeoLiteCity.dat.*`)
-	geoLegacyv6Regex = regexp.MustCompile(`.*-GeoLiteCityv6.dat.*`)
+	geoLegacyRegex   = regexp.MustCompile(`20190101T035057Z-GeoLiteCity\.dat.*`)
+	geoLegacyv6Regex = regexp.MustCompile(`20190201T034356Z-GeoLiteCityv6\.dat-GeoLiteCityv6.dat.*`)
 
 	// ErrNoLoader is returned if nil is passed for loader parameter.
 	ErrNoLoader = errors.New("No loader provided")

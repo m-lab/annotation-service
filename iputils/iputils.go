@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/csv"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 
@@ -286,6 +287,28 @@ func rangeCIDR(cidr string) (net.IP, net.IP, error) {
 		}
 	}
 	return lowIP, ip, nil
+}
+
+func CIDRRange(lowIP, highIP net.IP) string {
+	c := 0
+	for i := 0; i <= 15; i++ {
+		xor := highIP[i] ^ lowIP[i]
+		for j := 0; j < 8; j++ {
+			if xor&0x01 == 1 {
+				c++
+			}
+			xor = xor >> 1
+		}
+	}
+
+	mask := 0
+	if lowIP.To4() == nil {
+		mask = 128 - c
+	} else {
+		mask = 32 - c
+	}
+
+	return fmt.Sprintf("%s/%d", lowIP, mask)
 }
 
 // plusOne adds one to a net.IP.

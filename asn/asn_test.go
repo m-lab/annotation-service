@@ -21,6 +21,9 @@ import (
 func init() {
 	// Always prepend the filename and line number.
 	log.SetFlags(log.LstdFlags | log.Lshortfile | log.Lmicroseconds)
+
+	// Set ipinfo CSV file path.
+	asn.ASNamesFile = "testdata/asnames-test.csv"
 }
 
 func bToMb(b uint64) uint64 {
@@ -79,7 +82,12 @@ func TestAnnotateV4(t *testing.T) {
 	err := ann.Annotate("1.0.128.100", &geoData)
 	assert.Nil(t, err)
 	assertASNData(t,
-		&api.ASData{Systems: []api.System{api.System{ASNs: []uint32{23969}}}},
+		&api.ASData{
+			Systems:  []api.System{api.System{ASNs: []uint32{23969}}},
+			CIDR:     "1.0.128.0/23",
+			ASNumber: 23969,
+			ASName:   "TOT Public Company Limited",
+		},
 		geoData.Network)
 
 	// test set ASN
@@ -87,7 +95,12 @@ func TestAnnotateV4(t *testing.T) {
 	err = ann.Annotate("37.203.240.10", &geoData)
 	assert.Nil(t, err)
 	assertASNData(t,
-		&api.ASData{Systems: []api.System{api.System{ASNs: []uint32{199430, 202079}}}},
+		&api.ASData{
+			Systems:  []api.System{api.System{ASNs: []uint32{199430, 202079}}},
+			CIDR:     "37.203.240.0/24",
+			ASNumber: 199430,
+			ASName:   "Limited Liability Company GOODWOOD",
+		},
 		geoData.Network)
 
 	// test multi-origin ASN
@@ -95,9 +108,14 @@ func TestAnnotateV4(t *testing.T) {
 	err = ann.Annotate("37.142.80.10", &geoData)
 	assert.Nil(t, err)
 	assertASNData(t,
-		&api.ASData{Systems: []api.System{
-			api.System{ASNs: []uint32{12849}},
-			api.System{ASNs: []uint32{65024}}}},
+		&api.ASData{
+			Systems: []api.System{
+				api.System{ASNs: []uint32{12849}},
+				api.System{ASNs: []uint32{65024}}},
+			CIDR:     "37.142.80.0/21",
+			ASNumber: 12849,
+			ASName:   "Hot-Net internet services Ltd.",
+		},
 		geoData.Network)
 
 	// test already populated error
@@ -122,7 +140,12 @@ func TestAnnotateV6(t *testing.T) {
 	err := ann.Annotate("2001:2b8:18:0000:0000:0000:0000:1313", &geoData)
 	assert.Nil(t, err)
 	assertASNData(t,
-		&api.ASData{Systems: []api.System{api.System{ASNs: []uint32{17832}}}},
+		&api.ASData{
+			Systems:  []api.System{api.System{ASNs: []uint32{17832}}},
+			CIDR:     "2001:2b8::/43",
+			ASNumber: 17832,
+			ASName:   "Korea Internet Security Agency",
+		},
 		geoData.Network)
 
 	// test set ASN
@@ -130,7 +153,12 @@ func TestAnnotateV6(t *testing.T) {
 	err = ann.Annotate("2001:410:0000:0000:0000:0000:0000:1313", &geoData)
 	assert.Nil(t, err)
 	assertASNData(t,
-		&api.ASData{Systems: []api.System{api.System{ASNs: []uint32{271, 7860, 8111, 26677}}}},
+		&api.ASData{
+			Systems:  []api.System{api.System{ASNs: []uint32{271, 7860, 8111, 26677}}},
+			CIDR:     "2001:410::/47",
+			ASNumber: 271,
+			ASName:   "BCnet",
+		},
 		geoData.Network)
 
 	// test multi-origin ASN
@@ -138,10 +166,16 @@ func TestAnnotateV6(t *testing.T) {
 	err = ann.Annotate("2001:428:00:0000:0000:0000:0000:1313", &geoData)
 	assert.Nil(t, err)
 	assertASNData(t,
-		&api.ASData{Systems: []api.System{
-			api.System{ASNs: []uint32{209}},
-			api.System{ASNs: []uint32{3910}},
-			api.System{ASNs: []uint32{3908}}}},
+		&api.ASData{
+			Systems: []api.System{
+				{ASNs: []uint32{209}},
+				{ASNs: []uint32{3910}},
+				{ASNs: []uint32{3908}},
+			},
+			CIDR:     "2001:428::/39",
+			ASNumber: 209,
+			ASName:   "Qwest Communications Company, LLC",
+		},
 		geoData.Network)
 
 	// test already populated error

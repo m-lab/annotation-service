@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"errors"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
@@ -15,18 +16,24 @@ import (
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/iputils"
 	"github.com/m-lab/annotation-service/loader"
+	"github.com/m-lab/go/rtx"
+	"github.com/m-lab/uuid-annotator/ipinfo"
 )
 
 var (
 	expectedColumnCount = 3 // the number of the expected columns in the source dataset
 
 	errExtractDateFromFilename = errors.New("cannot extract date from input filename")
+
+	ASNamesFile = "data/asnames.ipinfo.csv"
+	asnames     ipinfo.ASNames
 )
 
 // ASNDataset holds the database in the memory
 type ASNDataset struct {
-	IPList []ASNIPNode
-	Start  time.Time // Date from which to start using this dataset
+	IPList  []ASNIPNode
+	ASNames ipinfo.ASNames
+	Start   time.Time // Date from which to start using this dataset
 }
 
 //-----------------------------------------------------------------
@@ -131,7 +138,16 @@ func LoadASNDataset(file *storage.ObjectAttrs) (api.Annotator, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ASNDataset{IPList: nodes, Start: *time}, nil
+
+	if asnames == nil {
+		// Load the ipinfo CSV containing the ASN -> ASName mapping.
+		content, err := ioutil.ReadFile(ASNamesFile)
+		rtx.Must(err, "Cannot load asnames files")
+		asnames, err = ipinfo.Parse(content)
+		rtx.Must(err, "Cannot parse asnames file")
+	}
+
+	return &ASNDataset{IPList: nodes, Start: *time, ASNames: asnames}, nil
 }
 
 // LoadASNDatasetFromReader produces a new ASN api.Annotator.

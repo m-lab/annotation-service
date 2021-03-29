@@ -100,6 +100,10 @@ type System struct {
 // NOTE: This is NOT intended to be used directly as the BigQuery schema.
 type ASData struct {
 	IPPrefix string `json:",omitempty"` // the IP prefix found in the table.
+	CIDR     string `json:",omitempty"` // The IP prefix found in the RouteViews data.
+	ASNumber uint32 `json:",omitempty"` // First AS number.
+	ASName   string `json:",omitempty"` // AS name for that number, data from IPinfo.io
+	Missing  bool   `json:",omitempty"` // True when the ASN data is missing from RouteViews.
 
 	// One or more "Systems".  There must always be at least one System.  If there are more than one,
 	// then this is a Multi-Origin AS, and the component Systems are in order of frequency in routing tables,
