@@ -90,9 +90,10 @@ func (asn *ASNDataset) Annotate(ip string, ann *api.GeoData) error {
 	if len(result.Systems) > 0 &&
 		len(result.Systems[0].ASNs) > 0 {
 		result.ASNumber = result.Systems[0].ASNs[0]
+		result.ASName = asn.ASNames[result.ASNumber]
+	} else {
+		result.Missing = true
 	}
-
-	result.ASName = asn.ASNames[result.ASNumber]
 	ann.Network = &result
 	return nil
 }
