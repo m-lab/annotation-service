@@ -12,6 +12,7 @@ RUN chmod -R a+rx /go/bin/annotation-service
 FROM golang:alpine
 RUN apk add --no-cache geoip
 COPY --from=build /go/bin/annotation-service /
+COPY --from=build /go/src/github.com/m-lab/annotation-service/data /data
 WORKDIR /
 
 ENTRYPOINT ["/annotation-service"]
