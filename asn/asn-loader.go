@@ -26,7 +26,11 @@ var (
 	errExtractDateFromFilename = errors.New("cannot extract date from input filename")
 
 	ASNamesFile = "data/asnames.ipinfo.csv"
-	asnames     ipinfo.ASNames
+
+	// asnames contains the AS number -> AS name association, loaded from
+	// ASNamesFile. Each annotator keeps a reference to this global map, so
+	// that we don't need to load the file multiple times.
+	asnames ipinfo.ASNames
 )
 
 // ASNDataset holds the database in the memory
@@ -139,6 +143,7 @@ func LoadASNDataset(file *storage.ObjectAttrs) (api.Annotator, error) {
 		return nil, err
 	}
 
+	// Note: this is not concurrency-safe.
 	if asnames == nil {
 		// Load the ipinfo CSV containing the ASN -> ASName mapping.
 		content, err := ioutil.ReadFile(ASNamesFile)
