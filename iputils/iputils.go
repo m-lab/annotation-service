@@ -289,6 +289,9 @@ func rangeCIDR(cidr string) (net.IP, net.IP, error) {
 	return lowIP, ip, nil
 }
 
+// CIDRRange returns the IP range in CIDR notation and works for both IPv4 and
+// IPv6 addresses. lowIP and highIP must be byte slices of length 16,
+// regardless of v4 / v6.
 func CIDRRange(lowIP, highIP net.IP) string {
 	c := 0
 	for i := 0; i <= 15; i++ {
