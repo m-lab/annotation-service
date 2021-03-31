@@ -156,7 +156,12 @@ func loadAll(
 			result[filename] = ann
 			resultLock.Unlock()
 			metrics.DatasetCount.Inc()
-			log.Println("Loaded", filename)
+
+			m := runtime.MemStats{}
+			runtime.ReadMemStats(&m)
+			log.Printf("Loaded %v.  Alloc:%v MiB, TotalAlloc:%v MiB, Sys:%v MiB\n",
+				filename, m.Alloc/1024/1024, m.TotalAlloc/1024/1024, m.Sys/1024/1024)
+
 		}(file)
 	}
 	wg.Wait()

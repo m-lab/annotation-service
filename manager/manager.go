@@ -49,6 +49,7 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 	dirLock.RLock()
 	defer dirLock.RUnlock()
 	if annotatorDirectory == nil {
+		log.Print("annotatorDirectory is nil!")
 		return nil, ErrDirectoryIsNil
 	}
 	return annotatorDirectory.GetAnnotator(date)

@@ -60,6 +60,10 @@ func live(w http.ResponseWriter, r *http.Request) {
 func ready(w http.ResponseWriter, r *http.Request) {
 	ann, _ := manager.GetAnnotator(time.Now())
 	if ann == nil {
+		m := runtime.MemStats{}
+		runtime.ReadMemStats(&m)
+		log.Printf("Service still unavailable.  Alloc:%v MiB, TotalAlloc:%v MiB, Sys:%v MiB\n",
+			m.Alloc/1024/1024, m.TotalAlloc/1024/1024, m.Sys/1024/1024)
 		w.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}
