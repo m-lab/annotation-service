@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"cloud.google.com/go/storage"
@@ -31,6 +32,9 @@ var (
 	// ASNamesFile. Each annotator keeps a reference to this global map, so
 	// that we don't need to load the file multiple times.
 	asnames ipinfo.ASNames
+
+	// once is used to make sure loading ASNamesFile only happens once.
+	once sync.Once
 )
 
 // ASNDataset holds the database in the memory
@@ -143,14 +147,13 @@ func LoadASNDataset(file *storage.ObjectAttrs) (api.Annotator, error) {
 		return nil, err
 	}
 
-	// Note: this is not concurrency-safe.
-	if asnames == nil {
+	once.Do(func() {
 		// Load the ipinfo CSV containing the ASN -> ASName mapping.
 		content, err := ioutil.ReadFile(ASNamesFile)
 		rtx.Must(err, "Cannot load asnames files")
 		asnames, err = ipinfo.Parse(content)
 		rtx.Must(err, "Cannot parse asnames file")
-	}
+	})
 
 	return &ASNDataset{IPList: nodes, Start: *time, ASNames: asnames}, nil
 }
