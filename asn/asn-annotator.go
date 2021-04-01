@@ -21,9 +21,8 @@ var (
 
 	// ErrorIllegalIPNodeType raised when the ASNDataset contains IPNode which is not an ASNIPNode
 	ErrorIllegalIPNodeType = errors.New("Illegal IPNode type found")
+	annotateLogger         = logx.NewLogEvery(nil, time.Second)
 )
-
-var annotateLogger = logx.NewLogEvery(nil, time.Second)
 
 // Annotate expects an IP string and an api.GeoData pointer to find the ASN
 // and populate the data into the GeoData.ASN struct
@@ -79,6 +78,14 @@ func (asn *ASNDataset) Annotate(ip string, ann *api.GeoData) error {
 		}
 		newSystem := api.System{ASNs: intList}
 		result.Systems = append(result.Systems, newSystem)
+	}
+	result.CIDR = iputils.CIDRRange(asnNode.IPAddressLow, asnNode.IPAddressHigh)
+	if len(result.Systems) > 0 &&
+		len(result.Systems[0].ASNs) > 0 {
+		result.ASNumber = result.Systems[0].ASNs[0]
+		result.ASName = asn.ASNames[result.ASNumber]
+	} else {
+		result.Missing = true
 	}
 	ann.Network = &result
 	return nil

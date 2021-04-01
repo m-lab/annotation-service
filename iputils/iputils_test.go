@@ -3,10 +3,14 @@ package iputils
 import (
 	"encoding/csv"
 	"errors"
+	"fmt"
+	"io"
 	"net"
+	"os"
 	"strings"
 	"testing"
 
+	"github.com/m-lab/go/testingx"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -366,4 +370,54 @@ func (p *TestParser) LastNode() IPNode {
 		return nil
 	}
 	return &p.list[len(p.list)-1]
+}
+
+// TestCIDRRangeIPv4 tests the CIDRRange function on IPv4 addresses.
+func TestCIDRRangeIPv4(t *testing.T) {
+	// Read test file.
+	f, err := os.Open("testdata/ipv4-cidr.csv")
+	testingx.Must(t, err, "cannot open test file")
+	defer f.Close()
+	reader := csv.NewReader(f)
+	reader.Comma = '\t'
+
+	// Convert each CIDR in the test file to low/high range and back.
+	for {
+		fields, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		expectedCIDR := fmt.Sprintf("%s/%s", fields[0], fields[1])
+		lowIP, highIP, err := rangeCIDR(expectedCIDR)
+		testingx.Must(t, err, "cannot convert CIDR %s to range", expectedCIDR)
+		gotCIDR := CIDRRange(lowIP, highIP)
+		if gotCIDR != expectedCIDR {
+			t.Errorf("expected: %s, got: %s\n", expectedCIDR, gotCIDR)
+		}
+	}
+}
+
+// TestCIDRRangeIPv6 tests the CIDRRange function on IPv6 addresses.
+func TestCIDRRangeIPv6(t *testing.T) {
+	// Read test file.
+	f, err := os.Open("testdata/ipv6-cidr.csv")
+	testingx.Must(t, err, "cannot open test file")
+	defer f.Close()
+	reader := csv.NewReader(f)
+	reader.Comma = '\t'
+
+	// Convert each CIDR in the test file to low/high range and back.
+	for {
+		fields, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		expectedCIDR := fmt.Sprintf("%s/%s", fields[0], fields[1])
+		lowIP, highIP, err := rangeCIDR(expectedCIDR)
+		testingx.Must(t, err, "cannot convert CIDR %s to range", expectedCIDR)
+		gotCIDR := CIDRRange(lowIP, highIP)
+		if gotCIDR != expectedCIDR {
+			t.Errorf("expected: %s, got: %s\n", expectedCIDR, gotCIDR)
+		}
+	}
 }

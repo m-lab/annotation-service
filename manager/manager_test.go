@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/m-lab/annotation-service/api"
+	"github.com/m-lab/annotation-service/asn"
 	"github.com/m-lab/annotation-service/geolite2v2"
 	"github.com/m-lab/annotation-service/geoloader"
 	"github.com/m-lab/annotation-service/handler"
@@ -20,6 +21,9 @@ import (
 func init() {
 	// Always prepend the filename and line number.
 	log.SetFlags(log.LstdFlags | log.Lshortfile | log.Lmicroseconds)
+
+	// Set ipinfo CSV file path.
+	asn.ASNamesFile = "testdata/asnames-test.csv"
 }
 
 func fakeLoader(date string) (api.Annotator, error) {
@@ -48,18 +52,18 @@ func TestInitDataset(t *testing.T) {
 		res  string
 	}{
 		// This request needs a legacy binary dataset
-		{"1.4.128.0", "1199145600", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"Network":{"Systems":[{"ASNs":[23969]}]}}`},
+		{"1.4.128.0", "1199145600", `{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"Network":{"CIDR":"1.4.128.0/20","ASNumber":23969,"ASName":"TOT Public Company Limited","Systems":[{"ASNs":[23969]}]}}`},
 		// This request needs another legacy binary dataset
 		{"1.4.128.0", "1399145600",
-			`{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"Network":{"Systems":[{"ASNs":[23969]}]}}`},
+			`{"Geo":{"continent_code":"AS","country_code":"TH","country_code3":"THA","country_name":"Thailand","region":"40","city":"Bangkok","latitude":13.754,"longitude":100.501},"Network":{"CIDR":"1.4.128.0/20","ASNumber":23969,"ASName":"TOT Public Company Limited","Systems":[{"ASNs":[23969]}]}}`},
 		// This request needs a geolite2 dataset
 		{"1.9.128.0", "1512086400",
-			`{"Geo":{"continent_code":"AS","country_code":"MY","country_code3":"MYS","country_name":"Malaysia","region":"14","city":"Kuala Lumpur","postal_code":"50586","latitude":3.167,"longitude":101.7},"Network":{"Systems":[{"ASNs":[4788]}]}}`},
+			`{"Geo":{"continent_code":"AS","country_code":"MY","country_code3":"MYS","country_name":"Malaysia","region":"14","city":"Kuala Lumpur","postal_code":"50586","latitude":3.167,"longitude":101.7},"Network":{"CIDR":"1.9.80.0/18","ASNumber":4788,"Systems":[{"ASNs":[4788]}]}}`},
 		// This request needs the latest dataset in the memory.
 		{"1.22.128.0", "1544400000",
-			`{"Geo":{"continent_code":"AS","country_code":"IN","country_name":"India","region":"HR","Subdivision1ISOCode":"HR","Subdivision1Name":"Haryana","city":"Faridabad","latitude":28.4333,"longitude":77.3167},"Network":{"Systems":[{"ASNs":[45528]}]}}`},
+			`{"Geo":{"continent_code":"AS","country_code":"IN","country_name":"India","region":"HR","Subdivision1ISOCode":"HR","Subdivision1Name":"Haryana","city":"Faridabad","latitude":28.4333,"longitude":77.3167},"Network":{"CIDR":"1.22.69.0/20","ASNumber":45528,"Systems":[{"ASNs":[45528]}]}}`},
 		{"2002:dced:117c::dced:117c", "1559227976",
-			`{"Geo":{"continent_code":"OC","country_code":"AU","country_name":"Australia","region":"VIC","Subdivision1ISOCode":"VIC","Subdivision1Name":"Victoria","city":"East Malvern","postal_code":"3145","latitude":-37.8833,"longitude":145.05},"Network":{"Systems":[{"ASNs":[4804]}]}}`},
+			`{"Geo":{"continent_code":"OC","country_code":"AU","country_name":"Australia","region":"VIC","Subdivision1ISOCode":"VIC","Subdivision1Name":"Victoria","city":"East Malvern","postal_code":"3145","latitude":-37.8833,"longitude":145.05},"Network":{"CIDR":"220.236.0.0/14","ASNumber":4804,"Systems":[{"ASNs":[4804]}]}}`},
 	}
 	for n, test := range tests {
 		w := httptest.NewRecorder()
