@@ -9,11 +9,11 @@ service: annotator
 
 # TODO(dev): adjust CPU and memory based on actual requirements.
 resources:
-  cpu: 30
+  cpu: 40
   # Instances support between [(cpu * 0.9) - 0.4, (cpu * 6.5) - 0.4]
   # Actual memory available is exposed via GAE_MEMORY_MB environment variable.
   # Service now loads ALL datasets, so it needs quite a lot of memory.
-  memory_gb: 194
+  memory_gb: 259
 
   # Annotation service uses disk for loading legacy Geolite datasets.  It now loads many
   # concurrently, so needs a lot of disk space.
@@ -46,6 +46,8 @@ env_variables:
 
 liveness_check:
   path: "/live"
+  initial_delay_sec: 300
 
 readiness_check:
   path: "/ready"
+  app_start_timeout_sec: 600

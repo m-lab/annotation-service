@@ -38,7 +38,7 @@ var (
 
 // CompositeAnnotator wraps several annotators, and calls to Annotate() are forwarded to all of them.
 type CompositeAnnotator struct {
-	// date of CompositeAnnotator is the earliest date of anntators inside this CA. 
+	// date of CompositeAnnotator is the earliest date of anntators inside this CA.
 	// It is precomputed, and returned by AnnotatorDate()
 	date       time.Time
 	annotators []api.Annotator
@@ -59,12 +59,13 @@ func (ca CompositeAnnotator) Annotate(ip string, ann *api.GeoData) error {
 
 // PrintALl prints all dates inside this CompositeAnnotator
 func (ca CompositeAnnotator) PrintAll() {
-	log.Println("Date of this CA: ", ca.date.Format("20160102"))
+	log.Println("Date of this CA: ", ca.date.Format("20060102"))
 	log.Println("contains anntators with the following dates:")
 	for i := range ca.annotators {
-		log.Println(ca.annotators[i].AnnotatorDate().Format("20160102"))
+		log.Println(ca.annotators[i].AnnotatorDate().Format("20060102"))
 	}
 }
+
 // AnnotatorDate returns the date of the most recent wrapped annotator.  Most recent is returned
 // as we try to apply the most recent annotators that predate the test we are annotating.  So the
 // most recent of all the annotators is the date that should be compared to the test date.
