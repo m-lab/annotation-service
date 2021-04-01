@@ -56,6 +56,7 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 }
 
 // Writes list of annotator dates to log, preceeded by header string.
+// This was previously used to log all the annotator dates in MustUpdateDirectory.
 func logAnnotatorDates(header string, an []api.Annotator) {
 	b := strings.Builder{}
 	b.WriteString(header + "\n")
@@ -91,7 +92,6 @@ func MustUpdateDirectory() {
 
 	// Sort them just in case there are some out of order.
 	combo = directory.SortSlice(combo)
-	logAnnotatorDates("combo", combo)
 
 	if len(combo) < 1 {
 		log.Fatal("No annotators.  Terminating!!")
