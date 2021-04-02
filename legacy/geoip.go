@@ -69,6 +69,7 @@ func (gi *GeoIP) Free() {
 	return
 }
 
+// GetFreeCached returns how many times Free() was called.
 func (gi *GeoIP) GetFreeCalled() uint32 {
 	return gi.freeCalled
 }
