@@ -8,13 +8,16 @@ import (
 
 var (
 	// fips2ISOMapFile is the name of the FIPS to ISO csv file.
+	// Download: https://dev.maxmind.com/wp-content/uploads/2020/06/fips-iso-map.csv
+	// Plus added supplemental region names for US and CA.
 	fips2ISOMapFile = "data/fips-iso-map.csv"
 
-	// fipsMap is a singleton, package pointer to a map of FIPS-10 to ISO 3166-2
+	// fipsMap is a singleton, package variable that maps FIPS-10 to ISO 3166-2
 	// Region codes and names.
 	fips2ISOMap map[string]subdivision
 )
 
+// subdivision contains the ISO 3166-2 subdivision1 iso code and name.
 type subdivision struct {
 	ISOCode string
 	Name    string
@@ -24,8 +27,11 @@ func fipsKey(country, region string) string {
 	return country + "-" + region
 }
 
-func parseFips2ISOMap(name string) (map[string]subdivision, error) {
-	f, err := os.Open(name)
+// parseFips2ISOMap reads the CSV content of the filename, parses it and returns
+// a map of the (country,FIPS region) mapped to the ISO (code,name). The map key
+// is generated using `fipsKey()`.
+func parseFips2ISOMap(filename string) (map[string]subdivision, error) {
+	f, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
