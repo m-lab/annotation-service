@@ -22,6 +22,8 @@ import (
 	"regexp"
 	"sync"
 	"unsafe"
+
+	"github.com/m-lab/go/rtx"
 )
 
 // This is the regex used to filter for which files we want to consider acceptable for using with legacy dataset
@@ -34,6 +36,11 @@ const (
 	CheckCache  = 2
 	IndexCache  = 4
 	MMapCache   = 8
+)
+
+var (
+	// once is used to make sure loading the fips2iso map only happens once.
+	once sync.Once
 )
 
 // GeoIP contains a single v4 or v6 dataset for a particular day.
@@ -51,6 +58,9 @@ type GeoIP struct {
 
 	// Counter that how many times Free() was called.
 	freeCalled uint32
+
+	// fips2ISOMap is a local pointer to the package variable.
+	fips2ISOMap map[string]subdivision
 }
 
 // Free the memory hold by GeoIP dataset. Mutex should be held for this operation.
@@ -110,6 +120,14 @@ func OpenDB(file string, flag int, datasetName string) (*GeoIP, error) {
 	g.name = datasetName
 	g.freeCalled = 0
 	g.isIPv4 = !geoLegacyv6Regex.MatchString(datasetName)
+
+	once.Do(func() {
+		// Load the fips-to-iso CSV mapping FIPS to ISO codes.
+		var err error
+		fips2ISOMap, err = parseFips2ISOMap(fips2ISOMapFile)
+		rtx.Must(err, "Could not parse fips-to-iso file")
+	})
+	g.fips2ISOMap = fips2ISOMap
 
 	return g, nil
 }
