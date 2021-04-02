@@ -33,8 +33,8 @@ func bToMb(b uint64) uint64 {
 func getAnnotatorForDay(t *testing.T, v4 bool, datasetStartTime time.Time) api.Annotator {
 	year := strconv.Itoa(datasetStartTime.Year())
 	month := fmt.Sprintf("%02d", datasetStartTime.Month())
-	day := fmt.Sprintf("%02d", datasetStartTime.Day())
-	geoloader.UseSpecificASNDateForTesting(&year, &month, &day)
+	// day := fmt.Sprintf("%02d", datasetStartTime.Day())
+	geoloader.UpdateASNDatePattern(year + "/" + month)
 
 	var loader api.CachingLoader
 	if v4 {
