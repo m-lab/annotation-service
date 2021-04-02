@@ -11,6 +11,8 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/m-lab/annotation-service/geoloader"
+
 	"github.com/m-lab/annotation-service/handler"
 	"github.com/m-lab/annotation-service/manager"
 	"github.com/m-lab/go/memoryless"
@@ -21,6 +23,9 @@ var (
 	updateInterval = flag.Duration("update_interval", time.Duration(24)*time.Hour, "Run the update dataset job with this frequency.")
 	minInterval    = flag.Duration("min_interval", time.Duration(18)*time.Hour, "minimum gap between 2 runs.")
 	maxInterval    = flag.Duration("max_interval", time.Duration(26)*time.Hour, "maximum gap between 2 runs.")
+
+	geoDates       = flag.String("maxmind_dates", `\d{4}/\d{2}/\d{2}`, "Regex used to match Maxmind file dates.")
+	routeViewDates = flag.String("routeview_dates", `\d{4}/\d{2}`, "Regex used to match RouteView file dates")
 	// Create a single unified context and a cancellationMethod for said context.
 	ctx, cancelCtx = context.WithCancel(context.Background())
 )
@@ -77,6 +82,9 @@ func init() {
 
 func main() {
 	flag.Parse()
+
+	geoloader.UpdateASNDatePattern(*routeViewDates)
+	geoloader.UpdateGeoliteDatePattern(*geoDates)
 
 	runtime.SetBlockProfileRate(1000000) // 1 sample/msec
 	runtime.SetMutexProfileFraction(1000)

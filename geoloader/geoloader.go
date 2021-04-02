@@ -49,28 +49,14 @@ var (
 	errNoMatch = errors.New("Doesn't match") // TODO
 )
 
-// UseSpecificGeolite2DateForTesting is for unit tests to narrow the datasets to load from GCS to date that can be matched to the date part regexes.
-// The parameters are string pointers. If a parameter is nil, no filter will be used for that date part.
-func UseSpecificGeolite2DateForTesting(yearRegex, monthRegex, dayRegex *string) {
-	yearStr := `\d{4}`
-	monthStr := `\d{2}`
-	dayStr := monthStr
-
-	if yearRegex != nil {
-		yearStr = *yearRegex
-	}
-	if monthRegex != nil {
-		monthStr = *monthRegex
-	}
-	if dayRegex != nil {
-		dayStr = *dayRegex
-	}
-
-	geoLite2Regex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/%s/%s/%s%s%sT\d{6}Z-GeoLite2-City-CSV\.zip`, yearStr, monthStr, dayStr, yearStr, monthStr, dayStr))
-	geoLegacyRegex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/%s/%s/%s%s%sT.*-GeoLiteCity.dat.*`, yearStr, monthStr, dayStr, yearStr, monthStr, dayStr))
-	geoLegacyv6Regex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/%s/%s/%s%s%sT.*-GeoLiteCityv6.dat.*`, yearStr, monthStr, dayStr, yearStr, monthStr, dayStr))
+// UpdateGeoliteDatePattern sets the pattern used to match Maxmind datasets to
+// load from GCS. The ymdRegex parameter is a string used as a regex pattern.
+func UpdateGeoliteDatePattern(ymdRegex string) {
+	geoLite2Regex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/.*T\d{6}Z-GeoLite2-City-CSV\.zip`, ymdRegex))
+	geoLegacyRegex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/.*T.*-GeoLiteCity.dat.*`, ymdRegex))
+	geoLegacyv6Regex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/.*T.*-GeoLiteCityv6.dat.*`, ymdRegex))
 	_, file, line, _ := runtime.Caller(1)
-	log.Printf("Date filter is set to %s%s%s by %s:%d", yearStr, monthStr, dayStr, file, line)
+	log.Printf("Date filter is set to %s by %s:%d", ymdRegex, file, line)
 }
 
 // UseOnlyMarchForTest hacks the regular expressions to reduce the number of datasets for testing.
