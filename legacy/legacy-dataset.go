@@ -142,9 +142,6 @@ func (gi *Annotator) Annotate(IP string, data *api.GeoData) error {
 
 	// It is very possible that the record missed some fields in legacy dataset.
 	if record == nil {
-		data.Geo = &api.GeolocationIP{
-			Missing: true,
-		}
 		return ErrNoRecord
 	}
 
