@@ -39,7 +39,7 @@ func TestInitDataset(t *testing.T) {
 	// Make the dataset filters much more restrictive to prevent OOM and make test faster.
 	//geoloader.UseOnlyMarchForTest()
 	ymd := "(2018|2017|2015|2014)/03/(07|08)"
-	geoloader.UpdateGeolitePattern(ymd)
+	geoloader.UpdateGeoliteDatePattern(ymd)
 	ymd = "2018/03/(01|08)"
 	geoloader.UpdateASNDatePattern(ymd)
 

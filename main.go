@@ -84,7 +84,7 @@ func main() {
 	flag.Parse()
 
 	geoloader.UpdateASNDatePattern(*routeViewDates)
-	geoloader.UpdateGeolitePattern(*geoDates)
+	geoloader.UpdateGeoliteDatePattern(*geoDates)
 
 	runtime.SetBlockProfileRate(1000000) // 1 sample/msec
 	runtime.SetMutexProfileFraction(1000)

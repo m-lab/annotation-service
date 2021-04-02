@@ -49,9 +49,9 @@ var (
 	errNoMatch = errors.New("Doesn't match") // TODO
 )
 
-// UpdateGeolitePattern is for unit tests to narrow the datasets to load from GCS to date that can be matched to the date part regexes.
+// UpdateGeoliteDatePattern is for unit tests to narrow the datasets to load from GCS to date that can be matched to the date part regexes.
 // The parameters are string pointers. If a parameter is nil, no filter will be used for that date part.
-func UpdateGeolitePattern(ymdRegex string) {
+func UpdateGeoliteDatePattern(ymdRegex string) {
 	geoLite2Regex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/.*T\d{6}Z-GeoLite2-City-CSV\.zip`, ymdRegex))
 	geoLegacyRegex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/.*T.*-GeoLiteCity.dat.*`, ymdRegex))
 	geoLegacyv6Regex = regexp.MustCompile(fmt.Sprintf(`Maxmind/%s/.*T.*-GeoLiteCityv6.dat.*`, ymdRegex))
