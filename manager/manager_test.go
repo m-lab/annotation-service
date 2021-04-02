@@ -40,8 +40,8 @@ func TestInitDataset(t *testing.T) {
 	//geoloader.UseOnlyMarchForTest()
 	ymd := "(2018|2017|2015|2014)/03/(07|08)"
 	geoloader.UpdateGeoliteDatePattern(ymd)
-	ymd = "2018/03/(01|08)"
-	geoloader.UpdateASNDatePattern(ymd)
+	ym := "2018/03"
+	geoloader.UpdateASNDatePattern(ym)
 
 	// Load the small directory.
 	manager.MustUpdateDirectory()
