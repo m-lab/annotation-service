@@ -20,6 +20,7 @@ const (
 )
 
 var (
+	// NOTE: we pin the regex to first of the month to conserve RAM.
 	asnRegexV4 = regexp.MustCompile(`RouteViewIPv4/\d{4}/\d{2}/routeviews-(oix|rv2)-\d{6}01-\d{4}\.pfx2as\.gz`) // matches to the IPv4 RouteView datasets (first day of each month)
 	asnRegexV6 = regexp.MustCompile(`RouteViewIPv6/\d{4}/\d{2}/routeviews-rv6-\d{6}01-\d{4}\.pfx2as\.gz`)       // matches to the IPv6 RouteView datasets (first day of each month)
 
