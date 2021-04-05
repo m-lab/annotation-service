@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	// Folder containing the maxmind files
+	// MaxmindPrefix is the folder containing the maxmind files in GCS.
 	MaxmindPrefix = "Maxmind/"
 )
 

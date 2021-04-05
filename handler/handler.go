@@ -29,6 +29,8 @@ const (
 	encodingBase = 36
 )
 
+// InitHandler sets up the annotator directory and registers annotation service
+// HTTP handlers.
 func InitHandler() {
 	manager.MustUpdateDirectory()
 
@@ -208,7 +210,7 @@ func AnnotateV2(date time.Time, ips []string, reqInfo string) (v2.Response, erro
 				// time serices if there are variable error strings.
 				metrics.ErrorTotal.WithLabelValues("Annotate Error").Inc()
 
-				// We are trying to debug error propogation.  So logging errors here to help with that.
+				// We are trying to debug error propagation.  So logging errors here to help with that.
 				v2errorLogger.Println(err)
 			}
 			continue

@@ -21,6 +21,7 @@ import (
 )
 
 var (
+	// ErrDirectoryIsNil is returned before the annotatorDirectory is initialized.
 	ErrDirectoryIsNil = errors.New("annotatorDirectory has not been initialized")
 
 	// dirLock must be held when accessing or replacing annotatorDirectory.
@@ -55,7 +56,7 @@ func GetAnnotator(date time.Time) (api.Annotator, error) {
 	return annotatorDirectory.GetAnnotator(date)
 }
 
-// Writes list of annotator dates to log, preceeded by header string.
+// Writes list of annotator dates to log, preceded by header string.
 // This was previously used to log all the annotator dates in MustUpdateDirectory.
 func logAnnotatorDates(header string, an []api.Annotator) {
 	b := strings.Builder{}
