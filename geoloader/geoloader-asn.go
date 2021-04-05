@@ -20,6 +20,7 @@ const (
 )
 
 var (
+	// NOTE: we pin the regex to first of the month to conserve RAM.
 	asnRegexV4 = regexp.MustCompile(`RouteViewIPv4/\d{4}/\d{2}/routeviews-(oix|rv2)-\d{6}01-\d{4}\.pfx2as\.gz`) // matches to the IPv4 RouteView datasets (first day of each month)
 	asnRegexV6 = regexp.MustCompile(`RouteViewIPv6/\d{4}/\d{2}/routeviews-rv6-\d{6}01-\d{4}\.pfx2as\.gz`)       // matches to the IPv6 RouteView datasets (first day of each month)
 
@@ -29,29 +30,17 @@ var (
 	errNeededLoadingDate = errors.New("Before needed loading date")
 )
 
-// UseSpecificASNDateForTesting is for unit tests to narrow the datasets to load from GCS to date that can be matched to the date part regexes.
-// The parameters are string pointers. If a parameter is nil, no filter will be used for that date part.
-func UseSpecificASNDateForTesting(yearRegex, monthRegex, dayRegex *string) {
+// UpdateASNDatePattern sets the pattern used to match RouteView datasets to
+// load from GCS. The ym parameter is a string used as a regex pattern.
+func UpdateASNDatePattern(ym string) {
 	asnV4StartTime = time.Date(2001, 1, 1, 0, 0, 0, 0, time.UTC)
 	asnV6StartTime = asnV4StartTime
 
-	yearStr := `\d{4}`
-	monthStr := `\d{2}`
-	dayStr := `\d{2}`
-
-	if yearRegex != nil {
-		yearStr = *yearRegex
-	}
-	if monthRegex != nil {
-		monthStr = *monthRegex
-	}
-	if dayRegex != nil {
-		dayStr = *dayRegex
-	}
-
-	asnRegexV4 = regexp.MustCompile(fmt.Sprintf(`RouteViewIPv4/%s/%s/routeviews-(oix|rv2)-%s%s%s-\d{4}\.pfx2as\.gz`, yearStr, monthStr, yearStr, monthStr, dayStr))
-	asnRegexV6 = regexp.MustCompile(fmt.Sprintf(`RouteViewIPv6/%s/%s/routeviews-rv6-%s%s%s-\d{4}\.pfx2as\.gz`, yearStr, monthStr, yearStr, monthStr, dayStr))
-	log.Printf("Date filter is set to %s%s%s", yearStr, monthStr, dayStr)
+	// NOTE: a specific YYYY/MM regex will fetch all files for that month.
+	// NOTE: we pin the regex to first of the month to conserve RAM.
+	asnRegexV4 = regexp.MustCompile(fmt.Sprintf(`RouteViewIPv4/%s/routeviews-(oix|rv2)-\d{6}01-\d{4}\.pfx2as\.gz`, ym))
+	asnRegexV6 = regexp.MustCompile(fmt.Sprintf(`RouteViewIPv6/%s/routeviews-rv6-\d{6}01-\d{4}\.pfx2as\.gz`, ym))
+	log.Printf("Date filter is set to %s", ym)
 }
 
 // asnFilterFrom returns nil if a file object's name matches the regular expression, and has a date field <= fileTime.

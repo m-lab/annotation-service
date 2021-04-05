@@ -74,13 +74,13 @@ provided below.
 
 MaxMind GeoLiteLatest databases include:
 
-  1. GeoLiteCity-Blocks.csv
+1. GeoLiteCity-Blocks.csv
 
     - StartIPNum IPv4
     - EndIPNum  IPv4
     - GeonameID
 
-  1. GeoLiteCity-Location.csv
+1. GeoLiteCity-Location.csv
 
     - GeonameID
     - Country Code
@@ -92,7 +92,7 @@ MaxMind GeoLiteLatest databases include:
 
 MaxMind GeoLite2 databases include:
 
-  1. GeoLite2-City-Blocks-IPv4.csv & GeoLite2-City-Blocks-IPv6.csv
+1. GeoLite2-City-Blocks-IPv4.csv & GeoLite2-City-Blocks-IPv6.csv
 
     - IP network (CIDR Format)
     - GeonameID (identifies end user location)
@@ -101,7 +101,7 @@ MaxMind GeoLite2 databases include:
     - Latitude
     - Longitude
 
-  1. GeoLite2-City-Locations-en.csv
+1. GeoLite2-City-Locations-en.csv
 
     - GeonameID
     - Continent Code
@@ -140,10 +140,38 @@ CachingLoader specifies the interface provided by loaders that load and cache a 
 1. Maintains list of loaded Annotator objects.
 1. Refreshes the list of loaded objects on demand.
 
-```
+```go
 type CachingLoader interface {
   UpdateCache() error
   Fetch() []Annotator
 }
 ```
 
+## Local Testing
+
+Install dependencies for geoip-dev and pkg-config using your local package
+manager. See .travis.yml and Dockerfile for examples.
+
+Because the default operation of the annotation service is to load *all*
+historical data, the RAM requirements are significant. Instead, for local
+testing, specify alterante date patterns for maxmind and routeview files.
+
+```sh
+go get .
+~/bin/annotation-service -maxmind_dates '2013/10/07' -routeview_dates '2013/10'
+```
+
+The annotation service supports two endpoints: `/batch_annotate` and
+`/annotate`. The `/annotate` resource accepts HTTP GET with parameters.
+
+- `since_epoch=` specifies the timestamp of the annotation.
+- `ip_addr=` specifies the IP address that should be annotated.
+
+NOTE: for local testing, only the loaded RouteView and Maxmind databases are
+used for all dates.
+
+Perform an adhoc query using `curl`:
+
+```sh
+curl 'http://localhost:8080/annotate?since_epoch=1380600000&ip_addr=67.86.65.1' | jq
+```

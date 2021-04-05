@@ -254,8 +254,8 @@ func BenchmarkGeoLite2ipv4(b *testing.B) {
 // TODO - can this just use the standard loader now?
 func preload() error {
 	// TODO - for some reason, we are still seeing March 2018 instead of Sept 2017.
-	year, month, day := "2017", "09", "07"
-	geoloader.UseSpecificGeolite2DateForTesting(&year, &month, &day)
+	ymd := "2017/09/07"
+	geoloader.UpdateGeoliteDatePattern(ymd)
 	g2loader := geoloader.Geolite2Loader(geolite2v2.LoadG2)
 	err := g2loader.UpdateCache()
 	if err != nil {
