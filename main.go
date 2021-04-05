@@ -24,7 +24,7 @@ var (
 	minInterval    = flag.Duration("min_interval", time.Duration(18)*time.Hour, "minimum gap between 2 runs.")
 	maxInterval    = flag.Duration("max_interval", time.Duration(26)*time.Hour, "maximum gap between 2 runs.")
 
-	geoDates       = flag.String("maxmind_dates", `\d{4}/\d{2}/\d{2}`, "Regex used to match Maxmind file dates.")
+	maxmindDates   = flag.String("maxmind_dates", `\d{4}/\d{2}/\d{2}`, "Regex used to match Maxmind file dates.")
 	routeViewDates = flag.String("routeview_dates", `\d{4}/\d{2}`, "Regex used to match RouteView file dates")
 	// Create a single unified context and a cancellationMethod for said context.
 	ctx, cancelCtx = context.WithCancel(context.Background())
@@ -84,7 +84,7 @@ func main() {
 	flag.Parse()
 
 	geoloader.UpdateASNDatePattern(*routeViewDates)
-	geoloader.UpdateGeoliteDatePattern(*geoDates)
+	geoloader.UpdateGeoliteDatePattern(*maxmindDates)
 
 	runtime.SetBlockProfileRate(1000000) // 1 sample/msec
 	runtime.SetMutexProfileFraction(1000)
