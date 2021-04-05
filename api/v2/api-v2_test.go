@@ -38,13 +38,13 @@ func TestDoRequest(t *testing.T) {
 	ips := []string{"8.8.8.8", "147.1.2.3"}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	resp, err := api.GetAnnotations(ctx, url, time.Now(), ips, "reqInfo")
+	_, err := api.GetAnnotations(ctx, url, time.Now(), ips, "reqInfo")
 	if err == nil {
 		t.Fatal("Should have timed out")
 	}
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	resp, err = api.GetAnnotations(ctx, url, time.Now(), ips, "reqInfo")
+	resp, err := api.GetAnnotations(ctx, url, time.Now(), ips, "reqInfo")
 	if err != nil {
 		t.Fatal(err)
 	}

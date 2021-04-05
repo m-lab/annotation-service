@@ -85,6 +85,7 @@ func bucketIterator(withPrefix string) (*storage.ObjectIterator, error) {
 	return prospectiveFiles, nil
 }
 
+// Filename is a typed value for tracking GCS filenames.
 type Filename string
 
 // loadAll loads all datasets from the source that match the filter.
@@ -260,6 +261,8 @@ func Geolite2Loader(
 		maxmindPrefix)
 }
 
+// IsLegacy checks whether the given date should be handled by the legacy GEO1
+// Maxmind geolite format.
 func IsLegacy(date time.Time) bool {
 	return date.Before(geoLite2StartDate)
 }

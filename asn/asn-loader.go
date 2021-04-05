@@ -26,6 +26,7 @@ var (
 
 	errExtractDateFromFilename = errors.New("cannot extract date from input filename")
 
+	// ASNamesFile names the ASN source data.
 	ASNamesFile = "data/asnames.ipinfo.csv"
 
 	// asnames contains the AS number -> AS name association, loaded from

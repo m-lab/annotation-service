@@ -17,7 +17,7 @@ func TestPrometheusMetrics(t *testing.T) {
 	metrics.ErrorTotal.WithLabelValues("x")
 	metrics.RejectionCount.WithLabelValues("x")
 	// TODO(https://github.com/m-lab/annotation-service/issues/266)
-        // Some metrics no longer pass the linter.
+	// Some metrics no longer pass the linter.
 	//promtest.LintMetrics(t)
 	promtest.LintMetrics(nil)
 }

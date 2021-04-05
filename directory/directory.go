@@ -57,7 +57,7 @@ func (ca CompositeAnnotator) Annotate(ip string, ann *api.GeoData) error {
 	return nil
 }
 
-// PrintALl prints all dates inside this CompositeAnnotator
+// PrintAll prints all dates inside this CompositeAnnotator
 func (ca CompositeAnnotator) PrintAll() {
 	log.Println("Date of this CA: ", ca.date.Format("20060102"))
 	log.Println("contains anntators with the following dates:")
@@ -251,6 +251,7 @@ func (d *Directory) lastEarlierThan(date time.Time) api.Annotator {
 	return d.annotators[index-1]
 }
 
+// PrintAll calls PrintAll for all directory annotators.
 func (d *Directory) PrintAll() {
 	log.Println("Here are all datasets in dir currently:")
 	for _, ann := range d.annotators {

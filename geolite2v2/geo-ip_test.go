@@ -120,7 +120,7 @@ func randomValidIPv4(ann api.Annotator) (int, net.IP) {
 	}
 }
 
-func TestGeoLite2SearchBinary(t *testing.T) {
+func TestGeoLite2SearchBinaryV6(t *testing.T) {
 	err := preload()
 	if err != nil {
 		// TODO: make CreateZipReader produce identifiable error types
@@ -157,6 +157,20 @@ func TestGeoLite2SearchBinary(t *testing.T) {
 		v6ipMatch++
 		i += 100
 	}
+	t.Logf("Found %d matching err and %d matching ip for v6", v6errMatch, v6ipMatch)
+}
+
+func TestGeoLite2SearchBinaryV4(t *testing.T) {
+	err := preload()
+	if err != nil {
+		// TODO: make CreateZipReader produce identifiable error types
+		// and then skip things when it has an auth failure but
+		// t.Error() if the problem is anything other than an auth
+		// failure.
+		log.Println(err)
+		log.Println("This statement errors out when things are being tested from github repos that are not github.com/m-lab/annotation-server.  We are assuming that this is the case, and skipping the rest of this test.")
+		return
+	}
 
 	// Test IPv4
 	gl2ipv4 := annotator.IP4Nodes
@@ -186,7 +200,6 @@ func TestGeoLite2SearchBinary(t *testing.T) {
 	}
 
 	t.Logf("Found %d matching err and %d matching ip for v4", v4errMatch, v4ipMatch)
-	t.Logf("Found %d matching err and %d matching ip for v6", v6errMatch, v6ipMatch)
 }
 
 // plusOne adds one to a net.IP.
