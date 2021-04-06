@@ -108,7 +108,7 @@ type ASData struct {
 	// One or more "Systems".  There must always be at least one System.  If there are more than one,
 	// then this is a Multi-Origin AS, and the component Systems are in order of frequency in routing tables,
 	// most common first.
-	Systems []System
+	Systems []System `json:",omitempty"`
 }
 
 // ErrNilOrEmptyASData is returned by BestASN if the ASData is nil or empty.
