@@ -54,16 +54,6 @@ func (ca CompositeAnnotator) Annotate(ip string, ann *api.GeoData) error {
 			// TODO - don't want to return error if there is another annotator that can do the job.
 		}
 	}
-	if ann.Geo == nil {
-		ann.Geo = &api.GeolocationIP{
-			Missing: true,
-		}
-	}
-	if ann.Network == nil {
-		ann.Network = &api.ASData{
-			Missing: true,
-		}
-	}
 	return nil
 }
 
