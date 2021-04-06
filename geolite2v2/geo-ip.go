@@ -157,24 +157,22 @@ func (ds *GeoDataset) Annotate(ip string, data *api.GeoData) error {
 	}
 
 	node, err := ds.SearchBinary(ip)
-	if err == nil {
-		populateLocationData(node, ds.LocationNodes, data)
-		return nil
+
+	if err != nil {
+		// ErrNodeNotFound is super spammy - 10% of requests, so suppress those.
+		if err != iputils.ErrNodeNotFound {
+			// Horribly noisy now.
+			if time.Since(lastLogTime) > time.Minute {
+				log.Println(err, ip)
+				lastLogTime = time.Now()
+			}
+		}
+		//TODO metric here
+		return err
 	}
 
-	switch err {
-	case iputils.ErrNodeNotFound:
-		data.Geo = &api.GeolocationIP{
-			Missing: true,
-		}
-	default:
-		// Horribly noisy now.
-		if time.Since(lastLogTime) > time.Minute {
-			log.Println(err, ip)
-			lastLogTime = time.Now()
-		}
-	}
-	return err
+	populateLocationData(node, ds.LocationNodes, data)
+	return nil
 }
 
 // AnnotatorDate returns the date that the dataset was published.
