@@ -8,7 +8,7 @@ import (
 
 func TestOpenAndFree(t *testing.T) {
 	file := "./testdata/GeoLiteCity.dat"
-	*legacy.Fips2ISOMapFile = "testdata/fips-iso-map-test.csv"
+	legacy.Fips2ISOMapFile = "testdata/fips-iso-map-test.csv"
 
 	gi, err := legacy.Open(file, "GeoLiteCity.dat")
 
