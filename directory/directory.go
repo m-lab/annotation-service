@@ -54,6 +54,16 @@ func (ca CompositeAnnotator) Annotate(ip string, ann *api.GeoData) error {
 			// TODO - don't want to return error if there is another annotator that can do the job.
 		}
 	}
+	if ann.Geo == nil {
+		ann.Geo = &api.GeolocationIP{
+			Missing: true,
+		}
+	}
+	if ann.Network == nil {
+		ann.Network = &api.ASData{
+			Missing: true,
+		}
+	}
 	return nil
 }
 
@@ -71,18 +81,6 @@ func (ca CompositeAnnotator) PrintAll() {
 // most recent of all the annotators is the date that should be compared to the test date.
 func (ca CompositeAnnotator) AnnotatorDate() time.Time {
 	return ca.date
-}
-
-// Compute the latest AnnotatorDate() value from a slice of annotators.
-func computeLatestDate(annotators []api.Annotator) time.Time {
-	t := time.Time{}
-	for i := range annotators {
-		at := annotators[i].AnnotatorDate()
-		if at.After(t) {
-			t = at
-		}
-	}
-	return t
 }
 
 func computerEarliestDate(annotators []api.Annotator) time.Time {
