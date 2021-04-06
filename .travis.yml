@@ -19,7 +19,7 @@ dist: bionic
 
 language: go
 go:
- - 1.13
+ - 1.15
 
 # Without this, annotator.sh fails, related to gcloud.
 sudo: required
