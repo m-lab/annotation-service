@@ -137,28 +137,30 @@ func (gi *Annotator) Annotate(IP string, data *api.GeoData) error {
 		return err
 	}
 	var record *GeoIPRecord
-	if ip.To4() != nil {
-		record = gi.dataset.GetRecord(IP, true)
-	} else {
-		record = gi.dataset.GetRecord(IP, false)
-	}
+	isIPv4 := ip.To4() != nil
+	record = gi.dataset.GetRecord(IP, isIPv4)
 
 	// It is very possible that the record missed some fields in legacy dataset.
 	if record == nil {
 		return ErrNoRecord
 	}
+
+	// Lookup the remapped Region name. Map returns an empty value if key is not found.
+	s := gi.dataset.fips2ISOMap[fipsKey(record.CountryCode, record.Region)]
 	data.Geo = &api.GeolocationIP{
-		ContinentCode: record.ContinentCode,
-		CountryCode:   record.CountryCode,
-		CountryCode3:  record.CountryCode3,
-		CountryName:   record.CountryName,
-		Region:        record.Region,
-		MetroCode:     int64(record.MetroCode),
-		City:          record.City,
-		AreaCode:      int64(record.AreaCode),
-		PostalCode:    record.PostalCode,
-		Latitude:      round(record.Latitude),
-		Longitude:     round(record.Longitude),
+		ContinentCode:       record.ContinentCode,
+		CountryCode:         record.CountryCode,
+		CountryCode3:        record.CountryCode3,
+		CountryName:         record.CountryName,
+		Region:              record.Region,
+		Subdivision1ISOCode: s.ISOCode,
+		Subdivision1Name:    s.Name,
+		MetroCode:           int64(record.MetroCode),
+		City:                record.City,
+		AreaCode:            int64(record.AreaCode),
+		PostalCode:          record.PostalCode,
+		Latitude:            round(record.Latitude),
+		Longitude:           round(record.Longitude),
 	}
 	return nil
 }
