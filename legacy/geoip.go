@@ -125,7 +125,7 @@ func OpenDB(file string, flag int, datasetName string) (*GeoIP, error) {
 	once.Do(func() {
 		// Load the fips-to-iso CSV mapping FIPS to ISO codes.
 		var err error
-		fips2ISOMap, err = parseFips2ISOMap(fips2ISOMapFile)
+		fips2ISOMap, err = parseFips2ISOMap(Fips2ISOMapFile)
 		rtx.Must(err, "Could not parse fips-to-iso file")
 	})
 	g.fips2ISOMap = fips2ISOMap

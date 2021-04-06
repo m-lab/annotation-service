@@ -7,10 +7,10 @@ import (
 )
 
 var (
-	// fips2ISOMapFile is the name of the FIPS to ISO csv file.
+	// Fips2ISOMapFile is the name of the FIPS to ISO csv file.
 	// Download: https://dev.maxmind.com/wp-content/uploads/2020/06/fips-iso-map.csv
 	// Plus added supplemental region names for US and CA.
-	fips2ISOMapFile = "data/fips-iso-map.csv"
+	Fips2ISOMapFile = "data/fips-iso-map.csv"
 
 	// fipsMap is a singleton, package variable that maps FIPS-10 to ISO 3166-2
 	// Region codes and names.
