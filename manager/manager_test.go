@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/m-lab/annotation-service/legacy"
+
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/asn"
 	"github.com/m-lab/annotation-service/geolite2v2"
@@ -24,6 +26,7 @@ func init() {
 
 	// Set ipinfo CSV file path.
 	asn.ASNamesFile = "testdata/asnames-test.csv"
+	legacy.Fips2ISOMapFile = "../legacy/testdata/fips-iso-map-test.csv"
 }
 
 func fakeLoader(date string) (api.Annotator, error) {

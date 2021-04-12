@@ -1,6 +1,7 @@
 package directory_test
 
 import (
+	"errors"
 	"log"
 	"testing"
 	"time"
@@ -17,6 +18,12 @@ func init() {
 type fakeAnn struct {
 	api.Annotator
 	startDate time.Time
+	err       error
+}
+
+func (f *fakeAnn) Annotate(ip string, ann *api.Annotations) error {
+	// Do nothing other than return configured error (may be nil).
+	return f.err
 }
 
 func (f *fakeAnn) AnnotatorDate() time.Time {
@@ -87,6 +94,32 @@ func TestCompositeAnnotator_String(t *testing.T) {
 
 			if got := ca.(directory.CompositeAnnotator).String(); got != tt.want {
 				t.Errorf("CompositeAnnotator.String() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCompositeAnnotator_Annotate(t *testing.T) {
+	errAnn := newFake("20110304")
+	errAnn.err = errors.New("fake error")
+	tests := []struct {
+		name       string
+		date       time.Time
+		annotators []api.Annotator
+		ip         string
+		ann        *api.GeoData
+	}{
+		{
+			name:       "success",
+			annotators: []api.Annotator{newFake("20100203"), errAnn},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ca := directory.NewCompositeAnnotator(tt.annotators)
+			g := &api.GeoData{}
+			if err := ca.Annotate(tt.ip, g); err != nil {
+				t.Errorf("CompositeAnnotator.Annotate() error = %v, want nil", err)
 			}
 		})
 	}

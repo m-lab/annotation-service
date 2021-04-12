@@ -19,7 +19,7 @@ dist: bionic
 
 language: go
 go:
- - 1.13
+ - 1.15
 
 # Without this, annotator.sh fails, related to gcloud.
 sudo: required
@@ -72,9 +72,7 @@ script:
  - source "${HOME}/google-cloud-sdk/path.bash.inc"
 
  # Run all tests and gather and submit coverage information.
- # - GCLOUD_PROJECT=mlab-testing go test -v -coverpkg=./... -coverprofile=coverage.cov ./...
- # Exclude main.go from tests to prevent "duplicate main.init.0" errors.
- - GCLOUD_PROJECT=mlab-testing go test -v -coverpkg=./... -coverprofile=coverage.cov ./asn/...  ./legacy/...  ./handler/...  ./metrics/...  ./geoloader/...  ./manager/...  ./geolite2v2/...  ./api/...  ./loader/...  ./directory/...  ./iputils/...
+ - GCLOUD_PROJECT=mlab-testing go test -v -coverpkg=./... -coverprofile=coverage.cov ./...
 
  - $HOME/gopath/bin/goveralls -coverprofile=coverage.cov -service=travis-ci
  # Run benchmarks

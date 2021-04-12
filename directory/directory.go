@@ -73,18 +73,6 @@ func (ca CompositeAnnotator) AnnotatorDate() time.Time {
 	return ca.date
 }
 
-// Compute the latest AnnotatorDate() value from a slice of annotators.
-func computeLatestDate(annotators []api.Annotator) time.Time {
-	t := time.Time{}
-	for i := range annotators {
-		at := annotators[i].AnnotatorDate()
-		if at.After(t) {
-			t = at
-		}
-	}
-	return t
-}
-
 func computerEarliestDate(annotators []api.Annotator) time.Time {
 	t := time.Now()
 	for i := range annotators {
