@@ -51,7 +51,7 @@ func TestAnnotate(t *testing.T) {
 		time string
 		res  string
 	}{
-		{"1.4.128.0", "625600", `{"Geo":{"region":"ME","Subdivision1ISOCode":"ME","city":"Not A Real City","postal_code":"10583","latitude":42.1,"longitude":-73.1},"Network":null}`},
+		{"1.4.128.0", "625600", `{"Geo":{"region":"ME","Subdivision1ISOCode":"ME","city":"Not A Real City","postal_code":"10583","latitude":42.1,"longitude":-73.1},"Network":{"Missing":true}}`},
 		{"This will be an error.", "1000", "invalid IP address"},
 	}
 	// TODO - make and use an annotator generator

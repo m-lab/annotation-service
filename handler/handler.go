@@ -63,6 +63,18 @@ func Annotate(w http.ResponseWriter, r *http.Request) {
 
 	trackMissingResponses(&result)
 
+	// Set Missing=true for empty results.
+	if result.Geo == nil {
+		result.Geo = &api.GeolocationIP{
+			Missing: true,
+		}
+	}
+	if result.Network == nil {
+		result.Network = &api.ASData{
+			Missing: true,
+		}
+	}
+
 	encodedResult, err := json.Marshal(result)
 	if checkError(err, w, "", 1, "single", tStart) {
 		return
@@ -214,6 +226,16 @@ func AnnotateV2(date time.Time, ips []string, reqInfo string) (v2.Response, erro
 				v2errorLogger.Println(err)
 			}
 			continue
+		}
+		if annotation.Geo == nil {
+			annotation.Geo = &api.GeolocationIP{
+				Missing: true,
+			}
+		}
+		if annotation.Network == nil {
+			annotation.Network = &api.ASData{
+				Missing: true,
+			}
 		}
 		responseMap[ips[i]] = &annotation
 	}
