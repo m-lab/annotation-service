@@ -229,7 +229,7 @@ func TestBatchAnnotate(t *testing.T) {
 		{
 			body: `[{"ip": "127.0.0.1", "timestamp": "2017-08-25T13:31:12.149678161-04:00"},
                     {"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "timestamp": "2017-08-25T14:32:13.149678161-04:00"}]`,
-			res: `{"127.0.0.1ov94o0":{"Geo":{"region":"ME","Subdivision1ISOCode":"ME","city":"Not A Real City","postal_code":"10583"},"Network":null},"2620:0:1003:1008:5179:57e3:3c75:1886ov97hp":{"Geo":{"region":"ME","Subdivision1ISOCode":"ME","city":"Not A Real City","postal_code":"10583"},"Network":null}}`,
+			res: `{"127.0.0.1ov94o0":{"Geo":{"region":"ME","Subdivision1ISOCode":"ME","city":"Not A Real City","postal_code":"10583"},"Network":{"Missing":true}},"2620:0:1003:1008:5179:57e3:3c75:1886ov97hp":{"Geo":{"region":"ME","Subdivision1ISOCode":"ME","city":"Not A Real City","postal_code":"10583"},"Network":{"Missing":true}}}`,
 		},
 	}
 	// TODO - make a test utility in geolite2 package.

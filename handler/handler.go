@@ -319,6 +319,17 @@ func handleOld(w http.ResponseWriter, tStart time.Time, jsonBuffer []byte) {
 	}
 	for _, anno := range responseMap {
 		trackMissingResponses(anno)
+		// Set Missing=true for empty results.
+		if anno.Geo == nil {
+			anno.Geo = &api.GeolocationIP{
+				Missing: true,
+			}
+		}
+		if anno.Network == nil {
+			anno.Network = &api.ASData{
+				Missing: true,
+			}
+		}
 	}
 	encodedResult, err := json.Marshal(responseMap)
 	if checkError(err, w, "old", len(dataSlice), "", tStart) {
