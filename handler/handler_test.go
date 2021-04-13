@@ -237,18 +237,18 @@ func TestBatchAnnotate(t *testing.T) {
 		{
 			// Do not use directory composit annotator to generate an annotation error and return empty result.
 			body: `{"RequestType": "Annotate v2.0", "Date": "2013-10-01T00:00:00Z", "IPs": ["227.86.65.1"]}`,
-			res:  `{"AnnotatorDate":"2021-04-12T20:00:00-04:00","Annotations":{}}`,
+			res:  `{"AnnotatorDate":"2020-01-01T00:00:00Z","Annotations":{}}`,
 		},
 		{
 			// Use directory composit annotator to generate missing annotation values.
 			body:   `{"RequestType": "Annotate v2.0", "Date": "2013-10-01T00:00:00Z", "IPs": ["227.86.65.1"]}`,
-			res:    `{"AnnotatorDate":"2021-04-12T20:00:00-04:00","Annotations":{"227.86.65.1":{"Geo":{"Missing":true},"Network":{"Missing":true}}}}`,
+			res:    `{"AnnotatorDate":"2020-01-01T00:00:00Z","Annotations":{"227.86.65.1":{"Geo":{"Missing":true},"Network":{"Missing":true}}}}`,
 			useDir: true,
 		},
 	}
 	// TODO - make a test utility in geolite2 package.
 	ann := &geolite2v2.GeoDataset{
-		Start: time.Now().Truncate(24 * time.Hour),
+		Start: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
 		IP4Nodes: []geolite2v2.GeoIPNode{
 			{
 				BaseIPNode: iputils.BaseIPNode{
