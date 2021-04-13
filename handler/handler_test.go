@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/m-lab/annotation-service/directory"
 	"github.com/m-lab/annotation-service/geolite2v2"
 	"github.com/m-lab/annotation-service/iputils"
 
@@ -217,9 +218,10 @@ func TestBatchValidateAndParse(t *testing.T) {
 
 func TestBatchAnnotate(t *testing.T) {
 	tests := []struct {
-		body string
-		res  string
-		alt  string // Alternate valid result
+		body   string
+		res    string
+		alt    string // Alternate valid result
+		useDir bool   // Use directory.CompositeAnnotator to mimick v2 behavior.
 	}{
 		{
 			body: "{",
@@ -227,9 +229,21 @@ func TestBatchAnnotate(t *testing.T) {
 			alt:  "",
 		},
 		{
+			// TODO: remove legacy v1 API call.
 			body: `[{"ip": "127.0.0.1", "timestamp": "2017-08-25T13:31:12.149678161-04:00"},
                     {"ip": "2620:0:1003:1008:5179:57e3:3c75:1886", "timestamp": "2017-08-25T14:32:13.149678161-04:00"}]`,
 			res: `{"127.0.0.1ov94o0":{"Geo":{"region":"ME","Subdivision1ISOCode":"ME","city":"Not A Real City","postal_code":"10583"},"Network":{"Missing":true}},"2620:0:1003:1008:5179:57e3:3c75:1886ov97hp":{"Geo":{"region":"ME","Subdivision1ISOCode":"ME","city":"Not A Real City","postal_code":"10583"},"Network":{"Missing":true}}}`,
+		},
+		{
+			// Do not use directory composit annotator to generate an annotation error and return empty result.
+			body: `{"RequestType": "Annotate v2.0", "Date": "2013-10-01T00:00:00Z", "IPs": ["227.86.65.1"]}`,
+			res:  `{"AnnotatorDate":"2021-04-12T20:00:00-04:00","Annotations":{}}`,
+		},
+		{
+			// Use directory composit annotator to generate missing annotation values.
+			body:   `{"RequestType": "Annotate v2.0", "Date": "2013-10-01T00:00:00Z", "IPs": ["227.86.65.1"]}`,
+			res:    `{"AnnotatorDate":"2021-04-12T20:00:00-04:00","Annotations":{"227.86.65.1":{"Geo":{"Missing":true},"Network":{"Missing":true}}}}`,
+			useDir: true,
 		},
 	}
 	// TODO - make a test utility in geolite2 package.
@@ -239,7 +253,7 @@ func TestBatchAnnotate(t *testing.T) {
 			{
 				BaseIPNode: iputils.BaseIPNode{
 					IPAddressLow:  net.IPv4(0, 0, 0, 0),
-					IPAddressHigh: net.IPv4(255, 255, 255, 255),
+					IPAddressHigh: net.IPv4(127, 255, 255, 255),
 				},
 				LocationIndex: 0,
 				PostalCode:    "10583",
@@ -263,8 +277,13 @@ func TestBatchAnnotate(t *testing.T) {
 			},
 		},
 	}
-	manager.SetDirectory([]api.Annotator{ann})
 	for _, test := range tests {
+		manager.SetDirectory([]api.Annotator{ann})
+		if test.useDir {
+			// Reset directory with a composite annotator to mimick v2 Handler behavior.
+			ca := directory.NewCompositeAnnotator([]api.Annotator{ann})
+			manager.SetDirectory([]api.Annotator{ca})
+		}
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("POST", "/batch_annotate", strings.NewReader(test.body))
 		handler.BatchAnnotate(w, r)

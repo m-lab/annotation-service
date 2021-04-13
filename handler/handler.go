@@ -223,6 +223,7 @@ func AnnotateV2(date time.Time, ips []string, reqInfo string) (v2.Response, erro
 				metrics.ErrorTotal.WithLabelValues("Annotate Error").Inc()
 
 				// We are trying to debug error propagation.  So logging errors here to help with that.
+				fmt.Println("ERROR:", err)
 				v2errorLogger.Println(err)
 			}
 			continue
