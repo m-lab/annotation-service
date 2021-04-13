@@ -48,12 +48,27 @@ func TestIp6to4(t *testing.T) {
 
 func TestAnnotate(t *testing.T) {
 	tests := []struct {
-		ip   string
-		time string
-		res  string
+		ip     string
+		time   string
+		res    string
+		useDir bool
 	}{
-		{"1.4.128.0", "625600", `{"Geo":{"region":"ME","Subdivision1ISOCode":"ME","city":"Not A Real City","postal_code":"10583","latitude":42.1,"longitude":-73.1},"Network":{"Missing":true}}`},
-		{"This will be an error.", "1000", "invalid IP address"},
+		{
+			ip:   "1.4.128.0",
+			time: "625600",
+			res:  `{"Geo":{"region":"ME","Subdivision1ISOCode":"ME","city":"Not A Real City","postal_code":"10583","latitude":42.1,"longitude":-73.1},"Network":{"Missing":true}}`,
+		},
+		{
+			ip:     "223.4.128.0",
+			time:   "625600",
+			res:    `{"Geo":{"Missing":true},"Network":{"Missing":true}}`,
+			useDir: true,
+		},
+		{
+			ip:   "This will be an error.",
+			time: "1000",
+			res:  "invalid IP address",
+		},
 	}
 	// TODO - make and use an annotator generator
 	ann := &geolite2v2.GeoDataset{
@@ -62,7 +77,7 @@ func TestAnnotate(t *testing.T) {
 			{
 				BaseIPNode: iputils.BaseIPNode{
 					IPAddressLow:  net.IPv4(0, 0, 0, 0),
-					IPAddressHigh: net.IPv4(255, 255, 255, 255),
+					IPAddressHigh: net.IPv4(127, 255, 255, 255),
 				},
 				LocationIndex: 0,
 				PostalCode:    "10583",
@@ -90,9 +105,14 @@ func TestAnnotate(t *testing.T) {
 			},
 		},
 	}
-	manager.SetDirectory([]api.Annotator{ann})
 
 	for _, test := range tests {
+		manager.SetDirectory([]api.Annotator{ann})
+		if test.useDir {
+			// Reset directory with a composite annotator to mimick v2 Handler behavior.
+			ca := directory.NewCompositeAnnotator([]api.Annotator{ann})
+			manager.SetDirectory([]api.Annotator{ca})
+		}
 		w := httptest.NewRecorder()
 		r := &http.Request{}
 		r.URL, _ = url.Parse("/annotate?ip_addr=" + url.QueryEscape(test.ip) + "&since_epoch=" + url.QueryEscape(test.time))
