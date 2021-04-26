@@ -112,6 +112,11 @@ func TestBasic(t *testing.T) {
 			want: defaultServerAnn,
 		},
 		{
+			name: "success-ipv6",
+			ip:   "2001:5a0:4300::1",
+			want: defaultServerAnn,
+		},
+		{
 			name: "success-retired-site",
 			ip:   "196.201.2.192",
 			want: retiredServerann,
@@ -119,6 +124,11 @@ func TestBasic(t *testing.T) {
 		{
 			name: "missing",
 			ip:   "0.0.0.0",
+			want: missingServerAnn,
+		},
+		{
+			name: "missing-ipv6",
+			ip:   "::1",
 			want: missingServerAnn,
 		},
 	}
