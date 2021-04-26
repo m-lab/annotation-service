@@ -15,7 +15,6 @@ import (
 	"github.com/m-lab/go/osx"
 	"github.com/m-lab/go/rtx"
 	"github.com/m-lab/uuid-annotator/annotator"
-	uuid "github.com/m-lab/uuid-annotator/annotator"
 )
 
 type badProvider struct {
@@ -55,10 +54,10 @@ func TestBasic(t *testing.T) {
 	site.LoadFrom(ctx, localRawfile, retiredFile)
 
 	var missingServerAnn = annotator.ServerAnnotations{
-		Geo: &uuid.Geolocation{
+		Geo: &annotator.Geolocation{
 			Missing: true,
 		},
-		Network: &uuid.Network{
+		Network: &annotator.Network{
 			Missing: true,
 		},
 	}

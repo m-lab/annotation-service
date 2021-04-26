@@ -43,7 +43,6 @@ func LoadFrom(ctx context.Context, js content.Provider, retiredJS content.Provid
 		siteinfoSource:        js,
 		siteinfoRetiredSource: retiredJS,
 		networks:              make(map[string]uuid.ServerAnnotations, 400),
-		sites:                 make(map[string]uuid.ServerAnnotations, 200),
 	}
 	err := globalAnnotator.load(ctx)
 	log.Println(len(globalAnnotator.sites), "sites loaded")
@@ -185,8 +184,6 @@ func (sa *annotator) load(ctx context.Context) error {
 		}
 
 		sa.networks[ann.Network.IPv4] = ann.Annotation
-		// TODO: remove.
-		sa.sites[ann.Annotation.Site] = ann.Annotation // Copy out of array.
 	}
 
 	return nil
