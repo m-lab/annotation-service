@@ -109,7 +109,7 @@ func (sa *annotator) Annotate(ip string, server *uuid.ServerAnnotations) {
 	}
 
 	// Find CIDR corresponding to the provided ip.
-	// All of our subnets are /26 if IPv6, /64 if IPv6.
+	// All of our subnets are /26 if IPv4, /64 if IPv6.
 	var cidr string
 	if parsedIP.To4() == nil {
 		mask := net.CIDRMask(64, 128)
