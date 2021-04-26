@@ -172,7 +172,6 @@ func (sa *annotator) load(ctx context.Context) error {
 		}
 		_, _, err := net.ParseCIDR(ann.Network.IPv4)
 		if err != nil {
-			fmt.Printf("Skipping %s (%s)\n", ann.Network.IPv4, ann.Annotation.Site)
 			continue
 		}
 
@@ -180,7 +179,6 @@ func (sa *annotator) load(ctx context.Context) error {
 		if ann.Network.IPv6 != "" {
 			_, _, err = net.ParseCIDR(ann.Network.IPv6)
 			if err != nil {
-				fmt.Printf("Skipping %s (%s)\n", ann.Network.IPv6, ann.Annotation.Site)
 				continue
 			}
 			sa.networks[ann.Network.IPv6] = ann.Annotation
@@ -191,8 +189,5 @@ func (sa *annotator) load(ctx context.Context) error {
 		sa.sites[ann.Annotation.Site] = ann.Annotation // Copy out of array.
 	}
 
-	for k, v := range sa.networks {
-		fmt.Printf("%s -> %s\n", k, v.Site)
-	}
 	return nil
 }
