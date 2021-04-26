@@ -103,6 +103,10 @@ var missing = uuid.ServerAnnotations{
 
 // Annotate annotates the server with the appropriate annotations.
 func (sa *annotator) Annotate(ip string, server *uuid.ServerAnnotations) {
+	if server == nil {
+		return
+	}
+
 	parsedIP := net.ParseIP(ip)
 	if parsedIP == nil {
 		return
@@ -171,6 +175,8 @@ func (sa *annotator) load(ctx context.Context) error {
 		}
 		_, _, err := net.ParseCIDR(ann.Network.IPv4)
 		if err != nil {
+			log.Printf("Found incorrect IPv4 in siteinfo: %s\n",
+				ann.Network.IPv4)
 			continue
 		}
 
@@ -178,6 +184,8 @@ func (sa *annotator) load(ctx context.Context) error {
 		if ann.Network.IPv6 != "" {
 			_, _, err = net.ParseCIDR(ann.Network.IPv6)
 			if err != nil {
+				log.Printf("Found incorrect IPv6 in siteinfo: %s\n",
+					ann.Network.IPv6)
 				continue
 			}
 			sa.networks[ann.Network.IPv6] = ann.Annotation
