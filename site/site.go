@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
+	"net"
 	"time"
 
 	"github.com/m-lab/go/content"
@@ -29,9 +31,9 @@ func init() {
 }
 
 // Annotate adds site annotation for a site/machine
-func Annotate(site, machine string, server *uuid.ServerAnnotations) {
+func Annotate(ip string, server *uuid.ServerAnnotations) {
 	if globalAnnotator != nil {
-		globalAnnotator.Annotate(site, machine, server)
+		globalAnnotator.Annotate(ip, server)
 	}
 }
 
@@ -40,6 +42,7 @@ func LoadFrom(ctx context.Context, js content.Provider, retiredJS content.Provid
 	globalAnnotator = &annotator{
 		siteinfoSource:        js,
 		siteinfoRetiredSource: retiredJS,
+		networks:              make(map[string]uuid.ServerAnnotations, 400),
 		sites:                 make(map[string]uuid.ServerAnnotations, 200),
 	}
 	err := globalAnnotator.load(ctx)
@@ -85,7 +88,8 @@ type annotator struct {
 	siteinfoRetiredSource content.Provider
 	// Each site has a single ServerAnnotations struct, which
 	// is later customized for each machine.
-	sites map[string]uuid.ServerAnnotations
+	sites    map[string]uuid.ServerAnnotations
+	networks map[string]uuid.ServerAnnotations
 }
 
 // missing is used if annotation is requested for a non-existant server.
@@ -98,22 +102,29 @@ var missing = uuid.ServerAnnotations{
 	},
 }
 
-// Annotate annotates the server with the approprate annotations.
-func (sa *annotator) Annotate(site, machine string, server *uuid.ServerAnnotations) {
-	if server == nil {
+// Annotate annotates the server with the appropriate annotations.
+func (sa *annotator) Annotate(ip string, server *uuid.ServerAnnotations) {
+	parsedIP := net.ParseIP(ip)
+	if parsedIP == nil {
 		return
 	}
 
-	server.Machine = machine
-	server.Site = site
-	s, ok := sa.sites[site]
-	if !ok {
-		server.Geo = missing.Geo
-		server.Network = missing.Network
-		return
+	// Find CIDR corresponding to the provided ip.
+	// All of our subnets are /26 if IPv6, /64 if IPv6.
+	var cidr string
+	if parsedIP.To4() == nil {
+		mask := net.CIDRMask(64, 128)
+		cidr = fmt.Sprintf("%s/64", parsedIP.Mask(mask))
+	} else {
+		mask := net.CIDRMask(26, 32)
+		cidr = fmt.Sprintf("%s/26", parsedIP.Mask(mask))
 	}
-	server.Geo = s.Geo
-	server.Network = s.Network
+
+	if ann, ok := sa.networks[cidr]; ok {
+		*server = ann
+	} else {
+		*server = missing
+	}
 }
 
 // load loads siteinfo dataset and returns them.
@@ -151,7 +162,37 @@ func (sa *annotator) load(ctx context.Context) error {
 	for _, ann := range s {
 		// Machine should always be empty, filled in later.
 		ann.Annotation.Machine = ""
+
+		// Make a map of CIDR -> Annotation.
+		// Verify that the CIDRs are valid by trying to parse them.
+		// If either the IPv4 or IPv6 CIDRs are wrong, the entry is
+		// discarded. The IPv6 CIDR can be empty in some cases.
+		if ann.Network.IPv4 == "" {
+			continue
+		}
+		_, _, err := net.ParseCIDR(ann.Network.IPv4)
+		if err != nil {
+			fmt.Printf("Skipping %s (%s)\n", ann.Network.IPv4, ann.Annotation.Site)
+			continue
+		}
+
+		// Check the IPv6 CIDR only if not empty.
+		if ann.Network.IPv6 != "" {
+			_, _, err = net.ParseCIDR(ann.Network.IPv6)
+			if err != nil {
+				fmt.Printf("Skipping %s (%s)\n", ann.Network.IPv6, ann.Annotation.Site)
+				continue
+			}
+			sa.networks[ann.Network.IPv6] = ann.Annotation
+		}
+
+		sa.networks[ann.Network.IPv4] = ann.Annotation
+		// TODO: remove.
 		sa.sites[ann.Annotation.Site] = ann.Annotation // Copy out of array.
+	}
+
+	for k, v := range sa.networks {
+		fmt.Printf("%s -> %s\n", k, v.Site)
 	}
 	return nil
 }
