@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/m-lab/etl/site"
+	"github.com/m-lab/annotation-service/site"
 	"github.com/m-lab/go/content"
 	"github.com/m-lab/go/flagx"
 	"github.com/m-lab/go/osx"
@@ -52,9 +52,8 @@ func TestBasic(t *testing.T) {
 	setUp()
 	ctx := context.Background()
 	site.LoadFrom(ctx, localRawfile, retiredFile)
-	missingServerAnn := annotator.ServerAnnotations{
-		Machine: "foo",
-		Site:    "bar",
+
+	var missingServerAnn = annotator.ServerAnnotations{
 		Geo: &annotator.Geolocation{
 			Missing: true,
 		},
@@ -64,7 +63,7 @@ func TestBasic(t *testing.T) {
 	}
 
 	defaultServerAnn := annotator.ServerAnnotations{
-		Machine: "mlab1",
+		Machine: "",
 		Site:    "lga03",
 		Geo: &annotator.Geolocation{
 			ContinentCode: "NA",
@@ -83,7 +82,7 @@ func TestBasic(t *testing.T) {
 	}
 
 	retiredServerann := annotator.ServerAnnotations{
-		Machine: "mlab1",
+		Machine: "",
 		Site:    "acc01",
 		Geo: &annotator.Geolocation{
 			ContinentCode: "AF",
@@ -102,33 +101,40 @@ func TestBasic(t *testing.T) {
 	}
 
 	tests := []struct {
-		name          string
-		site, machine string
-		want          annotator.ServerAnnotations
+		name string
+		ip   string
+		want annotator.ServerAnnotations
 	}{
 		{
-			name:    "success",
-			site:    "lga03",
-			machine: "mlab1",
-			want:    defaultServerAnn,
+			name: "success",
+			ip:   "64.86.148.130",
+			want: defaultServerAnn,
 		},
 		{
-			name:    "success-retired-site",
-			site:    "acc01",
-			machine: "mlab1",
-			want:    retiredServerann,
+			name: "success-ipv6",
+			ip:   "2001:5a0:4300::1",
+			want: defaultServerAnn,
 		},
 		{
-			name:    "missing",
-			site:    "bar",
-			machine: "foo",
-			want:    missingServerAnn,
+			name: "success-retired-site",
+			ip:   "196.201.2.192",
+			want: retiredServerann,
+		},
+		{
+			name: "missing",
+			ip:   "0.0.0.0",
+			want: missingServerAnn,
+		},
+		{
+			name: "missing-ipv6",
+			ip:   "::1",
+			want: missingServerAnn,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ann := annotator.ServerAnnotations{}
-			site.Annotate(tt.site, tt.machine, &ann)
+			site.Annotate(tt.ip, &ann)
 			if diff := deep.Equal(ann, tt.want); diff != nil {
 				t.Errorf("Annotate() failed; %s", strings.Join(diff, "\n"))
 			}
@@ -155,7 +161,7 @@ func TestNilServer(t *testing.T) {
 		t.Error(err)
 	}
 	// Should not panic!  Nothing else to check.
-	site.Annotate("lga03", "mlab1", nil)
+	site.Annotate("64.86.148.128", nil)
 }
 
 func TestCorrupt(t *testing.T) {
