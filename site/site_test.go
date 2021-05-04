@@ -62,7 +62,7 @@ func TestBasic(t *testing.T) {
 		},
 	}
 
-	defaultServerAnn := annotator.ServerAnnotations{
+	defaultServerAnnIPv4 := annotator.ServerAnnotations{
 		Machine: "",
 		Site:    "lga03",
 		Geo: &annotator.Geolocation{
@@ -73,6 +73,27 @@ func TestBasic(t *testing.T) {
 			Longitude:     -73.8667,
 		},
 		Network: &annotator.Network{
+			CIDR:     "64.86.148.128/26",
+			ASNumber: 6453,
+			ASName:   "TATA COMMUNICATIONS (AMERICA) INC",
+			Systems: []annotator.System{
+				{ASNs: []uint32{6453}},
+			},
+		},
+	}
+
+	defaultServerAnnIPv6 := annotator.ServerAnnotations{
+		Machine: "",
+		Site:    "lga03",
+		Geo: &annotator.Geolocation{
+			ContinentCode: "NA",
+			CountryCode:   "US",
+			City:          "New York",
+			Latitude:      40.7667,
+			Longitude:     -73.8667,
+		},
+		Network: &annotator.Network{
+			CIDR:     "2001:5a0:4300::/64",
 			ASNumber: 6453,
 			ASName:   "TATA COMMUNICATIONS (AMERICA) INC",
 			Systems: []annotator.System{
@@ -92,6 +113,7 @@ func TestBasic(t *testing.T) {
 			Longitude:     -0.1681,
 		},
 		Network: &annotator.Network{
+			CIDR:     "196.201.2.192/26",
 			ASNumber: 30997,
 			ASName:   "Ghana Internet Exchange Association",
 			Systems: []annotator.System{
@@ -108,12 +130,12 @@ func TestBasic(t *testing.T) {
 		{
 			name: "success",
 			ip:   "64.86.148.130",
-			want: defaultServerAnn,
+			want: defaultServerAnnIPv4,
 		},
 		{
 			name: "success-ipv6",
 			ip:   "2001:5a0:4300::1",
-			want: defaultServerAnn,
+			want: defaultServerAnnIPv6,
 		},
 		{
 			name: "success-retired-site",
