@@ -11,13 +11,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/m-lab/annotation-service/site"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/metrics"
+	"github.com/m-lab/annotation-service/site"
 	"github.com/m-lab/go/logx"
 	uuid "github.com/m-lab/uuid-annotator/annotator"
 )
