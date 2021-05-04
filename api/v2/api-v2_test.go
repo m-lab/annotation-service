@@ -58,13 +58,39 @@ func TestDoRequest(t *testing.T) {
 				Geo:     &types.GeolocationIP{ContinentCode: "NA", CountryCode: "US", CountryName: "United States", Latitude: 37.751, Longitude: -97.822},
 				Network: &types.ASData{},
 			},
+			// Verify current ipv4 sites are annotated correctly.
 			"64.86.148.132": &types.Annotations{
 				Geo: &types.GeolocationIP{ContinentCode: "NA", CountryCode: "US", City: "New York", Latitude: 40.7667, Longitude: -73.8667},
 				Network: &types.ASData{
+					CIDR:     "64.86.148.128/26",
 					ASNumber: 0x1935,
 					ASName:   "TATA COMMUNICATIONS (AMERICA) INC",
 					Systems: []types.System{
 						{ASNs: []uint32{0x1935}},
+					},
+				},
+			},
+			// Verify current ipv6 sites are annotated correctly.
+			"2001:5a0:4300::132": &types.Annotations{
+				Geo: &types.GeolocationIP{ContinentCode: "NA", CountryCode: "US", City: "New York", Latitude: 40.7667, Longitude: -73.8667},
+				Network: &types.ASData{
+					CIDR:     "2001:5a0:4300::/64",
+					ASNumber: 0x1935,
+					ASName:   "TATA COMMUNICATIONS (AMERICA) INC",
+					Systems: []types.System{
+						{ASNs: []uint32{0x1935}},
+					},
+				},
+			},
+			// Verify that retired sites are annotated correctly.
+			"196.201.2.198": &types.Annotations{
+				Geo: &types.GeolocationIP{ContinentCode: "AF", CountryCode: "GH", City: "Accra", Latitude: 5.606, Longitude: -0.1681},
+				Network: &types.ASData{
+					CIDR:     "196.201.2.192/26",
+					ASNumber: 0x7915,
+					ASName:   "Ghana Internet Exchange Association",
+					Systems: []types.System{
+						{ASNs: []uint32{0x7915}},
 					},
 				},
 			},
@@ -83,7 +109,7 @@ func TestDoRequest(t *testing.T) {
 	url := ts.URL
 
 	//url = "https://annotator-dot-mlab-sandbox.appspot.com/batch_annotate"
-	ips := []string{"8.8.8.8", "147.1.2.3", "64.86.148.132"}
+	ips := []string{"8.8.8.8", "147.1.2.3", "64.86.148.132", "2001:5a0:4300::132", "196.201.2.198"}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	_, err := api.GetAnnotations(ctx, url, time.Now(), ips, "reqInfo")
