@@ -209,9 +209,9 @@ func annotateServerIPs(ips []string) ([]string, map[string]*api.Annotations) {
 // GetAnnotations takes a url, and Request, makes remote call, and returns parsed ResponseV2
 // TODO make this unexported once we have migrated all code to use GetAnnotator()
 func GetAnnotations(ctx context.Context, url string, date time.Time, ips []string, info ...string) (*Response, error) {
-	cIPs, sAnno := annotateServerIPs(ips)
+	clientIPs, serverAnn := annotateServerIPs(ips)
 
-	req := NewRequest(date, cIPs)
+	req := NewRequest(date, clientIPs)
 	if len(info) > 0 {
 		req.RequestInfo = info[0]
 	}
@@ -288,8 +288,8 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 		decodeLogEvery.Println("Decode error:", ErrMoreJSON)
 	}
 	// Append server annotations to results from annotation-service server.
-	for ip, anno := range sAnno {
-		resp.Annotations[ip] = anno
+	for ip, ann := range serverAnn {
+		resp.Annotations[ip] = ann
 	}
 	return &resp, nil
 }
