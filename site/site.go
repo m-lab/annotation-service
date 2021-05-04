@@ -124,6 +124,7 @@ func (sa *annotator) Annotate(ip string, server *uuid.ServerAnnotations) {
 	}
 
 	if ann, ok := sa.networks[cidr]; ok {
+		ann.Network.CIDR = cidr
 		*server = ann
 	} else {
 		*server = missing
