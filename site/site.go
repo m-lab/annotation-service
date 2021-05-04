@@ -45,7 +45,7 @@ func LoadFrom(ctx context.Context, js content.Provider, retiredJS content.Provid
 		networks:              make(map[string]uuid.ServerAnnotations, 400),
 	}
 	err := globalAnnotator.load(ctx)
-	log.Println(len(globalAnnotator.sites), "sites loaded")
+	log.Println(len(globalAnnotator.networks), "sites loaded")
 	return err
 }
 
@@ -87,7 +87,6 @@ type annotator struct {
 	siteinfoRetiredSource content.Provider
 	// Each site has a single ServerAnnotations struct, which
 	// is later customized for each machine.
-	sites    map[string]uuid.ServerAnnotations
 	networks map[string]uuid.ServerAnnotations
 }
 
