@@ -1,0 +1,31 @@
+[
+   {
+      "Annotation": {
+         "Geo": {
+            "City": "New York",
+            "ContinentCode": "NA",
+            "CountryCode": "US",
+            "Latitude": 40.7667,
+            "Longitude": -73.8667,
+            "State": "NY"
+         },
+         "Network": {
+            "ASName": "TATA COMMUNICATIONS (AMERICA) INC",
+            "ASNumber": 6453,
+            "Systems": [
+               {
+                  "ASNs": [
+                     6453
+                  ]
+               }
+            ]
+         },
+         "Site": "lga03"
+      },
+      "Name": "lga03",
+      "Network": {
+         "IPv4": "64.86.148.128/26",
+         "IPv6": "2001:5a0:4300::/64"
+      }
+   }
+]
