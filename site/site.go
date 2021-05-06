@@ -12,6 +12,7 @@ import (
 
 	"github.com/m-lab/go/content"
 	"github.com/m-lab/go/flagx"
+	"github.com/m-lab/go/memoryless"
 	"github.com/m-lab/go/rtx"
 	uuid "github.com/m-lab/uuid-annotator/annotator"
 )
@@ -54,6 +55,20 @@ func LoadFrom(ctx context.Context, js content.Provider, retiredJS content.Provid
 func MustLoad(timeout time.Duration) {
 	err := Load(timeout)
 	rtx.Must(err, "Could not load annotation db")
+}
+
+// MustReload runs a memoryless timer that guarantees reload at least once a
+// day. The first load must succeed; subsequent loads may fail without exiting.
+func MustReload(ctx context.Context) {
+	MustLoad(time.Minute)
+	c := memoryless.Config{
+		Expected: 12 * time.Hour,
+		Min:      time.Hour,
+		Max:      24 * time.Hour,
+	}
+	rtx.Must(memoryless.Run(ctx, func() {
+		log.Println(Load(time.Minute))
+	}, c), "failed to run site annotation reloader")
 }
 
 // Load loads the site annotations source. Will try at least once, retry up to
