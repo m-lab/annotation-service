@@ -194,3 +194,18 @@ func TestCorrupt(t *testing.T) {
 		t.Error("Expected load error")
 	}
 }
+
+func TestMustReload(t *testing.T) {
+	flag.Set("siteinfo.url", "file:testdata/annotations.json")
+	flag.Set("siteinfo.retired-url", "file:testdata/retired-annotations.json")
+	t.Run("success", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		defer cancel()
+		complete := make(chan struct{})
+		go func() {
+			site.MustReload(ctx)
+			close(complete)
+		}()
+		<-complete // wait until context times out.
+	})
+}

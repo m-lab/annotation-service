@@ -16,7 +16,9 @@ import (
 
 	"github.com/m-lab/annotation-service/api"
 	"github.com/m-lab/annotation-service/metrics"
+	"github.com/m-lab/annotation-service/site"
 	"github.com/m-lab/go/logx"
+	uuid "github.com/m-lab/uuid-annotator/annotator"
 )
 
 /*************************************************************************
@@ -153,10 +155,62 @@ var ErrMoreJSON = errors.New("JSON body not completely consumed")
 
 var decodeLogEvery = logx.NewLogEvery(nil, 30*time.Second)
 
+func convert(s *uuid.ServerAnnotations) *api.Annotations {
+	return &api.Annotations{
+		Geo: &api.GeolocationIP{
+			ContinentCode:       s.Geo.ContinentCode,
+			CountryCode:         s.Geo.CountryCode,
+			CountryCode3:        s.Geo.CountryCode3,
+			CountryName:         s.Geo.CountryName,
+			Region:              s.Geo.Region,
+			Subdivision1ISOCode: s.Geo.Subdivision1ISOCode,
+			Subdivision1Name:    s.Geo.Subdivision1Name,
+			Subdivision2ISOCode: s.Geo.Subdivision2ISOCode,
+			Subdivision2Name:    s.Geo.Subdivision2Name,
+			MetroCode:           s.Geo.MetroCode,
+			City:                s.Geo.City,
+			AreaCode:            s.Geo.AreaCode,
+			PostalCode:          s.Geo.PostalCode,
+			Latitude:            s.Geo.Latitude,
+			Longitude:           s.Geo.Longitude,
+			AccuracyRadiusKm:    s.Geo.AccuracyRadiusKm,
+			Missing:             s.Geo.Missing,
+		},
+		Network: &api.ASData{
+			IPPrefix: "",
+			CIDR:     s.Network.CIDR,
+			ASNumber: s.Network.ASNumber,
+			ASName:   s.Network.ASName,
+			Missing:  s.Network.Missing,
+			// M-Lab Servers only define one System.
+			Systems: []api.System{
+				{ASNs: s.Network.Systems[0].ASNs},
+			},
+		},
+	}
+}
+
+func annotateServerIPs(ips []string) ([]string, map[string]*api.Annotations) {
+	clients := []string{}
+	results := map[string]*api.Annotations{}
+	for _, ip := range ips {
+		s := &uuid.ServerAnnotations{}
+		site.Annotate(ip, s)
+		if (s.Geo == nil && s.Network == nil) || (s.Geo.Missing && s.Network.Missing) {
+			clients = append(clients, ip)
+		} else {
+			results[ip] = convert(s)
+		}
+	}
+	return clients, results
+}
+
 // GetAnnotations takes a url, and Request, makes remote call, and returns parsed ResponseV2
 // TODO make this unexported once we have migrated all code to use GetAnnotator()
 func GetAnnotations(ctx context.Context, url string, date time.Time, ips []string, info ...string) (*Response, error) {
-	req := NewRequest(date, ips)
+	clientIPs, serverAnn := annotateServerIPs(ips)
+
+	req := NewRequest(date, clientIPs)
 	if len(info) > 0 {
 		req.RequestInfo = info[0]
 	}
@@ -231,6 +285,10 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 	}
 	if decoder.More() {
 		decodeLogEvery.Println("Decode error:", ErrMoreJSON)
+	}
+	// Append server annotations to results from annotation-service server.
+	for ip, ann := range serverAnn {
+		resp.Annotations[ip] = ann
 	}
 	return &resp, nil
 }
