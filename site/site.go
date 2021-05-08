@@ -20,8 +20,8 @@ import (
 var (
 	// For example of how siteinfo is loaded on production servers, see
 	// https://github.com/m-lab/k8s-support/blob/ff5b53faef7828d11d45c2a4f27d53077ddd080c/k8s/daemonsets/templates.jsonnet#L350
-	siteinfo        = flagx.URL{}
-	siteinfoRetired = flagx.URL{}
+	siteinfo        = flagx.MustNewURL("https://siteinfo.mlab-oti.measurementlab.net/v1/sites/annotations.json")
+	siteinfoRetired = flagx.MustNewURL("https://siteinfo.mlab-oti.measurementlab.net/v1/retired/annotations.json")
 	globalAnnotator *annotator
 )
 
