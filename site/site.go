@@ -20,8 +20,8 @@ import (
 var (
 	// For example of how siteinfo is loaded on production servers, see
 	// https://github.com/m-lab/k8s-support/blob/ff5b53faef7828d11d45c2a4f27d53077ddd080c/k8s/daemonsets/templates.jsonnet#L350
-	siteinfo        = flagx.URL{}
-	siteinfoRetired = flagx.URL{}
+	siteinfo        = flagx.MustNewURL("https://siteinfo.mlab-oti.measurementlab.net/v1/sites/annotations.json")
+	siteinfoRetired = flagx.MustNewURL("https://siteinfo.mlab-oti.measurementlab.net/v1/retired/annotations.json")
 	globalAnnotator *annotator
 )
 
@@ -46,7 +46,7 @@ func LoadFrom(ctx context.Context, js content.Provider, retiredJS content.Provid
 		networks:              make(map[string]uuid.ServerAnnotations, 400),
 	}
 	err := globalAnnotator.load(ctx)
-	log.Println(len(globalAnnotator.networks), "sites loaded")
+	log.Println(globalAnnotator.sites, "sites loaded with", len(globalAnnotator.networks), "networks")
 	return err
 }
 
@@ -100,9 +100,10 @@ func Load(timeout time.Duration) error {
 type annotator struct {
 	siteinfoSource        content.Provider
 	siteinfoRetiredSource content.Provider
-	// Each site has a single ServerAnnotations struct, which
-	// is later customized for each machine.
+	// Each site network (v4 or v6) has a single ServerAnnotations struct,
+	// which is later customized for each machine.
 	networks map[string]uuid.ServerAnnotations
+	sites    int
 }
 
 // missing is used if annotation is requested for a non-existant server.
@@ -207,6 +208,7 @@ func (sa *annotator) load(ctx context.Context) error {
 		}
 
 		sa.networks[ann.Network.IPv4] = ann.Annotation
+		sa.sites++
 	}
 
 	return nil
