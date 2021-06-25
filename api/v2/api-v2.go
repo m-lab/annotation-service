@@ -202,7 +202,10 @@ func annotateServerIPs(ips []string) ([]string, map[string]*api.Annotations) {
 			results[ip] = convert(s)
 		}
 	}
-	return clients, results
+	if len(results) > 0 {
+		return clients, results
+	}
+	return clients, nil
 }
 
 // GetAnnotations takes a url, and Request, makes remote call, and returns parsed ResponseV2
@@ -287,8 +290,12 @@ func GetAnnotations(ctx context.Context, url string, date time.Time, ips []strin
 		decodeLogEvery.Println("Decode error:", ErrMoreJSON)
 	}
 	// Append server annotations to results from annotation-service server.
-	for ip, ann := range serverAnn {
-		resp.Annotations[ip] = ann
+	if resp.Annotations == nil {
+		resp.Annotations = serverAnn
+	} else {
+		for ip, ann := range serverAnn {
+			resp.Annotations[ip] = ann
+		}
 	}
 	return &resp, nil
 }
