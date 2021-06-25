@@ -74,7 +74,7 @@ script:
  # Run all tests and gather and submit coverage information.
  - GCLOUD_PROJECT=mlab-testing go test -v -coverpkg=./... -coverprofile=coverage.cov ./...
 
- - $HOME/gopath/bin/goveralls -coverprofile=coverage.cov -service=travis-ci || :
+ - $HOME/gopath/bin/goveralls -coverprofile=coverage.cov -service=travis-ci || true
  # Run benchmarks
  - go test -bench . ./geolite2v2/...
 
