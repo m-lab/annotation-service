@@ -74,7 +74,7 @@ script:
  # Run all tests and gather and submit coverage information.
  - GCLOUD_PROJECT=mlab-testing go test -v -coverpkg=./... -coverprofile=coverage.cov ./...
 
- - $HOME/gopath/bin/goveralls -coverprofile=coverage.cov -service=travis-ci
+ - $HOME/gopath/bin/goveralls -coverprofile=coverage.cov -service=travis-ci || true
  # Run benchmarks
  - go test -bench . ./geolite2v2/...
 
@@ -96,6 +96,7 @@ deploy:
  # branch to sandbox for pre-review testing.
  - provider: script
    script:
+    gcloud config set app/cloud_build_timeout 1200 &&
     $TRAVIS_BUILD_DIR/travis/deploy_app_legacy_keyfile.sh mlab-sandbox /tmp/mlab-sandbox.json $TRAVIS_BUILD_DIR annotator.yaml
    skip_cleanup: true
    on:
@@ -107,6 +108,7 @@ deploy:
  # STAGING: Should trigger AFTER code review and commit to master branch.
  - provider: script
    script:
+    gcloud config set app/cloud_build_timeout 1200 &&
     $TRAVIS_BUILD_DIR/travis/deploy_app_legacy_keyfile.sh mlab-staging /tmp/mlab-staging.json $TRAVIS_BUILD_DIR annotator.yaml
    skip_cleanup: true
    on:
@@ -117,6 +119,7 @@ deploy:
  # when tagged with prod-*.
  - provider: script
    script:
+    gcloud config set app/cloud_build_timeout 1200 &&
     $TRAVIS_BUILD_DIR/travis/deploy_app_legacy_keyfile.sh mlab-oti /tmp/mlab-oti.json $TRAVIS_BUILD_DIR annotator.yaml
    skip_cleanup: true
    on:
