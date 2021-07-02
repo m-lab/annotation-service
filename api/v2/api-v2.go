@@ -190,6 +190,87 @@ func convert(s *uuid.ServerAnnotations) *api.Annotations {
 	}
 }
 
+// ConvertAnnotationsToServerAnnotations accepts an annotation from the v2 API
+// and returns the equivalent annotator.ServerAnnotations structure from the
+// uuid-annotator. This function is only useful for migrating away from the v2
+// API and should be retired with the annotation-service once the annotation
+// export processes are complete.
+func ConvertAnnotationsToServerAnnotations(a *api.Annotations) *uuid.ServerAnnotations {
+	return &uuid.ServerAnnotations{
+		Geo: &uuid.Geolocation{
+			ContinentCode:       a.Geo.ContinentCode,
+			CountryCode:         a.Geo.CountryCode,
+			CountryCode3:        a.Geo.CountryCode3,
+			CountryName:         a.Geo.CountryName,
+			Region:              a.Geo.Region,
+			Subdivision1ISOCode: a.Geo.Subdivision1ISOCode,
+			Subdivision1Name:    a.Geo.Subdivision1Name,
+			Subdivision2ISOCode: a.Geo.Subdivision2ISOCode,
+			Subdivision2Name:    a.Geo.Subdivision2Name,
+			MetroCode:           a.Geo.MetroCode,
+			City:                a.Geo.City,
+			AreaCode:            a.Geo.AreaCode,
+			PostalCode:          a.Geo.PostalCode,
+			Latitude:            a.Geo.Latitude,
+			Longitude:           a.Geo.Longitude,
+			AccuracyRadiusKm:    a.Geo.AccuracyRadiusKm,
+			Missing:             a.Geo.Missing,
+		},
+		Network: &uuid.Network{
+			CIDR:     a.Network.CIDR,
+			ASNumber: a.Network.ASNumber,
+			ASName:   a.Network.ASName,
+			Missing:  a.Network.Missing,
+			// M-Lab Servers only define one System.
+			Systems: []uuid.System{
+				{ASNs: a.Network.Systems[0].ASNs},
+			},
+		},
+	}
+}
+
+// ConvertAnnotationsToClientAnnotations accepts an annotation from the v2 API
+// and returns the equivalent annotator.ClientAnnotations structure from the
+// uuid-annotator. This function is only useful for migrating away from the v2
+// API and should be retired with the annotation-service once the annotation
+// export processes are complete.
+func ConvertAnnotationsToClientAnnotations(a *api.Annotations) *uuid.ClientAnnotations {
+	c := &uuid.ClientAnnotations{
+		Geo: &uuid.Geolocation{
+			ContinentCode:       a.Geo.ContinentCode,
+			CountryCode:         a.Geo.CountryCode,
+			CountryCode3:        a.Geo.CountryCode3,
+			CountryName:         a.Geo.CountryName,
+			Region:              a.Geo.Region,
+			Subdivision1ISOCode: a.Geo.Subdivision1ISOCode,
+			Subdivision1Name:    a.Geo.Subdivision1Name,
+			Subdivision2ISOCode: a.Geo.Subdivision2ISOCode,
+			Subdivision2Name:    a.Geo.Subdivision2Name,
+			MetroCode:           a.Geo.MetroCode,
+			City:                a.Geo.City,
+			AreaCode:            a.Geo.AreaCode,
+			PostalCode:          a.Geo.PostalCode,
+			Latitude:            a.Geo.Latitude,
+			Longitude:           a.Geo.Longitude,
+			AccuracyRadiusKm:    a.Geo.AccuracyRadiusKm,
+			Missing:             a.Geo.Missing,
+		},
+		Network: &uuid.Network{
+			CIDR:     a.Network.CIDR,
+			ASNumber: a.Network.ASNumber,
+			ASName:   a.Network.ASName,
+			Missing:  a.Network.Missing,
+		},
+	}
+	if len(a.Network.Systems) > 0 {
+		c.Network.Systems = []uuid.System{}
+		for i := range a.Network.Systems {
+			c.Network.Systems = append(c.Network.Systems, uuid.System{ASNs: a.Network.Systems[i].ASNs})
+		}
+	}
+	return c
+}
+
 func annotateServerIPs(ips []string) ([]string, map[string]*api.Annotations) {
 	clients := []string{}
 	results := map[string]*api.Annotations{}
