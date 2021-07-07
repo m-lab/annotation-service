@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -17,6 +18,7 @@ import (
 	"github.com/m-lab/annotation-service/site"
 	"github.com/m-lab/go/content"
 	"github.com/m-lab/go/rtx"
+	uuid "github.com/m-lab/uuid-annotator/annotator"
 )
 
 func init() {
@@ -188,5 +190,88 @@ func TestSomeErrors(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "Internal Server Error") {
 		t.Error("Expected err containing Internal Server Error", err)
+	}
+}
+
+func TestConvertAnnotationsToServerAnnotations(t *testing.T) {
+	a := &types.Annotations{
+		Geo: &types.GeolocationIP{
+			ContinentCode:       "NA",
+			CountryCode:         "US",
+			Subdivision1ISOCode: "NY",
+			Subdivision1Name:    "New York",
+			City:                "New York",
+			PostalCode:          "10011",
+			Latitude:            1.2,
+			Longitude:           2.3,
+			AccuracyRadiusKm:    1,
+			Missing:             false,
+		},
+		Network: &types.ASData{
+			CIDR:     "192.168.0.0/26",
+			ASNumber: 10,
+			ASName:   "fake AS name",
+			Missing:  false,
+			Systems: []types.System{
+				{ASNs: []uint32{10}},
+			},
+		},
+	}
+	expectedServer := &uuid.ServerAnnotations{
+		// NOTE: the Site and Machine fields will not be specified.
+		Geo: &uuid.Geolocation{
+			ContinentCode:       "NA",
+			CountryCode:         "US",
+			Subdivision1ISOCode: "NY",
+			Subdivision1Name:    "New York",
+			City:                "New York",
+			PostalCode:          "10011",
+			Latitude:            1.2,
+			Longitude:           2.3,
+			AccuracyRadiusKm:    1,
+			Missing:             false,
+		},
+		Network: &uuid.Network{
+			CIDR:     "192.168.0.0/26",
+			ASNumber: 10,
+			ASName:   "fake AS name",
+			Missing:  false,
+			Systems: []uuid.System{
+				{ASNs: []uint32{10}},
+			},
+		},
+	}
+	expectedClient := &uuid.ClientAnnotations{
+		Geo: &uuid.Geolocation{
+			ContinentCode:       "NA",
+			CountryCode:         "US",
+			Subdivision1ISOCode: "NY",
+			Subdivision1Name:    "New York",
+			City:                "New York",
+			PostalCode:          "10011",
+			Latitude:            1.2,
+			Longitude:           2.3,
+			AccuracyRadiusKm:    1,
+			Missing:             false,
+		},
+		Network: &uuid.Network{
+			CIDR:     "192.168.0.0/26",
+			ASNumber: 10,
+			ASName:   "fake AS name",
+			Missing:  false,
+			Systems: []uuid.System{
+				{ASNs: []uint32{10}},
+			},
+		},
+	}
+
+	gs := api.ConvertAnnotationsToServerAnnotations(a)
+	if !reflect.DeepEqual(gs, expectedServer) {
+		t.Errorf("ConvertAnnotationsToServerAnnotations() = %v, want %v", gs, expectedServer)
+	}
+
+	gc := api.ConvertAnnotationsToClientAnnotations(a)
+	if !reflect.DeepEqual(gc, expectedClient) {
+		t.Errorf("ConvertAnnotationsToServerAnnotations() = %v, want %v", gc, expectedClient)
 	}
 }
