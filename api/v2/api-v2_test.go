@@ -217,6 +217,14 @@ func TestConvertAnnotationsToServerAnnotations(t *testing.T) {
 			},
 		},
 	}
+	empty := &types.Annotations{
+		Geo: &types.GeolocationIP{
+			Missing: true,
+		},
+		Network: &types.ASData{
+			Missing: true,
+		},
+	}
 	expectedServer := &uuid.ServerAnnotations{
 		// NOTE: the Site and Machine fields will not be specified.
 		Geo: &uuid.Geolocation{
@@ -239,6 +247,14 @@ func TestConvertAnnotationsToServerAnnotations(t *testing.T) {
 			Systems: []uuid.System{
 				{ASNs: []uint32{10}},
 			},
+		},
+	}
+	expectedEmpty := &uuid.ServerAnnotations{
+		Geo: &uuid.Geolocation{
+			Missing: true,
+		},
+		Network: &uuid.Network{
+			Missing: true,
 		},
 	}
 	expectedClient := &uuid.ClientAnnotations{
@@ -268,6 +284,10 @@ func TestConvertAnnotationsToServerAnnotations(t *testing.T) {
 	gs := api.ConvertAnnotationsToServerAnnotations(a)
 	if !reflect.DeepEqual(gs, expectedServer) {
 		t.Errorf("ConvertAnnotationsToServerAnnotations() = %v, want %v", gs, expectedServer)
+	}
+	gempty := api.ConvertAnnotationsToServerAnnotations(empty)
+	if !reflect.DeepEqual(gempty, expectedEmpty) {
+		t.Errorf("ConvertAnnotationsToServerAnnotations() = %v, want %v", gempty, expectedEmpty)
 	}
 
 	gc := api.ConvertAnnotationsToClientAnnotations(a)
