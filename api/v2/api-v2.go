@@ -196,7 +196,7 @@ func convert(s *uuid.ServerAnnotations) *api.Annotations {
 // API and should be retired with the annotation-service once the annotation
 // export processes are complete.
 func ConvertAnnotationsToServerAnnotations(a *api.Annotations) *uuid.ServerAnnotations {
-	return &uuid.ServerAnnotations{
+	s := &uuid.ServerAnnotations{
 		Geo: &uuid.Geolocation{
 			ContinentCode:       a.Geo.ContinentCode,
 			CountryCode:         a.Geo.CountryCode,
@@ -221,12 +221,15 @@ func ConvertAnnotationsToServerAnnotations(a *api.Annotations) *uuid.ServerAnnot
 			ASNumber: a.Network.ASNumber,
 			ASName:   a.Network.ASName,
 			Missing:  a.Network.Missing,
-			// M-Lab Servers only define one System.
-			Systems: []uuid.System{
-				{ASNs: a.Network.Systems[0].ASNs},
-			},
 		},
 	}
+	if len(a.Network.Systems) > 0 {
+		// M-Lab Servers only define one System.
+		s.Network.Systems = []uuid.System{
+			{ASNs: a.Network.Systems[0].ASNs},
+		}
+	}
+	return s
 }
 
 // ConvertAnnotationsToClientAnnotations accepts an annotation from the v2 API
