@@ -82,6 +82,10 @@ script:
  - go build
  - $TRAVIS_BUILD_DIR/travis/install_gcloud.sh
 
+before_deploy:
+ # See: https://github.com/cisagov/travis-wait-improved
+ - pip install travis-wait-improved
+
 # Deploy steps never trigger on a new Pull Request. Deploy steps will trigger
 # after a merge with matching "on:" conditions.
 deploy:
@@ -93,7 +97,7 @@ deploy:
  - provider: script
    script:
     gcloud config set app/cloud_build_timeout 1200 &&
-    $TRAVIS_BUILD_DIR/travis/deploy_app_legacy_keyfile.sh mlab-sandbox /tmp/mlab-sandbox.json $TRAVIS_BUILD_DIR annotator.yaml
+    travis-wait-improved --timeout 30m $TRAVIS_BUILD_DIR/travis/deploy_app_legacy_keyfile.sh mlab-sandbox /tmp/mlab-sandbox.json $TRAVIS_BUILD_DIR annotator.yaml
    skip_cleanup: true
    on:
     repo: m-lab/annotation-service
@@ -105,7 +109,7 @@ deploy:
  - provider: script
    script:
     gcloud config set app/cloud_build_timeout 1200 &&
-    $TRAVIS_BUILD_DIR/travis/deploy_app_legacy_keyfile.sh mlab-staging /tmp/mlab-staging.json $TRAVIS_BUILD_DIR annotator.yaml
+    travis-wait-improved --timeout 30m $TRAVIS_BUILD_DIR/travis/deploy_app_legacy_keyfile.sh mlab-staging /tmp/mlab-staging.json $TRAVIS_BUILD_DIR annotator.yaml
    skip_cleanup: true
    on:
     repo: m-lab/annotation-service
@@ -116,7 +120,7 @@ deploy:
  - provider: script
    script:
     gcloud config set app/cloud_build_timeout 1200 &&
-    $TRAVIS_BUILD_DIR/travis/deploy_app_legacy_keyfile.sh mlab-oti /tmp/mlab-oti.json $TRAVIS_BUILD_DIR annotator.yaml
+    travis-wait-improved --timeout 30m $TRAVIS_BUILD_DIR/travis/deploy_app_legacy_keyfile.sh mlab-oti /tmp/mlab-oti.json $TRAVIS_BUILD_DIR annotator.yaml
    skip_cleanup: true
    on:
     repo: m-lab/annotation-service
